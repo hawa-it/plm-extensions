@@ -512,8 +512,10 @@ exports.config = {
            ['MBOM_COPY', 'true' ]
         ],
         'searches' : [
-            { 'title' : 'Purchased Parts', 'query' : 'ITEM_DETAILS:CATEGORY%StandardPart' },
-            { 'title' : 'Packaging Parts', 'query' : 'ITEM_DETAILS:CATEGORY%PackagingParts' }
+            { 'title' : 'Purchased Parts', 'query' : 'Article_DETAILS:CATEGORY%StandardPart' },
+            { 'title' : 'Packaging Parts', 'query' : 'Article_DETAILS:CATEGORY%PackagingParts' }
+         //   { 'title' : 'Purchased Parts', 'query' : 'ITEM_DETAILS:CATEGORY%3DPurchased' },
+         //   { 'title' : 'Packaging Parts', 'query' : 'ITEM_DETAILS:CATEGORY%3DPackaging' }
         ]
     },
 
