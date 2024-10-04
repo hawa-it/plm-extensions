@@ -2476,7 +2476,8 @@ function setWorkspaceView(suffix) {
         let elemParent = $('#workspace-view-list-' + suffix);
             elemParent.html('');
 
-        $.get('/plm//tableau-data', { 'link' : $('#view-selector-' + suffix).val() }, function(response) {        
+        $.get('/plm//tableau-data', { 'link' : $('#view-selector-' + suffix).val() }, function(response) { 
+            console.log(response)
             $('#add-processing').hide();
             for(let item of response.data) {
                 addItemListEntry(item.item.link, item.item.urn, item.fields[0].value, suffix, elemParent, false);
