@@ -3032,6 +3032,10 @@ function createNewItems() {
                     addFieldToPayload(params.sections, wsMBOM.sections, null, newDefault[0], newDefault[1]);
                 }
 
+                console.log(config.mbom.newDefaults);
+                console.log(wsMBOM);
+                console.log(params);
+
                 requests.push($.post('/plm/create', params));
                 elements.push(elemItem);
 
