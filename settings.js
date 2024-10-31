@@ -2,7 +2,7 @@
 let clientId        = '';
 let tenant          = '';
 let redirectUri     = 'http://localhost:8080/callback';
-let defaultTheme    = 'light';
+let defaultTheme    = 'dark'; //light
 
 
 
@@ -545,12 +545,12 @@ exports.config = {
             explodedView  : true,
             modelBrowser  : false,
             properties    : false,
-            settings      : false,
+            settings      : true, //false
             fullscreen    : true,
             markup        : true,
             hide          : true,
             ghosting      : true,
-            highlight     : false,
+            highlight     : true, //false
             single        : true,
             fitToView     : true,
             reset         : true,
@@ -560,7 +560,7 @@ exports.config = {
     },
 
     portal : {
-        workspace        : 57,
+        workspace        : 79,
         autoClick        : true,
         sectionsExcluded : ['AML Summary', 'Quality Inspection', 'Sustainability', 'Compliance', 'Others'],
         sectionsIncluded : [],
