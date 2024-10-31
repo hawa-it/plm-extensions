@@ -98,7 +98,7 @@ exports.config = {
     'configurator' : {
         'wsIdEningeeringItems'      : '79',
         'wsIdConfigurationFeatures' : '274',
-        'bomViewName'               : 'Basic', // Configurator
+        'bomViewName'               : 'Details', // Configurator
         'fieldIdFeatures'           : 'FEATURES',
         'fieldIdOptions'            : 'OPTIONS',
         'fieldIdInclusions'         : 'INCLUSIONS',
@@ -184,7 +184,7 @@ exports.config = {
     }],
 
     'explorer' : {
-        'bomViewName'          : 'Basic',  // Details
+        'bomViewName'          : 'Details',  // Basic
         'fieldIdPRImage'       : 'IMAGE_1',
         'fieldIdPRContext'     : 'AFFECTED_ITEM',
         'wsIdItems'            : 79, //
@@ -593,7 +593,7 @@ exports.config = {
     },  
 
     'portfolio' : {
-        'bomViewName'       : 'Basic',
+        'bomViewName'       : 'Details',
         'hierarchy'         : ['Product Categories', 'Product Lines', 'Products']
     },
 
@@ -612,7 +612,7 @@ exports.config = {
         'fieldIdImage'  : 'IMAGE',
         'fieldIdMarkup' : 'MARKUP',
         'transitionId'  : 'CLOSE_REVIEW',
-        'bomViewName'   : 'Basic',
+        'bomViewName'   : 'Details',
         viewerFeatures  : {
             contextMenu   : false,
             cube          : false,
@@ -651,7 +651,7 @@ exports.config = {
     },
 
     'search' : {
-        'wsId'    : 57,
+        'wsId'    : 79,
         'fieldId' : 'NUMBER'
     },
 
@@ -745,7 +745,7 @@ exports.config = {
     },
 
     'viewer' : {
-        'fieldIdPartNumber'       : 'Artikel', //NUMBER
+        'fieldIdPartNumber'       : 'Number', //NUMBER
         'partNumberProperties'    : ['Artikelnummer', 'Bauteilnummer', 'Part Number', 'Name', 'label'], // 'Part Number', 'Name', 'label', 'Artikelnummer', 'Bauteilnummer'
         'splitPartNumberBy'       : ' v',
         'splitPartNumberIndexes'  : [0],
