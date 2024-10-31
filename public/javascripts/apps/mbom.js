@@ -2970,6 +2970,8 @@ function setSaveActions() {
                 let dbQty        = elemItem.attr('data-qty');
                 let edQty        = elemItem.find('.item-qty-input').first().val();
 
+            console.log('Is ' + dbQty + ' equal to ' + edQty + ' for ' + elemItem.attr('data-part-number') + '? ' + (dbQty === edQty));
+                
                 if(dbQty !== edQty) elemItem.addClass('pending-update');
                 else if(dbNumber !== edNumber) elemItem.addClass('pending-update');
 
@@ -3348,6 +3350,8 @@ function updateBOMItems() {
                     }
                 }
 
+                console.log(params);
+                
                 requests.push($.get('/plm/bom-update', params));
                 elements.push(elemItem);
 
