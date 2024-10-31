@@ -1372,6 +1372,10 @@ function convertEBOMtoMBOM() {
                 }
             }
 
+            for(let newDefault of config.mbom.newDefaults) {
+                    addFieldToPayload(params.sections, wsMBOM.sections, null, newDefault[0], newDefault[1]);
+            }
+
             $.post({
                 url         : '/plm/create', 
                 contentType : 'application/json',
