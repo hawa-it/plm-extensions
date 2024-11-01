@@ -1267,6 +1267,29 @@ function insertFromEBOMToMBOM(elemAction) {
     }
     
     if(elemTarget !== null) {   
+
+        let elemTargetBOM = elemTarget.find('.item-bom').first();
+        let srcPartNumber = elemItem.attr('data-part-number');
+        let existsInBOM   = false;
+
+        elemTargetBOM.children('.item').each(function() {
+            
+            let tgtPartNumber = $(this).attr('data-part-number');
+            
+            if(srcPartNumber === tgtPartNumber) {
+                
+                existsInBOM = true;
+                let srcQty  = Number(elemItem.attr('data-qty'));
+                let elemQty = $(this).find('.item-qty-input').first();
+                let tgtQty  = Number(elemQty.val()) + srcQty;
+                
+                elemQty.val(tgtQty);
+
+            }
+            
+        });
+
+        if(!existsInBOM) {
         
         let clone = elemItem.clone(true, true);
             
