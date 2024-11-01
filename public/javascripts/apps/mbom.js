@@ -1324,7 +1324,7 @@ function insertFromEBOMToMBOM(elemAction) {
         insertMBOMActions(elemActions);
 
     }
-    
+}    
 
 }
 function updateFromEBOMToMBOM(elemAction) {
