@@ -1226,6 +1226,29 @@ function insertFromEBOMToMBOM(elemAction) {
     }
     
     if(elemTarget !== null) {   
+
+        let elemTargetBOM = elemTarget.find('.item-bom').first();
+        let srcPartNumber = elemItem.attr('data-part-number');
+        let existsInBOM   = false;
+
+        elemTargetBOM.children('.item').each(function() {
+            
+            let tgtPartNumber = $(this).attr('data-part-number');
+            
+            if(srcPartNumber === tgtPartNumber) {
+                
+                existsInBOM = true;
+                let srcQty  = Number(elemItem.attr('data-qty'));
+                let elemQty = $(this).find('.item-qty-input').first();
+                let tgtQty  = Number(elemQty.val()) + srcQty;
+                
+                elemQty.val(tgtQty);
+
+            }
+            
+        });
+
+        if(!existsInBOM) {
         
         let clone = elemItem.clone(true, true);
             
@@ -1238,26 +1261,28 @@ function insertFromEBOMToMBOM(elemAction) {
                 // console.log('new target clicked');
             });
         
-        let elemQtyInput = clone.find('.item-qty-input');
-            elemQtyInput.removeAttr('disabled');
-            elemQtyInput.keyup(function (e) {
-                //if (e.which == 13) {
-                    // $(this).closest('.item').attr('data-qty', $(this).val());
-                    $(this).closest('.item').attr('data-instance-qty', $(this).val());
-                    setStatusBar();
-                    setBOMPanels($(this).closest('.item').attr('data-link'));
-                //}
-            });
-            elemQtyInput.click(function(e) {
-                e.stopPropagation();
-                e.preventDefault();
-                $(this).select();
-            });
+            let elemQtyInput = clone.find('.item-qty-input');
+                elemQtyInput.removeAttr('disabled');
+                elemQtyInput.keyup(function (e) {
+                    //if (e.which == 13) {
+                        // $(this).closest('.item').attr('data-qty', $(this).val());
+                        $(this).closest('.item').attr('data-instance-qty', $(this).val());
+                        setStatusBar();
+                        setBOMPanels($(this).closest('.item').attr('data-link'));
+                    //}
+                });
+                elemQtyInput.click(function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    $(this).select();
+                });
 
-        let elemActions = clone.find('.item-actions');
-            elemActions.html('');
+            let elemActions = clone.find('.item-actions');
+                elemActions.html('');
 
-        insertMBOMActions(elemActions);
+            insertMBOMActions(elemActions);
+
+        }
 
     }
     
