@@ -1279,7 +1279,7 @@ function insertFromEBOMToMBOM(elemAction) {
             if(srcPartNumber === tgtPartNumber) {
                 
                 existsInBOM = true;
-                let srcQty  = Number(elemItem.attr('data-qty'));
+                let srcQty  = Number(elemItem.attr('data-instance-qty'));
                 let elemQty = $(this).find('.item-qty-input').first();
                 let tgtQty  = Number(elemQty.val()) + srcQty;
                 
