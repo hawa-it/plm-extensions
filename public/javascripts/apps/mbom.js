@@ -2149,13 +2149,13 @@ function selectItem(elemItem, filter) {
         setStatusBar();
 
         if(filter) {
-            viewer.setGhosting(false);
+            if(isViewerStarted()) viewer.setGhosting(false);
             $('.leaf').hide();
             $('.operation').hide();
             $('.item.filter').removeClass('filter');
             elemItem.addClass('filter');
         } else {
-            viewer.setGhosting(true);
+           if(isViewerStarted()) viewer.setGhosting(true);
         }
 
         $('.item').removeClass('selected');
