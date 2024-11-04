@@ -166,7 +166,8 @@ function initViewer(id, viewables, params) {
             if(!isBlank(applicationFeatures.viewer.contextMenu)) {
                 if(!applicationFeatures.viewer.contextMenu) viewer.setContextMenu(null);
             }
-
+            }
+            
             Autodesk.Viewing.Document.load('urn:'+ viewables[0].urn, onDocumentLoadSuccess, onDocumentLoadFailure);
             
         });
