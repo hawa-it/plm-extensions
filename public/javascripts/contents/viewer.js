@@ -161,7 +161,8 @@ function initViewer(id, viewables, params) {
                 console.error('Failed to create a Viewer: WebGL not supported.');
                 return;
             }      
-            
+
+            if(!isBlank(applicationFeatures.viewer)) {
             if(!isBlank(applicationFeatures.viewer.contextMenu)) {
                 if(!applicationFeatures.viewer.contextMenu) viewer.setContextMenu(null);
             }
