@@ -3,7 +3,7 @@
   "version": "September 2024",
   "private": true,
   "scripts": {
-    "start": "node --max-http-header-size=16384 ./bin/www"
+    "start": "node --max-http-header-size=16384 ./bin/www settings_hawa.js"
   },
   "dependencies": {
     "agentkeepalive": "*",
