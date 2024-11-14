@@ -283,7 +283,7 @@ exports.config = {
         },{
             'id'        : 'pdm-location', //
             'title'     : 'PDM Location',
-            'fieldId'   : 'SOURCE', //PDM_LOCATION
+            'fieldId'   : 'Source', //PDM_LOCATION
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'bars', //
