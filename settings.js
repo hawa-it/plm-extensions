@@ -275,7 +275,7 @@ exports.config = {
         },{
             'id'        : 'pdm-category',
             'title'     : 'PDM Category',
-            'fieldId'   : 'CATEGORY', //PDM_CATEGORY
+            'fieldId'   : 'CATEGORY_TYPE', //PDM_CATEGORY
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'bars',
