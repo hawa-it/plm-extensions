@@ -204,7 +204,7 @@ exports.config = {
         },{
             'id'        : 'change',
             'title'     : 'Pending Change',
-            'fieldId'   : 'WORKING_CHANGE_ORDER',
+            'fieldId'   : 'Change Pending', //WORKING_CHANGE_ORDER
             'urn'       : '',
             'type'      : 'non-empty',
             'style'     : 'counters',
@@ -215,7 +215,7 @@ exports.config = {
         },{
             'id'        : 'change-order',
             'title'     : 'Change Orders',
-            'fieldId'   : 'WORKING_CHANGE_ORDER',
+            'fieldId'   : 'Change Pending', //WORKING_CHANGE_ORDER
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'bars',
@@ -250,8 +250,8 @@ exports.config = {
             'data'      : []
         },{
             'id'        : 'type',
-            'title'     : 'Type',
-            'fieldId'   : 'TYPE',
+            'title'     : 'Type', 
+            'fieldId'   : 'TEILEART', //TYPE
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'bars',
@@ -259,7 +259,7 @@ exports.config = {
         },{
             'id'        : 'top-level-class-name',
             'title'     : 'Top Level Class',
-            'fieldId'   : 'TOP_LEVEL_CLASS',
+            'fieldId'   : 'TOP_LEVEL_CLASS', // nicht genutzt
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'bars',
@@ -267,7 +267,7 @@ exports.config = {
         },{
             'id'        : 'class-name',
             'title'     : 'Class',
-            'fieldId'   : 'CLASS_NAME',
+            'fieldId'   : 'CLASS_NAME', // nicht genutzt
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'bars',
@@ -275,7 +275,7 @@ exports.config = {
         },{
             'id'        : 'pdm-category',
             'title'     : 'PDM Category',
-            'fieldId'   : 'PDM_CATEGORY',
+            'fieldId'   : 'CATEGORY', //PDM_CATEGORY
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'bars',
@@ -283,15 +283,15 @@ exports.config = {
         },{
             'id'        : 'pdm-location',
             'title'     : 'PDM Location',
-            'fieldId'   : 'PDM_LOCATION',
+            'fieldId'   : 'SOURCE', //PDM_LOCATION
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'bars',
             'data'      : []
         },{
             'id'        : 'pdm-last-modification-date',
-            'title'     : 'PDM Last Modification',
-            'fieldId'   : 'PDM_LAST_MODIFICATION_DATE',
+            'title'     : 'PDM Last Modification', 
+            'fieldId'   : 'VAULT_GEZEICHNET_AM', //PDM_LAST_MODIFICATION_DATE
             'urn'       : '',
             'type'      : 'days',
             'style'     : 'bars',
@@ -299,7 +299,7 @@ exports.config = {
         },{
             'id'        : 'responsible-designer',
             'title'     : 'Responsible Designer',
-            'fieldId'   : 'RESPONSIBLE_DESIGNER',
+            'fieldId'   : 'VAULT_GEZEICHNET_VON', // RESPONSIBLE_DESIGNER
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'bars',
@@ -307,7 +307,7 @@ exports.config = {
         },{
             'id'        : 'spare-part',
             'title'     : 'Spare Part',
-            'fieldId'   : 'SPARE_WEAR_PART',
+            'fieldId'   : 'SPARE_WEAR_PART', // Nicht benutzt
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'counters',
@@ -319,7 +319,7 @@ exports.config = {
         },{
             'id'        : 'has-pending-packages',
             'title'     : 'Has Pending Packages',
-            'fieldId'   : 'HAS_PENDING_PACKAGES',
+            'fieldId'   : 'HAS_PENDING_PACKAGES', // Nicht benutzt
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'counters',
@@ -343,7 +343,7 @@ exports.config = {
         },{
             'id'        : 'vendor',
             'title'     : 'Vendor',
-            'fieldId'   : 'VENDOR',
+            'fieldId'   : 'VENDOR', // Nicht benutzt
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'bars',
@@ -351,7 +351,7 @@ exports.config = {
         },{
             'id'        : 'country',
             'title'     : 'Country',
-            'fieldId'   : 'COUNTRY',
+            'fieldId'   : 'COUNTRY', // Nicht benutzt
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'bars',
@@ -359,7 +359,7 @@ exports.config = {
         },{
             'id'        : 'total-cost',
             'title'     : 'Total Cost',
-            'fieldId'   : 'TOTAL_COST',
+            'fieldId'   : 'TOTAL_COST', // Nicht benutzt
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'bars',
@@ -367,7 +367,7 @@ exports.config = {
         },{
             'id'        : 'lead-time',
             'title'     : 'Lead Time',
-            'fieldId'   : 'LEAD_TIME',
+            'fieldId'   : 'LEAD_TIME', // Nicht benutzt
             'urn'       : '',
             'type'      : 'value',
             'sort'      : 'value',
@@ -377,7 +377,7 @@ exports.config = {
         },{
             'id'        : 'long-lead-time',
             'title'     : 'Long Lead Time',
-            'fieldId'   : 'LONG_LEAD_TIME',
+            'fieldId'   : 'LONG_LEAD_TIME', // Nicht benutzt
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'counters',
@@ -397,7 +397,7 @@ exports.config = {
         },{
             'id'        : 'total-weight',
             'title'     : 'Total Weight',
-            'fieldId'   : 'TOTAL_WEIGHT',
+            'fieldId'   : 'ITEM_WEIGHT', //TOTAL_WEIGHT
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'bars',
@@ -405,7 +405,7 @@ exports.config = {
         },{
             'id'        : 'quality-inspection-required',
             'title'     : 'Quality Inspection Required',
-            'fieldId'   : 'INSPECTION_REQUIRED',
+            'fieldId'   : 'INSPECTION_REQUIRED', // Nicht benutzt
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'counters',
@@ -417,7 +417,7 @@ exports.config = {
         },{
             'id'        : 'quality-inspection-result',
             'title'     : 'Latest Quality Inspection Result',
-            'fieldId'   : 'LATEST_QI_RESULT',
+            'fieldId'   : 'LATEST_QI_RESULT', // Nicht benutzt
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'bars',
