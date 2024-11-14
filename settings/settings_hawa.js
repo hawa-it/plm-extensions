@@ -184,8 +184,8 @@ exports.config = {
     }],
 
     'explorer' : {
-        'bomViewName'          : 'Details',  // Basic
-        'fieldIdPRImage'       : 'IMAGE_1',
+        'bomViewName'          : 'Details',  // Basic 
+        'fieldIdPRImage'       : 'THUMBNAIL', //IMAGE_1
         'fieldIdPRContext'     : 'AFFECTED_ITEM',
         'wsIdItems'            : 79, //
         'wsIdProblemReports'   : 82,
@@ -283,7 +283,7 @@ exports.config = {
         },{
             'id'        : 'pdm-location', //
             'title'     : 'PDM Location',
-            'fieldId'   : 'Source', //PDM_LOCATION
+            'fieldId'   : 'SOURCE', //PDM_LOCATION
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'bars', //
