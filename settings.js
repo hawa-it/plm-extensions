@@ -299,7 +299,7 @@ exports.config = {
         },{
             'id'        : 'responsible-designer',
             'title'     : 'Responsible Designer',
-            'fieldId'   : 'VAULT_GEZEICHNET_VON', // RESPONSIBLE_DESIGNER
+            'fieldId'   : 'Vault Drawn by', // RESPONSIBLE_DESIGNER
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'bars',
