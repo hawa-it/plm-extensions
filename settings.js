@@ -286,7 +286,7 @@ exports.config = {
             'fieldId'   : 'SOURCE', //PDM_LOCATION
             'urn'       : '',
             'type'      : 'value',
-            'style'     : 'bars',
+            'style'     : 'counters', //bars
             'data'      : []
         },{
             'id'        : 'pdm-last-modification-date',
