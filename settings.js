@@ -281,7 +281,7 @@ exports.config = {
             'style'     : 'bars',
             'data'      : []
         },{
-            'id'        : 'pdm-location',
+            'id'        : 'source', //pdm-location
             'title'     : 'PDM Location',
             'fieldId'   : 'SOURCE', //PDM_LOCATION
             'urn'       : '',
