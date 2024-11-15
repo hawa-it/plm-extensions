@@ -203,8 +203,8 @@ exports.config = {
             ]
         },{
             'id'        : 'change',
-            'title'     : 'Pending Change',
-            'fieldId'   : 'CHANGE_PENDING', //WORKING_CHANGE_ORDER
+            'title'     : 'Pending Change', //
+            'fieldId'   : 'WORKING_CHANGE_ORDER', // CHANGE_PENDING
             'urn'       : '',
             'type'      : 'non-empty',
             'style'     : 'counters',
@@ -215,7 +215,7 @@ exports.config = {
         },{
             'id'        : 'change-order',
             'title'     : 'Change Orders',
-            'fieldId'   : 'CHANGE_PENDING', //WORKING_CHANGE_ORDER
+            'fieldId'   : 'WORKING_CHANGE_ORDER', // CHANGE_PENDING
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'bars',
