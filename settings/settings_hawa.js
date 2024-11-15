@@ -204,7 +204,7 @@ exports.config = {
         },{
             'id'        : 'change',
             'title'     : 'Pending Change',
-            'fieldId'   : 'Change Pending', //WORKING_CHANGE_ORDER
+            'fieldId'   : 'CHANGE_PENDING', //WORKING_CHANGE_ORDER
             'urn'       : '',
             'type'      : 'non-empty',
             'style'     : 'counters',
@@ -215,7 +215,7 @@ exports.config = {
         },{
             'id'        : 'change-order',
             'title'     : 'Change Orders',
-            'fieldId'   : 'Change Pending', //WORKING_CHANGE_ORDER
+            'fieldId'   : 'CHANGE_PENDING', //WORKING_CHANGE_ORDER
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'bars',
@@ -234,7 +234,7 @@ exports.config = {
             'fieldId'   : 'STATUS',
             'urn'       : '',
             'type'      : 'value',
-            'style'     : 'counters',
+            'style'     : 'bars', //counters
             'data'      : [
                 { 'value' : 'Superseded', 'count' : 0, 'color' : colors.list[0], 'vector' : vectors.red    },
                 { 'value' : 'Working'   , 'count' : 0, 'color' : colors.list[2], 'vector' : vectors.yellow },
@@ -250,7 +250,7 @@ exports.config = {
             'data'      : []
         },{
             'id'        : 'type',
-            'title'     : 'Type',
+            'title'     : 'Part-Type',
             'fieldId'   : 'TEILEART', //TYPE
             'urn'       : '',
             'type'      : 'value',
@@ -275,14 +275,14 @@ exports.config = {
         },{
             'id'        : 'pdm-category',
             'title'     : 'PDM Category',
-            'fieldId'   : 'Category Type', //PDM_CATEGORY
+            'fieldId'   : 'CATEGORY_TYPE', //PDM_CATEGORY
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'bars',
             'data'      : []
         },{
             'id'        : 'pdm-location', //
-            'title'     : 'PDM Location',
+            'title'     : 'PDM Source',
             'fieldId'   : 'SOURCE', //PDM_LOCATION
             'urn'       : '',
             'type'      : 'value',
@@ -293,13 +293,13 @@ exports.config = {
             'title'     : 'PDM Last Modification',
             'fieldId'   : 'VAULT_GEZEICHNET_AM', //PDM_LAST_MODIFICATION_DATE
             'urn'       : '',
-            'type'      : 'days',
+            'type'      : 'date', //days
             'style'     : 'bars',
             'data'      : []
         },{
             'id'        : 'responsible-designer',
             'title'     : 'Responsible Designer',
-            'fieldId'   : 'Vault Drawn by', // RESPONSIBLE_DESIGNER
+            'fieldId'   : 'VAULT_GEZEICHNET_VON', // RESPONSIBLE_DESIGNER
             'urn'       : '',
             'type'      : 'value',
             'style'     : 'bars',
