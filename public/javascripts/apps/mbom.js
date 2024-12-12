@@ -471,6 +471,10 @@ function createMBOMRoot(itemDetails, callback) {
             }
         }
 
+        for(let newDefault of config.mbom.newDefaults) {
+            addFieldToPayload(params.sections, wsMBOM.sections, null, newDefault[0], newDefault[1]);
+        }        
+
         $.post({
             url         : '/plm/create', 
             contentType : 'application/json',
@@ -1434,6 +1438,10 @@ function convertEBOMtoMBOM() {
                     partNumber += config.mbom.suffixItemNumber + siteLabel
                     addFieldToPayload(params.sections, wsMBOM.sections, null, config.mbom.fieldIdNumber, partNumber);
                 }
+            }
+
+            for(let newDefault of config.mbom.newDefaults) {
+                addFieldToPayload(params.sections, wsMBOM.sections, null, newDefault[0], newDefault[1]);
             }
 
             $.post({
@@ -3115,7 +3123,7 @@ function createNewItems() {
                     }
                 }
 
-                for(newDefault of config.mbom.newDefaults) {
+                for(let newDefault of config.mbom.newDefaults) {
                     addFieldToPayload(params.sections, wsMBOM.sections, null, newDefault[0], newDefault[1]);
                 }
 
