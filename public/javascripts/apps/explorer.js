@@ -1632,7 +1632,7 @@ function saveBOMChange() {
                     addFieldToPayload(params.sections, wsItems.sections, null, elemField.fieldId, elemField.value);
                 });
 
-                requests.push($.get('/plm/edit', params));
+                requests.push($.post('/plm/edit', params));
                 elements.push(elemItem);
 
             }
@@ -1668,7 +1668,7 @@ function saveItem() {
         'sections' : getSectionsPayload($('#details-sections')) 
     };
 
-    $.get('/plm/edit', params, function(response) {
+    $.post('/plm/edit', params, function(response) {
         if(response.error) {
             showErrorMessage('Save Failed', response.data.message);
         }
