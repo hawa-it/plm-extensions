@@ -751,6 +751,77 @@ router.get('/edit', function(req, res) {
     });
     
 });
+/* ----- ITEM DETAILS UPDATE ----- */
+router.post('/edit', function(req, res) {
+
+    console.log(' ');
+    console.log('  /edit');
+    console.log(' --------------------------------------------');
+    console.log('  req.body.wsId       = ' + req.body.wsId);
+    console.log('  req.body.dmsId      = ' + req.body.dmsId);
+    console.log('  req.body.link       = ' + req.body.link);
+    console.log('  req.body.sections   = ' + req.body.sections);
+    console.log();
+
+    let prefix   = (typeof req.body.link !== 'undefined') ? req.body.link : '/api/v3/workspaces/' + req.body.wsId + '/items/' + req.body.dmsId;
+    let url      = 'https://' + req.session.tenant + '.autodeskplm360.net' + prefix;
+    let sections = [];
+    let wsId     = req.body.wsId;
+    let dmsId    = req.body.dmsId;
+
+    if (typeof req.body.link !== 'undefined') {
+        wsId  = req.body.link.split('/')[4];
+        dmsId = req.body.link.split('/')[6];
+    }
+
+    for(let section of req.body.sections) {
+
+        let sectionId =  (typeof section.link === 'undefined') ? section.id : section.link.split('/')[6];
+
+        let sect = {
+            'link'   : prefix + '/views/1/sections/' + sectionId,
+            'fields' : []
+        }
+
+        for(field of section.fields) {
+
+            let value = field.value;
+            let type  = (typeof field.type === 'undefined') ? 'String' : field.type;
+
+            type = type.toLowerCase();
+
+            if(type === 'integer') {
+                value = parseInt(field.value);
+            } else if(type === 'multi-linking-picklist') {
+                value = [];
+                for(link of field.value) value.push({'link' : link});
+            } else if(type === 'single selection') {
+                value = { 'link' : value };
+            } else if(type === 'picklist') {
+                if(value === '') value = null;
+            }
+
+            sect.fields.push({
+                '__self__'  : prefix + '/views/1/fields/' + field.fieldId,
+                'urn'       : 'urn:adsk.plm:tenant.workspace.item.view.field:' + req.session.tenant.toUpperCase() + '.' + wsId + '.' + dmsId + '.1.' + field.fieldId,
+                'value'     : value
+            });
+
+        }
+
+        sections.push(sect);
+
+    }
+
+    axios.patch(url, {
+        'sections' : sections
+    }, { headers : req.session.headers }).then(function (response) {
+        sendResponse(req, res, response, false);
+    }).catch(function (error) {
+        sendResponse(req, res, error.response, true);
+    });
+    
+});
 router.post('/update', function(req, res) {
 
     // this is similar to /edit, but implemented as post request to allow for larger headers (i.e. for image uploads)
