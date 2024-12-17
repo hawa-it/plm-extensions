@@ -225,7 +225,6 @@ function processItemDetailsFields(id, sections, fields, data, editable, hideComp
                     }
                 }
             }
-        }
         
         if(excludeSections.indexOf(sectionId) === -1) {
 
