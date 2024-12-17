@@ -270,6 +270,8 @@ function processItemDetailsFields(id, sections, fields, data, editable, hideComp
 
             for(sectionField of section.fields) {
 
+                let fieldEditable = (editable && !isLocked);
+
                 if(!excludeFields.includes(sectionField.link.split('/')[8])) {
 
                     if(sectionField.type === 'MATRIX') {
@@ -280,7 +282,7 @@ function processItemDetailsFields(id, sections, fields, data, editable, hideComp
                                         if(matrixField !== null) {
                                             for(wsField of fields) {
                                                 if(wsField.urn === matrixField.urn)
-                                                    insertField(wsField, data, elemFields, hideComputed, hideReadOnly, editable);
+                                                    insertField(wsField, data, elemFields, hideComputed, hideReadOnly, fieldEditable);
                                             }
                                         }
                                     }
