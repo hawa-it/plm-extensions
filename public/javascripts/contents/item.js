@@ -214,13 +214,14 @@ function processItemDetailsFields(id, sections, fields, data, editable, hideComp
         let sectionId   = section.__self__.split('/')[6];
         let isNew       = true;
         let isLocked   = false;
-        let className   = 'expanded'
+        let className   = 'expanded';
 
         if(!isBlank(data)) {
             if(!isBlank(data.sections)) {
                 for(let dataSection of data.sections) {
                     if(sectionId === dataSection.link.split('/')[10]) {
                         isLocked = dataSection.sectionLocked;
+                        }
                     }
                 }
             }
