@@ -292,7 +292,7 @@ function processItemDetailsFields(id, sections, fields, data, editable, hideComp
                     } else {
                         for(wsField of fields) {
                             if(wsField.urn === sectionField.urn)
-                                insertField(wsField, data, elemFields, hideComputed, hideReadOnly, editable);
+                                insertField(wsField, data, elemFields, hideComputed, hideReadOnly, fieldEditable);
                         }
                     }
                     
