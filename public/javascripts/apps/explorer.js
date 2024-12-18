@@ -335,27 +335,21 @@ function openSelectedItem(elemClicked)       { openItem(elemClicked.attr('data-l
 function openItem(link) {
 
     $('body').addClass('screen-main').removeClass('screen-landing');
+    $('#select-version').children().remove();
     
     $.get('/plm/versions', { link : link}, function(response) {
-        
+
         for(let version of response.data.versions) {
 
-            let label = (version.status === 'WORKING') ? 'WORKING' : 'Rev ' + version.version;
+            let label = (isBlank(version.version)) ? version.status : 'Rev ' + version.version;
+
+            if(version.version === 'OBS') label = 'OBSOLETE';
 
              $('<option></option>').appendTo($('#select-version'))
                 .attr('value', version.item.link)
+                .attr('data-title', version.item.title)
                 .attr('data-status', version.status)
                 .html(label);
-
-            if(version.item.link === link) {
-
-                let title       = version.item.title;
-                document.title  = title;
-                context.title   = title;
-
-                $('#header-subtitle').html(title);
-
-            }
 
         }
 
@@ -369,11 +363,18 @@ function selectItemVersion() {
 
     let linkVersion = $('#select-version').val();
     let split       = linkVersion.split('/');
-    let status      = $('#select-version').find(':selected').attr('data-status');
+    let selOption   = $('#select-version').find(':selected');
+    let title       = selOption.attr('data-title');
+    let status      = selOption.attr('data-status');
     let revBias     = (status === 'WORKING') ? 'working' : 'release';
 
     window.history.replaceState(null, null, '/explorer?wsid=' + split[4] + '&dmsid=' + split[6] + '&theme=' + theme);
 
+    document.title  = title;
+    context.title   = title;
+    context.link    = linkVersion;
+
+    $('#header-subtitle').html(title).show();
     $('#details').attr('data-link', linkVersion);
     $('#bom-table-tree').html('');
     $('#bom-table-flat').html('');
