@@ -1690,8 +1690,9 @@ function saveItem() {
         'link'     : $('#details').attr('data-link'),
         'sections' : getSectionsPayload($('#details-sections')) 
     };
-
+    console.log(params);
     $.post('/plm/edit', params, function(response) {
+        console.log(response);
         if(response.error) {
             showErrorMessage('Save Failed', response.data.message);
         }
