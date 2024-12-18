@@ -89,6 +89,9 @@ $(document).ready(function() {
 function setUIEvents() {
 
     // Header Toolbar
+    $('#select-version').change(function() {
+        selectItemVersion();
+    });
     $('#button-toggle-recents').click(function() {
         $('body').toggleClass('no-recents');
     });
@@ -329,44 +332,63 @@ function clickSearchResult(elemClicked)      { openSelectedItem(elemClicked); }
 function clickWorkspaceViewItem(elemClicked) { openSelectedItem(elemClicked); }
 function clickBookmarkItem(elemClicked)      { openSelectedItem(elemClicked); }
 function openSelectedItem(elemClicked)       { openItem(elemClicked.attr('data-link'), elemClicked.attr('data-title')); }
-function openItem(link, title) {
+function openItem(link) {
 
-    let split = link.split('/');
+    $('body').addClass('screen-main').removeClass('screen-landing');
+    
+    $.get('/plm/versions', { link : link}, function(response) {
+        
+        for(let version of response.data.versions) {
+
+            let label = (version.status === 'WORKING') ? 'WORKING' : 'Rev ' + version.version;
+
+             $('<option></option>').appendTo($('#select-version'))
+                .attr('value', version.item.link)
+                .attr('data-status', version.status)
+                .html(label);
+
+            if(version.item.link === link) {
+
+                let title       = version.item.title;
+                document.title  = title;
+                context.title   = title;
+
+                $('#header-subtitle').html(title);
+
+            }
+
+        }
+
+        $('#select-version').val(link);
+        selectItemVersion();
+
+    });
+
+}
+function selectItemVersion() {
+
+    let linkVersion = $('#select-version').val();
+    let split       = linkVersion.split('/');
+    let status      = $('#select-version').find(':selected').attr('data-status');
+    let revBias     = (status === 'WORKING') ? 'working' : 'release';
 
     window.history.replaceState(null, null, '/explorer?wsid=' + split[4] + '&dmsid=' + split[6] + '&theme=' + theme);
 
-    $('body').addClass('screen-main').removeClass('screen-landing');
-    $('#details').attr('data-link', link);
-    $('#header-subtitle').html('');
+    $('#details').attr('data-link', linkVersion);
     $('#bom-table-tree').html('');
+    $('#bom-table-flat').html('');
     $('.kpi').remove();
     $('#dashboard-processing').show();
     $('#bom-processing').show();
 
-    context.link = link;
-    
-    if(isBlank(title)) {
-        $.get('/plm/descriptor', { 'link' : link}, function(response) {
-            $('#header-subtitle').html(response.data);
-            document.title = documentTitle + ': ' + response.data;
-            context.title = response.data;
-        });
-    } else {
-        $('#header-subtitle').html(title);
-        document.title = documentTitle + ': ' + title;
-        context.title = title;
-    }
-
-    for(let kpi of config.explorer.kpis) {
-        kpi.data = [];
-    }
+    for(let kpi of config.explorer.kpis) kpi.data = [];
 
     viewerLeaveMarkupMode();
-    getBOMData(link);
-    insertViewer(link);
-    setItemDetails(link);
-    insertAttachments(link, paramsAttachments);
-    insertChangeProcesses(link, paramsProcesses);
+    getBOMData(linkVersion, revBias);
+    insertViewer(linkVersion);
+    setItemDetails(linkVersion);
+    insertAttachments(linkVersion, paramsAttachments);
+    insertChangeProcesses(linkVersion, paramsProcesses);
 
 }
 
@@ -439,12 +461,12 @@ function initViewerDone() {
 
 
 // Insert Selected item's data
-function getBOMData(link) {
+function getBOMData(link, revBias) {
     
     let params = {
         'link'          : link,
         'depth'         : 10,
-        'revisionBias'  : revisionBias,
+        'revisionBias'  : revBias,
         'viewId'        : wsItems.viewId
     }
 
