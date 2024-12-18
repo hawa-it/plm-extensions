@@ -1182,7 +1182,7 @@ function getSectionsPayload(elemParent) {
             // if(!elemField.hasClass('multi-picklist')) {
                 if(fieldData.value !== null) {
                     if(typeof fieldData.value !== 'undefined') {
-                        if(fieldData.value !== '') {
+                      //  if(fieldData.value !== '') {
                             section.fields.push({
                                 'fieldId'   : fieldData.fieldId,
                                 'link'      : fieldData.link,
@@ -1191,7 +1191,7 @@ function getSectionsPayload(elemParent) {
                                 'title'     : fieldData.title,
                                 'typeId'    : fieldData.typeId,
                             });
-                        }
+                      //  }
                     }
                 }
             // }
