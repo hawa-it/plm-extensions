@@ -87,7 +87,7 @@ exports.config = {
     printViewSettings : false,
     
     // Provide key workspaces information
-    items          : { wsId : 79, fieldIdNumber : 'ARTIKEL', name : 'Articles', fieldIdPDM : 'PDM_ITEM_ID' },
+    items          : { wsId : 52, fieldIdNumber : 'ARTIKEL', name : 'Articles', fieldIdPDM : 'PDM_ITEM_ID' },
     problemReports : { wsId : 82 },
     
     // Set default settings for all viewer instances
