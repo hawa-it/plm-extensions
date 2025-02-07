@@ -235,7 +235,7 @@ exports.config = {
     }],
 
     explorer : {
-        bomViewName          : 'Basic', // Details
+        bomViewName          : 'Details', // Details Basic
         fieldIdPRImage       : 'IMAGE_1',
         fieldIdPRContext     : 'AFFECTED_ITEM',
         wsIdSupplierPackages : 147,
@@ -245,11 +245,11 @@ exports.config = {
                 { value : 'Pre-Release', color : colors.list[2], vector : vectors.yellow },
                 { value : 'Production',  color : colors.list[4], vector : vectors.green  }
             ]},
-            { id : 'change', title : 'Pending Change', fieldId : 'WORKING_CHANGE_ORDER', type : 'non-empty', style : 'counters', data : [
+            { id : 'change', title : 'Pending Change', fieldId : 'Change Pending', type : 'non-empty', style : 'counters', data : [
                 { value : 'Yes', color : colors.list[0], vector : vectors.red },
                 { value : 'No' , color : colors.list[4], vector : vectors.green }
             ]},
-            { id : 'change-order', title : 'Change Orders', fieldId : 'WORKING_CHANGE_ORDER', type : 'value',  style : 'bars',  data : [] },
+            { id : 'change-order', title : 'Change Orders', fieldId : 'Change Pending', type : 'value',  style : 'bars',  data : [] },
             { id : 'revision', title : 'Revision', fieldId : 'REVISION', type : 'value', style : 'bars', data : [] },
             { id : 'status', title : 'Status', fieldId : 'STATUS', type : 'value', style : 'counters', data : [
                 { value : 'Superseded', color : colors.list[0], vector : vectors.red    },
@@ -257,49 +257,49 @@ exports.config = {
                 { value : 'Latest'    , color : colors.list[4], vector : vectors.green  }
             ]},   
             { id : 'release-date', title : 'Release Date', fieldId : 'RELEASE_DATE', type : 'days', style : 'bars', data : [] },
-            { id : 'type', title : 'Type', fieldId : 'TYPE', type : 'value', style : 'bars', data : [] },
-            { id : 'top-level-class-name', title : 'Top Level Class', fieldId : 'TOP_LEVEL_CLASS', type : 'value', style : 'bars', data : [] },
-            { id : 'class-name', title : 'Class', fieldId : 'CLASS_NAME', type : 'value', style : 'bars', data : [] },
-            { id : 'pdm-category', title : 'PDM Category', fieldId : 'PDM_CATEGORY', type : 'value', style : 'bars', data : [] },
-            { id : 'pdm-location', title : 'PDM Location', fieldId : 'PDM_LOCATION', type : 'value', style : 'bars', data : [] },
-            { id : 'pdm-last-modification-date', title : 'PDM Last Modification', fieldId : 'PDM_LAST_MODIFICATION_DATE', type : 'days', style : 'bars', data : [] },
-            { id : 'responsible-designer', title : 'Responsible Designer', fieldId : 'RESPONSIBLE_DESIGNER', type : 'value', style : 'bars', data : [] },
+            { id : 'type', title : 'Type', fieldId : 'TEILEART', type : 'value', style : 'bars', data : [] },
+            { id : 'top-level-class-name', title : 'Top Level Class', fieldId : 'TOP_LEVEL_CLASS', type : 'value', style : 'bars', data : [] }, // nicht genutzt
+            { id : 'class-name', title : 'Class', fieldId : 'CLASS_NAME', type : 'value', style : 'bars', data : [] }, // nicht genutzt
+            { id : 'pdm-category', title : 'PDM Category', fieldId : 'CATEGORY', type : 'value', style : 'bars', data : [] },
+            { id : 'pdm-location', title : 'PDM Location', fieldId : 'SOURCE', type : 'value', style : 'bars', data : [] },
+            { id : 'pdm-last-modification-date', title : 'PDM Last Modification', fieldId : 'VAULT_GEZEICHNET_AM', type : 'days', style : 'bars', data : [] },
+            { id : 'responsible-designer', title : 'Responsible Designer', fieldId : 'VAULT_GEZEICHNET_VON', type : 'value', style : 'bars', data : [] },
             { id : 'spare-part', title : 'Spare Part', fieldId : 'SPARE_WEAR_PART', type : 'value', style : 'counters', data : [
                 { value : '-'        , color : colors.list[0], vector : vectors.red },
                 { value : 'Wear Part' , color : colors.list[2], vector : vectors.yellow },
-                { value : 'Spare Part', color : colors.list[4], vector : vectors.green }
+                { value : 'Spare Part', color : colors.list[4], vector : vectors.green } // Nicht benutzt
             ]},
             { id : 'has-pending-packages', title : 'Has Pending Packages', fieldId : 'HAS_PENDING_PACKAGES', type : 'value', style : 'counters', data : [
                 { value : 'Yes' , color : colors.list[0], vector : vectors.red },
                 { value : '-'   , color : colors.list[2], vector : vectors.yellow },
-                { value : 'No'  , color : colors.list[4], vector : vectors.green }
+                { value : 'No'  , color : colors.list[4], vector : vectors.green } // Nicht benutzt
             ]},
             { id : 'make-or-buy', title : 'Make or Buy', fieldId : 'MAKE_OR_BUY', type : 'value', style : 'counters', data : [
                 { value : 'Buy' , color : colors.list[0], vector : vectors.red },
                 { value : '-'   , color : colors.list[2], vector : vectors.yellow },
                 { value : 'Make', color : colors.list[4], vector : vectors.green }
             ]},
-            { id : 'vendor', title : 'Vendor', fieldId : 'VENDOR', type : 'value', style : 'bars', data : [] },
-            { id : 'country', title : 'Country', fieldId : 'COUNTRY', type : 'value', style : 'bars', data : [] },
-            { id : 'total-cost', title : 'Total Cost', fieldId : 'TOTAL_COST', type : 'value', style : 'bars', data : [] },
-            { id : 'lead-time', title : 'Lead Time', fieldId : 'LEAD_TIME', type : 'value', sort : 'value', style : 'bars', data : [] },
+            { id : 'vendor', title : 'Vendor', fieldId : 'VENDOR', type : 'value', style : 'bars', data : [] }, // Nicht benutzt
+            { id : 'country', title : 'Country', fieldId : 'COUNTRY', type : 'value', style : 'bars', data : [] }, // Nicht benutzt
+            { id : 'total-cost', title : 'Total Cost', fieldId : 'TOTAL_COST', type : 'value', style : 'bars', data : [] }, // Nicht benutzt
+            { id : 'lead-time', title : 'Lead Time', fieldId : 'LEAD_TIME', type : 'value', sort : 'value', style : 'bars', data : [] }, // Nicht benutzt
             { id : 'long-lead-time', title : 'Long Lead Time', fieldId : 'LONG_LEAD_TIME', type : 'value', style : 'counters', data : [
                 { value : 'Yes' , color : colors.list[0], vector : vectors.red },
                 { value : '-'   , color : colors.list[2], vector : vectors.yellow },
-                { value : 'No'  , color : colors.list[4], vector : vectors.green }
+                { value : 'No'  , color : colors.list[4], vector : vectors.green } // Nicht benutzt
             ]},
             { id : 'material', title : 'Material', fieldId : 'MATERIAL', type : 'value', style : 'bars', data : [] },
-            { id : 'total-weight', title : 'Total Weight', fieldId : 'TOTAL_WEIGHT', type : 'value', style : 'bars', data : [] },
+            { id : 'total-weight', title : 'Total Weight', fieldId : 'ITEM_WEIGHT', type : 'value', style : 'bars', data : [] },
             { id : 'quality-inspection-required', title : 'Quality Inspection Required', fieldId : 'INSPECTION_REQUIRED', type : 'value', style : 'counters', data : [
                 { value : 'Yes' , color : colors.list[0], vector : vectors.red },
                 { value : '-'   , color : colors.list[2], vector : vectors.yellow },
-                { value : 'No'  , color : colors.list[4], vector : vectors.green }
+                { value : 'No'  , color : colors.list[4], vector : vectors.green } // Nicht benutzt
             ]},
             { id : 'quality-inspection-result', title : 'Latest Quality Inspection Result', fieldId : 'LATEST_QI_RESULT', type : 'value', style : 'bars', data : [
                 { value : '-'          , color : colors.list[3], vector : vectors.list[0] },
                 { value : 'FAIL'       , color : colors.list[0], vector : vectors.red },
                 { value : 'In Progress', color : colors.list[2], vector : vectors.yellow },
-                { value : 'PASS'       , color : colors.list[4], vector : vectors.green }
+                { value : 'PASS'       , color : colors.list[4], vector : vectors.green } // Nicht benutzt
             ]},
             { id : 'reach', title : 'REACH', fieldId : 'REACH', type : 'value', style : 'bars', data : [
                 { value : 'Not Compliant' , color : colors.list[0], vector : vectors.red },
@@ -412,8 +412,8 @@ exports.config = {
 			['MBOM_COPY', 'true' ]
         ],
         searches : [
-            { 'title' : 'Purchased Parts', 'query' : 'ITEM_DETAILS:CATEGORY="standard part"' },
-            { 'title' : 'Packaging Parts', 'query' : 'ITEM_DETAILS:CATEGORY%Packaging_Parts' }		
+            { 'title' : 'Purchased Parts', 'query' : 'ITEM_DETAILS:CATEGORY="Standard Part"' },
+            { 'title' : 'Packaging Parts', 'query' : 'ITEM_DETAILS:CATEGORY="Packaging Parts"' }		
         //    { title : 'Purchased Parts', query : 'ITEM_DETAILS:MAKE_OR_BUY%3DBuy' },
         //    { title : 'Packaging Parts', query : 'ITEM_DETAILS:TYPE%3DPackaging'  },
         //    { title : 'Processes'      , query : 'ITEM_DETAILS:TYPE%3DProcess'    }
@@ -446,7 +446,7 @@ exports.config = {
 
     portal : {
         autoClick        : true,
-        workspacesIn     : ['Items'],
+        workspacesIn     : ['Articles'], //Items
         expandSections   : ['Basic'],
         sectionsExcluded : ['AML Summary', 'Quality Inspection', 'Sustainability', 'Compliance', 'Others'],
         sectionsIncluded : [],
@@ -479,7 +479,7 @@ exports.config = {
     },  
 
     portfolio : {
-        bomViewName       : 'Basic',
+        bomViewName       : 'Details', //Basic
         hierarchy         : ['Product Categories', 'Product Lines', 'Products'],
         viewerFeatures    : {
             contextMenu   : true,
