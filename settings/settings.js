@@ -380,7 +380,7 @@ exports.config = {
     },
 
     mbom : {
-        wsIdEBOM                      : '79',
+        wsIdEBOM                      : '52',
         wsIdMBOM                      : '79',
         bomViewNameEBOM               : 'MBOM Transition',
         bomViewNameMBOM               : 'MBOM Transition',
