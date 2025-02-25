@@ -132,7 +132,7 @@ function initViewer(id, viewables, params) {
     let options = {
         // logLevel    : 1,
         env         : 'AutodeskProduction',
-        api         : 'derivativeV2_EU',  // for models uploaded to EMEA change this option to 'derivativeV2_EU'
+        api         : 'derivativeV2',  // for models uploaded to EMEA change this option to 'derivativeV2_EU'
         // env: 'AutodeskProduction2',
         // api: 'streamingV2',   // for models uploaded to EMEA change this option to 'streamingV2_EU'
         getAccessToken  : function(onTokenReady) {
