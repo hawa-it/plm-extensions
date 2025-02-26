@@ -138,7 +138,7 @@ function getWorkspaceIds(callback) {
 function getProductCatgories() {
 
     insertResults(workspaces[0].wsId, [{
-        field       : 'NUMBER',
+        field       : 'TITLE',
         type        : 0,
         comparator  : 21,
         value       : ''
@@ -146,9 +146,8 @@ function getProductCatgories() {
         id               : 'landing-lines-tiles',
         hideHeader       : true,
         layout           : 'grid',
-        tileSize         : 'xxl',
-        tileImage        : true,
-        tileImageFIeldId : 'IMAGE',
+        contentSize      : 'xxl',
+        tileImage        : 'IMAGE',
         tileTitle        : 'MARKETING_NAME_' + languageId,
         tileSubtitle     : 'MARKETING_TEXT_' + languageId,
         useCache         : true,
@@ -190,9 +189,8 @@ function selectProductCategory(elemClicked) {
         id               : 'lines-tiles',
         hideHeader       : true,
         layout           : 'list',
-        tileSize         : 'xxl',
-        tileImage        : true,
-        tileImageFIeldId : 'IMAGE',
+        contentSize      : 'xxl',
+        tileImage        : 'IMAGE',
         tileTitle        : 'MARKETING_NAME_' + languageId,
         tileSubtitle     : 'MARKETING_TEXT_' + languageId,
         useCache         : true,
@@ -373,9 +371,8 @@ function selectProductLine(elemClicked) {
         id               : 'products-tiles',
         hideHeader       : true,
         layout           : 'grid',
-        tileSize         : 'xxl',
-        tileImage        : true,
-        tileImageFIeldId : 'IMAGE',
+        contentSize      : 'xxl',
+        tileImage        : 'IMAGE',
         tileTitle        : 'MARKETING_NAME_' + languageId,
         tileSubtitle     : 'MARKETING_TEXT_' + languageId,
         useCache         : false,
@@ -422,7 +419,7 @@ function selectProduct(elemClicked) {
                 { type : 'details'     , className : 'surface-level-1', params : { id : 'item-section-details', hideSections : true, sectionsIn: ['Specification'], headerLabel : 'Technical Specification' } },
                 { type : 'grid'        , className : 'surface-level-1', params : { id : 'item-section-grid'   , headerLabel : 'Variants', columnsIn : ['Title', 'Region', 'SKU', 'Target Launch'] } },
                 { type : 'images'      , className : 'surface-level-1', params : { id : 'item-section-images' , layout : 'grid'} },
-                { type : 'attachments' , className : 'surface-level-1', params : { id : 'item-section-attachments', editable : false, tileSize : 's' , singleToolbar : 'controls'} },
+                { type : 'attachments' , className : 'surface-level-1', params : { id : 'item-section-attachments', editable : false, contentSize : 's' , singleToolbar : 'controls'} },
                 { type : 'bom'         , className : 'surface-level-1', params : { 
                     id           : 'item-section-bom', 
                     bomViewName  : config.portfolio.bomViewName,

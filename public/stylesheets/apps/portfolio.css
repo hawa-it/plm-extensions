@@ -10,15 +10,14 @@
 #header-subtitle {
     display : none;
 }
-.tiles.grid.xxl .tile {
-    height : 456px;
-}
 .tiles.grid.xxl .tile-title {
     font-size   : 20px;
     line-height : 36px;
 }
 .tiles.grid.xxl .tile-subtitle {
-    max-height      : 106px;
+    height          : 112px;
+    max-height      : 112px;
+    min-height      : 112px;
     overflow-y      : auto;
     text-overflow   : ellipsis;
     white-space     : wrap;
@@ -262,10 +261,12 @@
     line-height     : 15px;
     padding         : 0px;
 }
-.product {
-    height : 580px;
+#landing-tiles-recents .tile,
+#landing-lines-tiles-content .tile,
+#landing-tiles-pinned .tile,
+#products-tiles-content .tile {
+    height : 456px;
 }
-
 
 
 /*  LINES */
@@ -308,14 +309,8 @@
     text-align      : left;
     width           : 640px;
 }
-#products-tiles  .tile-image {
-    font-size   : 164px;
-    height      : 200px;
+#products-tiles .tile-counter {
     line-height : 200px;
-    min-height  : 200px;
-    max-width   : 320px;
-    min-width   : 320px;
-    width       : 320px;
 }
 #products-tiles .tile-details {
     margin : 20px 30px;

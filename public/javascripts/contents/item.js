@@ -1616,6 +1616,8 @@ function insertDetailsFields(id, sections, fields, data, settings, callback) {
 
     $('#' + id + '-processing').hide();
 
+    if(isBlank(settings)) settings = {};
+
     let elemContent  = $('#' + id + '-content');
     let sectionsIn   = settings.sectionsIn;
     let sectionsEx   = settings.sectionsEx;
@@ -1626,7 +1628,8 @@ function insertDetailsFields(id, sections, fields, data, settings, callback) {
     elemContent.scrollTop();
     settings.derived = [];
 
-    if(isBlank(settings.expandSections)) settings.expandSections = [];
+    if(isBlank(settings.expandSections))   settings.expandSections   = [];
+    if(isBlank(settings.collapseContents)) settings.collapseContents = false;
 
     if(!settings.editable) elemContent.addClass('readonly');
 
@@ -1678,14 +1681,12 @@ function insertDetailsFields(id, sections, fields, data, settings, callback) {
         let sectionId   = section.__self__.split('/')[6];
         let isNew       = true;
         let sectionLock = false;
-        let className   = 'expanded';
+        let className   = (settings.collapseContents) ? 'collapsed' : 'expanded';
         let elemSection = $('<div></div>');
 
-        if(!isBlank(settings)) {
-            if(!isBlank(settings.collapseContents)) {
-                if(!settings.expandSections.includes(section.name)) {
-                    className = (settings.collapseContents) ? 'collapsed' : 'expanded';
-                }
+        if(!isBlank(settings.expandSections)) {
+            if(settings.expandSections.length > 0) {
+                className = (settings.expandSections.includes(section.name)) ? 'expanded' : 'collapsed';
             }
         }
 
@@ -2233,6 +2234,12 @@ function getEditableFields(fields) {
                     case 'Check Box': 
                         elemControl = $('<input>');
                         elemControl.attr('type', 'checkbox');
+                        break;
+
+                    case 'Date':
+                        elemControl = $('<input>');
+                        elemControl.attr('type', 'date');
+                        break;
 
                     case 'Float': 
                     case 'Integer': 
@@ -2254,12 +2261,12 @@ function getEditableFields(fields) {
                 }
 
                 result.push({
-                    'id'      : fieldId,
-                    'title'   : field.name,
-                    'link'    : field.__self__,
-                    'type'    : field.type.title,
-                    'typeId'  : field.type.link.split('/')[4],
-                    'control' : elemControl
+                    id      : fieldId,
+                    title   : field.name,
+                    link    : field.__self__,
+                    type    : field.type.title,
+                    typeId  : field.type.link.split('/')[4],
+                    control : elemControl
                 });
 
             }
@@ -2595,7 +2602,7 @@ function insertAttachments(link, params) {
         headerLabel : 'Attachments',
         layout      : 'list',
         tileIcon    : 'icon-pdf',
-        tileSize    : 's',
+        contentSize : 's',
     }, [
         [ 'bookmark'          , false ],
         [ 'filterByType'      , false ],
@@ -3433,7 +3440,9 @@ function insertGridData(id) {
                 elemTable.addClass('fixed-header');
 
                 for(let column of columns) {
-                    $('<th></th>').appendTo(elemTHRow).html(column.name);
+                    $('<th></th>').appendTo(elemTHRow)
+                        .addClass('column-' + column.fieldId)
+                        .html(column.name);
                 }
 
                 for(let row of responses[0].data) {
@@ -3442,9 +3451,9 @@ function insertGridData(id) {
                         .addClass('content-item')
                         .click(function(e) {
                             clickGridRow($(this), e);
-                            if(!isBlank(settings.grid[id].onItemClick)) settings.grid[id].onItemClick($(this));
+                            if(!isBlank(settings.grid[id].onClickItem)) settings.grid[id].onClickItem($(this));
                         }).dblclick(function() {
-                            if(!isBlank(settings.grid[id].onItemDblClick)) settings.grid[id].onItemDblClick($(this));
+                            if(!isBlank(settings.grid[id].onDblClickItem)) settings.grid[id].onDblClickItem($(this));
                         });
 
                     for(let field of row.rowData) {
@@ -3489,9 +3498,12 @@ function insertGridData(id) {
                                             
                                             case 'Single Selection':
                                             // case 'Radio Button':
-                                                // console.log(field);
-                                                // value = getFlatBOMCellValue(response.data, itemLink, field.__self__.urn, 'link');
-                                                elemControl.val(value);
+                                                let linkValue = getGridRowValue(row, field.fieldId, '', 'link');
+                                                let elemValue = $('<option></option>')
+                                                    .attr('value', linkValue)
+                                                    .html(value)
+                                                elemControl.append(elemValue);
+                                                elemControl.val(linkValue);
                                                 break;
                 
                                             default:
@@ -3541,6 +3553,8 @@ function insertGridData(id) {
 
         }
 
+        console.log('10');
+
         finishPanelContentUpdate(id, settings.grid[id]);
         insertGridDataDone(id, responses[0].data, responses[1].data);
 
@@ -3588,6 +3602,7 @@ function saveGridData(id) {
 function insertBOM(link , params) {
 
     if(isBlank(link)) return;
+    if(isBlank(params)) params = {};
 
     let id          = isBlank(params.id) ? 'bom' : params.id;
     let hideDetails = true;
@@ -3729,7 +3744,8 @@ function insertBOM(link , params) {
         $('<div></div>').appendTo($('#' + id))
             .attr('id', id + '-bom-path')
             .addClass('bom-path-empty')
-            .addClass('bom-path');
+            .addClass('bom-path')
+            .addClass('no-scrollbar');
         $('#' + id).addClass('with-bom-path');
     } 
 
@@ -4566,6 +4582,142 @@ function updateBOMPath(elemClicked) {
     }
 
 }
+
+
+
+// Insert selected BOM items in flat list
+function insertBOMPartsList(link , params) {
+
+    if(isBlank(link)) return;
+    if(isBlank(params)) params = {};
+
+    let id = isBlank(params.id) ? 'bom-parts-list' : params.id;
+    
+    settings.partList[id] = getPanelSettings(link, params, {
+        headerLabel : 'BOM Parts List'
+    }, [
+        [ 'bomViewName'     , 'Default View' ],
+        [ 'depth'           , 10             ],
+        [ 'hideParents'     , false          ],
+        [ 'revisionBias'    , 'release'      ],
+        [ 'selectItems'     , {}             ]
+    ]);
+
+    settings.partList[id].load = function() { insertBOMPartsListData(id); }
+
+    genPanelTop(id, settings.partList[id], 'partList');
+    genPanelHeader(id, settings.partList[id]);
+    genPanelOpenSelectedInPLMButton(id, settings.partList[id]);
+    genPanelSelectionControls(id, settings.partList[id]);
+    genPanelSearchInput(id, settings.partList[id]);
+    genPanelReloadButton(id, settings.partList[id]);
+    genPanelContents(id, settings.partList[id]);
+
+    insertBOMPartsListDone(id);
+
+    getBOMViewId(settings.partList[id]);
+
+}
+function insertBOMPartsListDone(id) {}
+function getBOMViewId( settings) {
+
+    $.get('/plm/bom-views-and-fields', { link : settings.link, useCache : settings.useCache }, function(response) {
+
+        for(let bomView of response.data) {
+            if(bomView.name === settings.bomViewName) {
+                settings.viewId = bomView.id;
+                settings.viewFields = bomView.fields;
+                settings.load();
+            }
+        }
+
+    });
+
+}
+function insertBOMPartsListData(id) {
+
+    settings.partList[id].timestamp = startPanelContentUpdate(id);
+    settings.partList[id].columns   = [];
+
+    let params = {
+        link          : settings.partList[id].link,
+        depth         : settings.partList[id].depth,
+        revisionBias  : settings.partList[id].revisionBias,
+        viewId        : settings.partList[id].viewId,
+        timestamp     : settings.partList[id].timestamp
+    }
+
+    $.get('/plm/bom', params, function(response) {
+
+        if(stopPanelContentUpdate(response, settings.partList[id])) return;
+
+        let parts = getBOMPartsList(settings.partList[id], response.data);
+        let items = [];
+
+        if(parts.length > 0) {
+            for(let field of parts[0].fields) {
+                if(includePanelTableColumn(field.displayName, settings.partList[id], settings.partList[id].columns.length)) {
+                    settings.partList[id].columns.push(field);
+                }
+            }
+        }
+
+        console.log(parts);
+
+        for(let part of parts) {
+
+            if((!settings.partList[id].hideParents) || (!part.hasChildren)) {
+
+                let contentItem = genPanelContentItem(settings.partList[id], {
+                    link  : part.link,
+                    title : part.title
+                });
+
+                for(let field of part.fields) {
+                
+                    if(field.fieldId === config.items.fieldIdNumber            ) contentItem.partNumber = field.value;
+                    if(field.fieldId === settings.partList[id].tileImageFieldId) contentItem.imageId    = field.value;
+                    if(field.fieldId === settings.partList[id].tileTitle       ) contentItem.title      = field.value;
+                    if(field.fieldId === settings.partList[id].tileSubtitle    ) contentItem.subtitle   = field.value;
+                    if(field.fieldId === settings.partList[id].groupBy         ) contentItem.group      = field.value;
+                    if(field.fieldId === 'DESCRIPTOR'                          ) contentItem.descriptor = field.value;
+                    if(field.fieldId === 'WF_CURRENT_STATE'                    ) contentItem.status     = field.value;
+                
+                    for(let tileDetail of contentItem.details) {
+                        if(field.fieldId === tileDetail.fieldId) {
+                            tileDetail.value = field.fieldData.value;
+                        }
+                    }
+                    for(let column of settings.partList[id].columns) {
+
+                        if(field.fieldId === column.fieldId) {
+                        
+                            let value = field.value;
+                        
+                            contentItem.data.push({
+                                fieldId : column.fieldId,
+                                value   : value
+                            });
+
+                        }
+
+                    }
+
+                }
+
+                items.push(contentItem);
+            }
+
+        }
+
+        insertBOMPartsListDataDone(id, response);
+        finishPanelContentUpdate(id, settings.partList[id], items);
+
+    });
+
+}
+function insertBOMPartsListDataDone(id, response) {}
+
 
 
 
@@ -5479,26 +5631,30 @@ function insertViewer(link, params) {
 
     //  Set defaults for optional parameters
     // --------------------------------------
-    let id              = 'viewer';    // ID of the DOM element where the viewer should be inserted
-    let fileId          = '';         // Select a specific file to be rendered by providing its unique ID
-    let filename        = '';         // Select a specific file to be rendered by providing its filename (matches the Title column in the attachments tab)
-    let extensionsIn    = [];         // Defines the list of attachment file types to take into account when requesting the possible list of viewable files. Only file types included in this list will be taken into account.
-    let extensionsEx    = [];         // Defines the list of attachment file types to exclued when requesting the possible list of viewable files. Files with an extension listed will not be considered as valid viewable.
-    let settings        = {};
-    
-    if( isBlank(params)                 )       params = {};
-    if(!isBlank(params.id)              )           id = params.id;
-    if(!isBlank(params.fileId)          )       fileId = params.fileId;
-    if(!isBlank(params.filename)        )     filename = params.filename;
-    if(!isBlank(params.extensionsIn)    ) extensionsIn = params.extensionsIn;
-    if(!isBlank(params.extensionsEx)    ) extensionsEx = params.extensionsEx;
-    
-    if(!isBlank(params.backgroundColor) )  settings.backgroundColor = params.backgroundColor;
-    if(!isBlank(params.antiAliasing)    )     settings.antiAliasing = params.antiAliasing;
-    if(!isBlank(params.ambientShadows)  )   settings.ambientShadows = params.ambientShadows;
-    if(!isBlank(params.groundReflection)) settings.groundReflection = params.groundReflection;
-    if(!isBlank(params.groundShadow)    )     settings.groundShadow = params.groundShadow;
-    if(!isBlank(params.lightPreset)     )      settings.lightPreset = params.lightPreset;
+    let id          = 'viewer';
+    let fileId      = '';         // Select a specific file to be rendered by providing its unique ID
+    let filename    = '';         // Select a specific file to be rendered by providing its filename (matches the Title column in the attachments tab) 
+
+    if( isBlank(params)         )   params = {};
+    if(!isBlank(params.id)      )       id = params.id;
+    if(!isBlank(params.fileId)  )   fileId = params.fileId;
+    if(!isBlank(params.filename)) filename = params.filename;
+
+    settings.viewer[id]               = {};
+    settings.viewer[id].link          = link;
+    settings.viewer[id].timeStamp     = new Date().getTime();
+    settings.viewer[id].extensionsIn  = ['dwf','dwfx','iam','ipt','stp','step','sldprt','pdf'];
+    settings.viewer[id].extensionsEx  = [];
+    settings.viewer[id].restartViewer = params.restartViewer || false;
+
+    if(!isBlank(params.extensionsIn)    ) settings.viewer[id].extensionsIn     = params.extensionsIn;
+    if(!isBlank(params.extensionsEx)    ) settings.viewer[id].extensionsEx     = params.extensionsEx;
+    if(!isBlank(params.backgroundColor) ) settings.viewer[id].backgroundColor  = params.backgroundColor;
+    if(!isBlank(params.antiAliasing)    ) settings.viewer[id].antiAliasing     = params.antiAliasing;
+    if(!isBlank(params.ambientShadows)  ) settings.viewer[id].ambientShadows   = params.ambientShadows;
+    if(!isBlank(params.groundReflection)) settings.viewer[id].groundReflection = params.groundReflection;
+    if(!isBlank(params.groundShadow)    ) settings.viewer[id].groundShadow     = params.groundShadow;
+    if(!isBlank(params.lightPreset)     ) settings.viewer[id].lightPreset      = params.lightPreset;
 
     let elemInstance = $('#' + id).children('.adsk-viewing-viewer');
     if(elemInstance.length > 0) elemInstance.hide();
@@ -5518,11 +5674,13 @@ function insertViewer(link, params) {
         link          : link, 
         fileId        : fileId, 
         filename      : filename, 
-        extensionsIn  : extensionsIn, 
-        extensionsEx  : extensionsEx 
+        extensionsIn  : settings.viewer[id].extensionsIn, 
+        extensionsEx  : settings.viewer[id].extensionsEx, 
+        timeStamp     : settings.viewer[id].timeStamp
     }, function(response) {
 
-        if($('#' + id).attr('data-link') !== response.params.link) return;
+        if(settings.viewer[id].link !== response.params.link) return;
+        if(settings.viewer[id].timeStamp != response.params.timeStamp) return;
 
         let suffix3D = ['.iam','.ipt','.stp','.step','.sldprt'];
 
@@ -5546,7 +5704,7 @@ function insertViewer(link, params) {
             if(elemInstance.length > 0) elemInstance.show();
 
             insertViewerDone(id, response.data);
-            initViewer(id, viewables, settings);
+            initViewer(id, viewables, settings.viewer[id]);
 
         } else {
 
@@ -5569,8 +5727,6 @@ function insertViewerMarkups(contentId, link, params, sections, fields) {
     let linkViewable   = (isBlank(params.fieldIdViewable)) ? link : getSectionFieldValue(sections, params.fieldIdViewable, '', 'link');
     let allImageFields = getAllImageFieldIDs(fields);
     let elemTop        = $('#' + contentId);
-    // let id            = params.id;
-    // let params         = content.params;
 
     if(isBlank(params.markupsImageFields)) params.markupsImageFields = [];
 
@@ -5579,21 +5735,25 @@ function insertViewerMarkups(contentId, link, params, sections, fields) {
             params.markupsImageFields = allImageFields
         } else {
             for(let imageField of allImageFields) {
-                console.log(imageField);
                 if(imageField.indexOf(params.markupsImageFieldsPrefix) === 0) params.markupsImageFields.push(imageField);
             }
         }
     }
 
+    let elemViewer = $('#' + contentId + '-viewer');
 
+    if(elemViewer.length === 0) {
 
-    $('<div></div>').appendTo(elemTop)
-        .attr('id', contentId + '-viewer')
-        .addClass('viewer');
+        $('<div></div>').appendTo(elemTop)
+            .attr('id', contentId + '-viewer')
+            .addClass('viewer');
+
+    }
     
-    params.id = contentId + '-viewer';
-
+    params.id             = contentId + '-viewer';
+    params.restartViewer  = true;
     viewerFeatures.markup = true;
+
     insertViewer(linkViewable, params);
     
     let elemMarkups = $('<div></div>').appendTo(elemTop)
@@ -5653,11 +5813,9 @@ function insertViewerMarkups(contentId, link, params, sections, fields) {
 
         }
 
-
     }
 
     params.id = contentId;
-
 
 }
 function selectItemMarkup(elemClicked) {
@@ -6564,9 +6722,10 @@ function insertItemSummary(link, params) {
             .addClass('screen');
     }
 
-    elemItemTop.attr('data-link', settings.summary[id].link);
-    elemItemTop.addClass('item')
-    elemItemTop.addClass('workspace-' + settings.summary[id].wsId);
+    elemItemTop.attr('data-link', settings.summary[id].link)
+        .addClass('item')
+        .addClass('panel-top')
+        .addClass('workspace-' + settings.summary[id].wsId);
 
     if(isBlank(settings.summary[id].surfaceLevel)) {
 

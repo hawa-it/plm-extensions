@@ -130,9 +130,11 @@ function initViewer(id, viewables, params) {
     dataInstances = [];
 
     let options = {
-        // logLevel    : 1,
+        logLevel    : 1,
         env         : 'AutodeskProduction',
         api         : 'derivativeV2',  // for models uploaded to EMEA change this option to 'derivativeV2_EU'
+        // region : 'EMEA',
+        // api         : 'derivativeV2_EU',  // for models uploaded to EMEA change this option to 'derivativeV2_EU'
         // env: 'AutodeskProduction2',
         // api: 'streamingV2',   // for models uploaded to EMEA change this option to 'streamingV2_EU'
         getAccessToken  : function(onTokenReady) {
@@ -142,7 +144,7 @@ function initViewer(id, viewables, params) {
         }
     }; // see https://aps.autodesk.com/en/docs/viewer/v7/reference/globals/TypeDefs/InitOptions/
 
-    if(typeof viewer === 'undefined') { 
+    if((typeof viewer === 'undefined') || (params.restartViewer)) { 
 
         splitPartNumberBy      = (isBlank(config.viewer.splitPartNumberBy))      ? ''  : config.viewer.splitPartNumberBy;
         splitPartNumberIndexes = (isBlank(config.viewer.splitPartNumberIndexes)) ? [0] : config.viewer.splitPartNumberIndexes;
@@ -172,7 +174,16 @@ function initViewer(id, viewables, params) {
                 if(!viewerFeatures.contextMenu) viewer.setContextMenu(null);
             }
 
-            Autodesk.Viewing.Document.load('urn:'+ viewables[0].urn, onDocumentLoadSuccess, onDocumentLoadFailure);
+            if(viewables[0].type === 'Adobe PDF') {
+                viewer.loadExtension('Autodesk.PDF').then( () => {
+                    viewerFeatures.markup = true;
+                    viewer.setBackgroundColor(viewerSettings.backgroundColor[0], viewerSettings.backgroundColor[1], viewerSettings.backgroundColor[2], viewerSettings.backgroundColor[3], viewerSettings.backgroundColor[4], viewerSettings.backgroundColor[5]);
+                    viewer.loadModel(viewables[0].link, viewer, onPDFLoadSuccess, onDocumentLoadFailure);
+                });
+
+            } else {
+                Autodesk.Viewing.Document.load('urn:'+ viewables[0].urn, onDocumentLoadSuccess, onDocumentLoadFailure);
+            }
             
         });
     
@@ -185,6 +196,10 @@ function initViewer(id, viewables, params) {
     } 
     
 }
+function onPDFLoadSuccess(doc) {
+
+    setViewerFeatures();
+}
 function onDocumentLoadSuccess(doc) {
 
     viewer.setGhosting(true);
@@ -196,7 +211,7 @@ function onDocumentLoadSuccess(doc) {
     viewer.setProgressiveRendering(true);
 
     let viewable = doc.getRoot().getDefaultGeometry();
-
+    
     if (viewable) {
         viewer.loadDocumentNode(doc, viewable).then(function(result) {
         // viewer.loadDocumentNode(doc, viewable, {globalOffset: {x:0,y:0,z:0}}).then(function(result) {
@@ -803,11 +818,13 @@ function viewerHighlightInstances(partNumber, ids, params) {
     if(isolate)     viewer.hideAll();
     if(resetColors) viewer.clearThemingColors();
 
-    for(let dataInstance of dataInstances) {
-        if(dataInstance.partNumber === partNumber) {
-            if(hiddenInstances.indexOf(dbId < 0)) {
-                dbIds.push(dataInstance.dbId);
-                viewer.show(dataInstance.dbId);
+    for(let dbId of ids) {
+        for(let dataInstance of dataInstances) {
+            if(dataInstance.partNumber === partNumber) {
+                if(hiddenInstances.indexOf(dbId < 0)) {
+                    dbIds.push(dataInstance.dbId);
+                    viewer.show(dataInstance.dbId);
+                }
             }
         }
     }

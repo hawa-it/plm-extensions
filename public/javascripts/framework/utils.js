@@ -15,6 +15,7 @@ let settings = {
     images            : {},
     attachments       : {},
     bom               : {},
+    partList          : {},
     flatBOM           : {},
     roots             : {},
     parents           : {},
@@ -30,6 +31,7 @@ let settings = {
     mow               : {},
     search            : {},
     results           : {},
+    viewer            : {},
     workspaceViews    : {},
     workspaceItems    : {},
     workflowHistory   : {},
@@ -751,7 +753,7 @@ function getPanelSettings(link, params, defaults, additional) {
     if(isBlank(defaults.groupBy)          ) defaults.groupBy           = '';
     if(isBlank(defaults.groupLayout)      ) defaults.groupLayout       = 'column';
     if(isBlank(defaults.additionalData)   ) defaults.additionalData    = [];
-    if(isBlank(defaults.tileSize)         ) defaults.tileSize          = 'xs';
+    if(isBlank(defaults.contentSize)      ) defaults.contentSize       = 'xs';
     if(isBlank(defaults.tileIcon)         ) defaults.tileIcon          = 'icon-product';
     if(isBlank(defaults.tileImage)        ) defaults.tileImage         = true;
     if(isBlank(defaults.tileTitle)        ) defaults.tileTitle         = 'DESCRIPTOR';
@@ -795,9 +797,10 @@ function getPanelSettings(link, params, defaults, additional) {
         groupLayout       : isBlank(params.groupLayout)       ? defaults.groupLayout : params.groupLayout,
         additionalData    : isBlank(params.additionalData)    ? defaults.additionalData : params.additionalData,
         number            : isBlank(params.number)            ? true : params.number,
-        tileSize          : isBlank(params.tileSize)          ? defaults.tileSize  : params.tileSize,
+        contentSize       : isBlank(params.contentSize)       ? defaults.contentSize  : params.contentSize,
         tileIcon          : isBlank(params.tileIcon)          ? defaults.tileIcon  : params.tileIcon,
         tileImage         : isBlank(params.tileImage)         ? defaults.tileImage : params.tileImage,
+        tileImageFieldId  : '',
         tileTitle         : isBlank(params.tileTitle)         ? defaults.tileTitle : params.tileTitle,
         tileSubtitle      : isBlank(params.tileSubtitle)      ? defaults.tileSubtitle : params.tileSubtitle,
         tileDetails       : isBlank(params.tileDetails)       ? defaults.tileDetails : params.tileDetails,
@@ -823,7 +826,7 @@ function getPanelSettings(link, params, defaults, additional) {
         columns           : [],
     }
 
-    if(isBlank(settings.tileSize)) settings.tileSize = 'xs';
+    if(isBlank(settings.contentSize)) settings.contentSize = 'xs';
 
     if(settings.collapsePanel) settings.headerToggle = true;
 
@@ -999,35 +1002,40 @@ function genPanelBookmarkButton(id, settings) {
 
     let elemButtonBookmark = $('#' + id + '-bookmark');
 
-    if(elemButtonBookmark.length > 0) return elemButtonBookmark;
+    if(elemButtonBookmark.length === 0) {
 
-    let elemToolbar = genPanelToolbar(id, settings, 'controls');
+        let elemToolbar = genPanelToolbar(id, settings, 'controls');
 
-    elemButtonBookmark = $('<div></div>').prependTo(elemToolbar)
-        .attr('id', id + '-bookmark')
-        .attr('data-dmsid', settings.link.split('/')[6])
-        .addClass('disabled')
-        .addClass('button')
-        .addClass('icon')
-        .addClass('icon-bookmark')
-        .click(function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            let elemButton = $(this);
-            if(elemButton.hasClass('disabled')) return;
-            elemButton.addClass('disabled')
-            if(elemButton.hasClass('main')) {
-                $.get('/plm/remove-bookmark', { dmsId : elemButton.attr('data-dmsid') }, function () {
-                    elemButton.removeClass('main');
-                    elemButton.removeClass('disabled');
-                });
-            } else {
-                $.get('/plm/add-bookmark', { dmsId : elemButton.attr('data-dmsid'), comment : ' ' }, function () {
-                    elemButton.addClass('main');
-                    elemButton.removeClass('disabled');
-                });
-            }
-        });
+        elemButtonBookmark = $('<div></div>').prependTo(elemToolbar)
+            .attr('id', id + '-bookmark')
+            .addClass('disabled')
+            .addClass('button')
+            .addClass('icon')
+            .addClass('icon-bookmark')
+            .click(function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                let elemButton = $(this);
+                if(elemButton.hasClass('disabled')) return;
+                elemButton.addClass('disabled')
+                if(elemButton.hasClass('main')) {
+                    $.get('/plm/remove-bookmark', { dmsId : elemButton.attr('data-dmsid') }, function () {
+                        elemButton.removeClass('main');
+                        elemButton.removeClass('disabled');
+                    });
+                } else {
+                    $.get('/plm/add-bookmark', { dmsId : elemButton.attr('data-dmsid'), comment : ' ' }, function () {
+                        elemButton.addClass('main');
+                        elemButton.removeClass('disabled');
+                    });
+                }
+            });
+
+    }
+
+    elemButtonBookmark.attr('data-dmsid', settings.link.split('/')[6])
+        .removeClass('main')
+        .addClass('disabled');
 
     return elemButtonBookmark;
 
@@ -1082,7 +1090,7 @@ function genPanelOpenInPLMButton(id, settings) {
         .click(function(e) {
             e.preventDefault();
             e.stopPropagation();
-            openItemByLink(settings.link);
+            openItemByLink($(this).closest('.panel-top').attr('data-link'));
         });
 
     return elemButtonOpenInPLM;
@@ -1442,7 +1450,7 @@ function genPanelContents(id, settings) {
         .attr('id', id + '-content')
         .addClass('panel-content')
         .addClass('no-scrollbar')
-        .addClass(settings.tileSize);
+        .addClass(settings.contentSize);
 
          if(settings.layout === 'table'  ) elemContent.addClass('table');
     else if(settings.layout === 'gallery') elemContent.addClass('tiles').addClass('gallery');
@@ -1450,7 +1458,7 @@ function genPanelContents(id, settings) {
     else if(settings.layout === 'list'   ) elemContent.addClass('tiles').addClass('list');
     else if(settings.layout === 'row'    ) {
         elemContent.addClass('tiles').addClass('row');
-        switch(settings.tileSize) {
+        switch(settings.contentSize) {
             case 'xxs':
             case 'xs':
             case 's':
@@ -1660,7 +1668,7 @@ function setPanelBookmarkStatus(id, settings, responses) {
 
     if(!settings.bookmark) return;
 
-    $('#' + id + '-bookmark').removeClass('disabled');
+    $('#' + id + '-bookmark').removeClass('disabled').removeClass('main');
 
     for(let response of responses) {
         if(response.url.indexOf('/bookmarks?') === 0) {
@@ -2373,7 +2381,7 @@ function genTilesList(id, items, settings) {
                     .addClass('tiles-group-list')
                     .addClass('tiles')
                     .addClass(settings.layout)
-                    .addClass(settings.tileSize)
+                    .addClass(settings.contentSize)
                     .addClass(settings.surfaceLevel)
                     .addClass(getSurfaceLevel(elemContent));
 
@@ -2488,6 +2496,7 @@ function genSingleTile(params, settings) {
     if(!isBlank(params.subtitle)) {
         $('<div></div>')
             .addClass('tile-subtitle')
+            .addClass('no-scrollbar')
             .html(params.subtitle)
             .appendTo(elemTileDetails);
     }
@@ -2513,32 +2522,36 @@ function genSingleTile(params, settings) {
 
     if(!isBlank(settings.stateColors)) {
 
-        if(isBlank(params.status)) params.status = '';
+        if(settings.stateColors.length > 0) {
 
-        let color = 'transparent';
-        let label = params.status;
+            if(isBlank(params.status)) params.status = '';
 
-        for(let stateColor of settings.stateColors) {
-            if(!isBlank(stateColor.state)) {
-                if(stateColor.name.toLowerCase() === params.status.toLowerCase()) {
-                    color = stateColor.color;
-                    if(!isBlank(stateColor.label)) label = stateColor.label;
-                }
-            } else if(!isBlank(stateColor.states)) {
-                if(stateColor.states.includes(params.status)) {
-                    color = stateColor.color;
-                    if(!isBlank(stateColor.label)) label = stateColor.label;
+            let color = 'transparent';
+            let label = params.status;
+
+            for(let stateColor of settings.stateColors) {
+                if(!isBlank(stateColor.state)) {
+                    if(stateColor.name.toLowerCase() === params.status.toLowerCase()) {
+                        color = stateColor.color;
+                        if(!isBlank(stateColor.label)) label = stateColor.label;
+                    }
+                } else if(!isBlank(stateColor.states)) {
+                    if(stateColor.states.includes(params.status)) {
+                        color = stateColor.color;
+                        if(!isBlank(stateColor.label)) label = stateColor.label;
+                    }
                 }
             }
-        }
 
-        let elemTileStatus = $('<div></div>').appendTo(elemTile)
-            .addClass('tile-status')
-            .css('background-color', color);
-            
-        $('<div></div>').appendTo(elemTileStatus)
-            .addClass('tile-status-label')
-            .html(label);
+            let elemTileStatus = $('<div></div>').appendTo(elemTile)
+                .addClass('tile-status')
+                .css('background-color', color);
+                
+            $('<div></div>').appendTo(elemTileStatus)
+                .addClass('tile-status-label')
+                .html(label);
+
+        }
 
     }
 
@@ -2558,20 +2571,19 @@ function genSingleTile(params, settings) {
 
     // }
 
-    // if(isBlank(params.imageId) && isBlank(params.imageLink)) {
     if(isBlank(params.imageId) && isBlank(params.imageLink)) elemTile.addClass('no-image');
-        // elemTile.addClass('no-image');
-        if(params.number) {
-            $('<div></div>').appendTo(elemTileImage)
-                .addClass('tile-counter')
-                .html(params.tileNumber);
-        } else {
-            $('<span></span>').appendTo(elemTileImage)
-            .addClass('icon')
-            .addClass(params.tileIcon);
-        }
-    // } else
-    appendImageFromCache(elemTileImage, params, function() {});
+    
+    if(params.number) {
+        $('<div></div>').appendTo(elemTileImage)
+            .addClass('tile-counter')
+            .html(params.tileNumber);
+    } else {
+        $('<span></span>').appendTo(elemTileImage)
+        .addClass('icon')
+        .addClass(params.tileIcon);
+    }
+    
+    appendImageFromCache(elemTileImage, settings, params, function() {});
 
     return elemTile;
 
@@ -2588,7 +2600,7 @@ function addTilesListImages(id, settings) {
         $.get('/plm/details', { link : elemTile.attr('data-link'), useCache : true }, function(response) {
             let linkImage   = getFirstImageFieldValue(response.data.sections);
             let elemImage   = elemTile.find('.tile-image').first();
-            appendImageFromCache(elemImage, { 
+            appendImageFromCache(elemImage, settings, { 
                 imageLink   : linkImage, 
                 number      : settings.number,
                 icon        : settings.tileIcon,
@@ -3899,6 +3911,117 @@ function getBOMNodeLink(id, nodes) {
     }
     return '';
 }
+function getBOMPartsList(settings, data) {
+
+    let parts = [];
+
+    settings.iEdge = 0;
+    settings.urns  = [];
+
+    for(let field of settings.viewFields) {
+        if(field.fieldId === 'QUANTITY') {
+            settings.urns.quantity = field.__self__.urn;
+        } else if(field.fieldId === config.items.fieldIdNumber) {
+            settings.urns.partNumber = field.__self__.urn;
+        }
+        if(!isBlank(settings.selectItems)) {
+            if(field.fieldId === settings.selectItems.fieldId) settings.urns.selectItems = field.__self__.urn;
+        }
+    }
+
+    getBOMParts(settings, parts, data.root, data.edges, data.nodes, 1.0, []);
+
+    return parts;
+
+}
+function getBOMParts(settings, parts, parent, edges, nodes, quantity, path) {
+
+    let result = { hasChildren : false };
+
+    for(let i = settings.iEdge; i < edges.length; i++) {
+
+        let edge = edges[i];
+
+        if(edge.parent === parent) {
+
+            if(i === settings.iEdge + 1) settings.iEdge = i;
+
+            let node = { 
+                quantity    : getBOMEdgeValue(edge, settings.urns.quantity, null, 0) * quantity,
+                partNumber  : getBOMCellValue(edge.child, settings.urns.partNumber, nodes),
+                path        : path.slice(),
+                fields      : []
+            }
+
+            node.path.push(node.partNumber);
+
+            result.hasChildren = true;
+
+            for(let bomNode of nodes) {
+
+                if(bomNode.item.urn === edge.child) {
+
+                    node.link       = bomNode.item.link;
+                    node.title      = bomNode.item.title;
+
+                    for(let field of settings.viewFields) {
+
+                        let fieldData = {
+                            fieldId     : field.fieldId,
+                            name        : field.name,
+                            displayName : field.displayName,
+                            urn         : field.__self__.urn,
+                            value       : ''
+                        }
+
+                        for(let nodeField of bomNode.fields) {
+                            if(nodeField.metaData.urn === fieldData.urn) {
+                                fieldData.value = nodeField.value;
+                            }
+                        }
+                            
+                        node.fields.push(fieldData);
+
+                    }
+
+                    break;
+
+                }
+            }
+
+            if(!isBlank(settings.selectItems)) {
+                let selectValue = getBOMCellValue(edge.child, settings.urns.selectItems, nodes);
+                if(settings.selectItems.values.includes(selectValue)) parts.push(node);
+            } else {
+                parts.push(node);
+            }
+
+
+
+            let nodeBOM = getBOMParts(settings, parts, edge.child, edges, nodes, node.quantity, node.path);
+
+            node.hasChildren = nodeBOM.hasChildren;
+
+        }
+
+    }
+
+    return result;
+
+}
+
+
+
+function onSerialNumberClick(elemClicked) {
+
+    if(elemClicked.hasClass('selected')) {
+        let partNumber = elemClicked.attr('data-part-number');
+        viewerSelectModel(partNumber);
+    } else {
+        viewerResetSelection();
+    }
+
+}
 
 
 
@@ -3942,8 +4065,12 @@ function getGridRowValue(row, fieldId, defaultValue, property) {
 
             if(typeof value === 'object') {
 
-                if(isBlank(property)) return field.value.link;
-                else return field.value[property];
+                if(isBlank(property)) { return field.value.link;
+                } else if(property == 'title') { 
+                    let result = field.value.title;
+                    if(!isBlank(field.value.version)) result += ' ' + field.value.version;
+                    return result;
+                } else return field.value[property];
                 
             } else if(field.type.title === 'Paragraph') {
 
@@ -4089,7 +4216,7 @@ function getFirstImageFieldValue(sections) {
 
 
 // Display image from cache, use defined placeholder icon while processing
-function appendImageFromCache(elemParent, params, onclick) {
+function appendImageFromCache(elemParent, settings, params, onclick) {
     
     if(isBlank(params)) return;
     if(isBlank(params.replace)) params.replace = true;
@@ -4117,7 +4244,12 @@ function appendImageFromCache(elemParent, params, onclick) {
 
     let urlBase = (params.link.indexOf('/vault/') > -1) ? '/vault' : '/plm';
 
-    $.get(urlBase + '/image-cache', params, function(response) {
+    $.get(urlBase + '/image-cache', {
+        link        : params.link,
+        imageId     : params.imageId,
+        imageLink   : params.imageLink,
+        fieldId     : settings.tileImageFieldId
+    }, function(response) {
 
         if(response.error) return;
 
