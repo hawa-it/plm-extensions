@@ -18,12 +18,18 @@ function getCustomHeaders(req) {
     let headers = {
         'Content-Type'  : 'application/json',
         'Accept'        : 'application/json',
-        'X-Tenant'      : req.session.tenant,
+        'X-Tenant'      : req.app.locals.tenant,
         'token'         : req.session.headers.token,
         'Authorization' : req.session.headers.Authorization       
     }
 
     return headers;
+}
+function getTenantLink(req) {
+
+    let tenant = (typeof req.query.tenant === 'undefined') ? req.app.locals.tenant  : req.query.tenant;
+
+    return 'https://' + tenant + '.autodeskplm360.net';
 
 }
 function runPromised(url, headers) {
@@ -35,6 +41,24 @@ function runPromised(url, headers) {
     }).catch(function(error) {
         console.log('error');
         console.log(error);
+    });
+
+}
+function downloadFileToCache(url, filename) {
+
+    return axios.get(url, {
+        responseType     : 'arraybuffer',
+        responseEncoding : 'binary',
+    }).then(function(response) {
+        fs.appendFileSync('public/cache/' + filename, response.data);
+        return { 
+            filename : filename,
+            success  : true
+        };
+    }).catch(function(error) {
+        console.log('error');
+        console.log(error);
+        return { success : false };
     });
 
 }
@@ -67,46 +91,120 @@ function sortArray(array, key, type) {
     }
 
 }
-function sendResponse(req, res, response, error) {
+function sendResponse(req, res, response, error, fromCache) {
 
-    let result = {
-        'url'       : req.url,
-        'params'    : (Object.keys(req.body).length === 0) ? req.query : req.body,
-        'data'      : [],
-        'status'    : '',
-        'message'   : '',
-        'error'     : error       
-    }
+    if((typeof fromCache === 'undefined')) fromCache = false;
 
-    if(error) {
+    req.session.reload(function(err) {
 
-        console.log();
-        console.log(' ERROR REQUESTING ' + req.url);
+        let params = [];
 
-        if(typeof response !== 'undefined') {
-            if(typeof response.message !== 'undefined') {
-                console.log(response.message);
-                result.message = response.message;
-            }
-            if(typeof response.data !== 'undefined') {
-                if(response.data.length > 0) {
-                    if(typeof response.data === 'string') result.message = response.data;
-                    else if(Array.isArray(response.data)) {
-                        if('message' in response.data[0]) result.message = response.data[0].message;
+        if((typeof req.body !== 'undefined')) {
+            if(JSON.stringify(req.body).length > 2) {
+                params = req.body;
+            } else params = req.query;
+        } else params = req.query;
+
+        let result = {
+            // 'params'    : (Object.keys(req.body).length === 0) ? req.query : req.body,
+            // 'params'    : (typeof req.body === 'undefined') ? req.query : req.body,
+            params    : params,
+            url       : req.url,
+            data      : [],
+            status    : '',
+            message   : '',
+            error     : error,
+            fromCache : fromCache       
+        }
+
+        if(error) {
+
+            console.log();
+            console.log(' ERROR REQUESTING ' + req.url);
+
+            if(typeof response !== 'undefined') {
+                if(typeof response.message !== 'undefined') {
+                    console.log(response.message);
+                    result.message = response.message;
+                }
+                if(typeof response.data !== 'undefined') {
+                    if(response.data.length > 0) {
+                        if(typeof response.data === 'string') result.message = response.data;
+                        else if(Array.isArray(response.data)) {
+                            if('message' in response.data[0]) result.message = response.data[0].message;
+                        }
                     }
                 }
             }
+
+        } else if(!fromCache) {
+            saveResponseInCache(req, response);            
+        // } else {
+            // console.log(' --> Sending cached response for ' + req.url);
+        }
+    
+        if(typeof response !== 'undefined') {
+            let keys = Object.keys(response);
+            if(keys.indexOf('status'   ) > -1) result.status    = response.status;
+            if(keys.indexOf('data'     ) > -1) result.data      = response.data;
         }
 
+        req.session.save(function(err) {
+            res.json(result);
+        });
+    
+    });
+
+}
+function notCached(req, res) {
+
+    if(!req.app.locals.enableCache)               return true;
+    if(typeof req.query.useCache === 'undefined') return true;
+    if(!req.query.useCache)                       return true;
+    if(req.query.useCache === 'false')            return true;
+
+    let cache = getCacheEntry(req);
+
+    if(cache.data === null) return true;
+
+    sendResponse(req, res, { 
+        data      : cache.data,
+        status    : cache.status
+        }, false, true);
+    return false;
+
+}
+function saveResponseInCache(req, response) {
+
+    if(!req.app.locals.enableCache)               return;
+    if(typeof req.query.useCache === 'undefined') return;
+    if(!req.query.useCache)                       return;
+    if(typeof response === 'undefined')           return;
+
+    let cache = getCacheEntry(req);
+
+    cache.data   = response.data;
+    cache.status = response.status;
+
+}
+function getCacheEntry(req) {
+
+    let urlSplit = req.url.split('timestamp=');
+    let key      = urlSplit[0];
+
+    if(urlSplit.length > 1) key += '&' + urlSplit[1].split('&')[1];
+
+    for(let cache of req.session.cache) {
+        if(cache.key === key) {
+            return cache;
+        }
     }
 
-    if(typeof response !== 'undefined') {
-        let keys = Object.keys(response);
-        if(keys.indexOf('status') > -1) result.status = response.status;
-        if(keys.indexOf('data') > -1) result.data = response.data;
-    }
+    let cache = { key : key, data : null, status : null }
 
-    res.json(result);
+    req.session.cache.push(cache);
+
+    return cache;
 
 }
 
@@ -117,17 +215,26 @@ router.get('/tabs', function(req, res, next) {
     console.log(' ');
     console.log('  /tabs');
     console.log(' --------------------------------------------');
-    console.log('  req.query.wsId = ' + req.query.wsId);
+    console.log('  req.query.wsId     = ' + req.query.wsId);
+    console.log('  req.query.link     = ' + req.query.link);
+    console.log('  req.query.tenant   = ' + req.query.tenant);
+    console.log('  req.query.useCache = ' + req.query.useCache);
+    console.log('');
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + req.query.wsId + '/tabs';
+    if(notCached(req, res)) {
 
-    axios.get(url, {
-        headers : req.session.headers
-    }).then(function(response) {
-        sendResponse(req, res, response, false);
-    }).catch(function(error) {
-        sendResponse(req, res, error.response, true);
-    });
+        let wsId = (typeof req.query.link === 'undefined') ? req.query.wsId : req.query.link.split('/')[4];
+        let url  = getTenantLink(req) + '/api/v3/workspaces/' + wsId + '/tabs';
+
+        axios.get(url, {
+            headers : req.session.headers
+        }).then(function(response) {
+            sendResponse(req, res, response, false);
+        }).catch(function(error) {
+            sendResponse(req, res, error.response, true);
+        });
+
+    }
     
 });
 
@@ -138,29 +245,35 @@ router.get('/sections', function(req, res, next) {
     console.log(' ');
     console.log('  /sections');
     console.log(' --------------------------------------------');
-    console.log('  req.query.wsId = ' + req.query.wsId);
-    console.log('  req.query.link = ' + req.query.link);
+    console.log('  req.query.wsId     = ' + req.query.wsId);
+    console.log('  req.query.link     = ' + req.query.link);
+    console.log('  req.query.tenant   = ' + req.query.tenant);
+    console.log('  req.query.useCache = ' + req.query.useCache);
     console.log();
 
-    let wsId = req.query.wsId;
+    if(notCached(req, res)) {
 
-    if(typeof wsId === 'undefined') {
-        if(typeof req.query.link !== 'undefined') {
-            wsId = req.query.link.split('/')[4];
+        let wsId = req.query.wsId;
+
+        if(typeof wsId === 'undefined') {
+            if(typeof req.query.link !== 'undefined') {
+                wsId = req.query.link.split('/')[4];
+            }
         }
+
+        let url = getTenantLink(req) + '/api/v3/workspaces/' + wsId + '/sections';
+        let headers = getCustomHeaders(req);
+            headers.Accept = 'application/vnd.autodesk.plm.sections.bulk+json';
+
+        axios.get(url, {
+            headers : headers
+        }).then(function(response) {
+            sendResponse(req, res, response, false);
+        }).catch(function(error) {
+            sendResponse(req, res, error.response, true);
+        });
+
     }
-
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + wsId + '/sections';
-    let headers = getCustomHeaders(req);
-        headers.Accept = 'application/vnd.autodesk.plm.sections.bulk+json';
-
-    axios.get(url, {
-        headers : headers
-    }).then(function(response) {
-        sendResponse(req, res, response, false);
-    }).catch(function(error) {
-        sendResponse(req, res, error.response, true);
-    });
     
 });
 
@@ -171,24 +284,82 @@ router.get('/fields', function(req, res, next) {
     console.log(' ');
     console.log('  /fields');
     console.log(' --------------------------------------------');
-    console.log('  req.query.wsId = ' + req.query.wsId);
-    console.log('  req.query.link = ' + req.query.link);
+    console.log('  req.query.wsId     = ' + req.query.wsId);
+    console.log('  req.query.link     = ' + req.query.link);
+    console.log('  req.query.tenant   = ' + req.query.tenant);
+    console.log('  req.query.useCache = ' + req.query.useCache);
+    console.log();
 
-    let wsId = req.query.wsId;
+    if(notCached(req, res)) {
 
-    if(typeof wsId === 'undefined') {
-        if(typeof req.query.link !== 'undefined') {
-            wsId = req.query.link.split('/')[4];
+        let wsId = req.query.wsId;
+
+        if(typeof wsId === 'undefined') {
+            if(typeof req.query.link !== 'undefined') {
+                wsId = req.query.link.split('/')[4];
+            }
         }
+
+        let url = getTenantLink(req) + '/api/v3/workspaces/' + wsId + '/fields';
+        
+        axios.get(url, {
+            headers : req.session.headers
+        }).then(function(response) {
+            let result = { 'data' : response.data.fields, 'status' : response.status }
+            sendResponse(req, res, result, false);
+        }).catch(function(error) {
+            sendResponse(req, res, error.response, true);
+        });
+
     }
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + wsId + '/fields';
+});
+
+
+/* ----- GET ALL PICKLISTS ----- */
+router.get('/picklists', function(req, res, next) {
+
+    console.log(' ');
+    console.log('  /picklists');
+    console.log(' --------------------------------------------');
+    console.log('  req.query.tenant = ' + req.query.tenant);
+    console.log();
+
+    let url = getTenantLink(req) + '/api/rest/v1/setups/picklists';
     
     axios.get(url, {
         headers : req.session.headers
     }).then(function(response) {
-        sendResponse(req, res, { 'data' : response.data.fields, 'status' : response.status }, false);
-    }).catch(function(error) {
+        if(response.data === "") response.data = { 'items' : [] };
+        sendResponse(req, res, response, false);
+    }).catch(function (error) {
+        sendResponse(req, res, error.response, true);
+    });
+
+});
+
+
+/* ----- GET PICKLIST DEFINITION ----- */
+router.get('/picklist-setup', function(req, res, next) {
+
+    console.log(' ');
+    console.log('  /picklist-setup');
+    console.log(' --------------------------------------------');
+    console.log('  req.query.id     = ' + req.query.id);
+    console.log('  req.query.link   = ' + req.query.link);
+    console.log('  req.query.tenant = ' + req.query.tenant);
+    console.log();
+
+    let id = (typeof req.query.id === 'undefined') ? req.query.link.split('/').pop() : req.query.id;
+
+    let url = getTenantLink(req) + '/api/rest/v1/setups/picklists/' + id;
+    
+    axios.get(url, {
+        headers : req.session.headers
+    }).then(function(response) {
+        if(response.data === "") response.data = { 'items' : [] };
+        sendResponse(req, res, response, false);
+    }).catch(function (error) {
         sendResponse(req, res, error.response, true);
     });
 
@@ -201,26 +372,32 @@ router.get('/picklist', function(req, res, next) {
     console.log(' ');
     console.log('  /picklist');
     console.log(' --------------------------------------------');
-    console.log('  req.query.link = ' + req.query.link);
-    console.log('  req.query.limit = ' + req.query.limit);
-    console.log('  req.query.offset = ' + req.query.offset);
-    console.log('  req.query.filter = ' + req.query.filter);
+    console.log('  req.query.link     = ' + req.query.link);
+    console.log('  req.query.limit    = ' + req.query.limit);
+    console.log('  req.query.offset   = ' + req.query.offset);
+    console.log('  req.query.filter   = ' + req.query.filter);
+    console.log('  req.query.tenant   = ' + req.query.tenant);
+    console.log('  req.query.useCache = ' + req.query.useCache);
     console.log();
 
-    let limit  = (typeof req.query.limit === 'undefined')  ? 100 : req.query.limit;
-    let offset = (typeof req.query.offset === 'undefined') ?   0 : req.query.offset;
-    let filter = (typeof req.query.filter === 'undefined') ?  '' : req.query.filter;
+    if(notCached(req, res)) {
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net' + req.query.link + '?asc=title&limit=' + limit + '&offset=' + offset + '&filter=' + filter;
-    
-    axios.get(url, {
-        headers : req.session.headers
-    }).then(function(response) {
-        if(response.data === "") response.data = { 'items' : [] };
-        sendResponse(req, res, response, false);
-    }).catch(function (error) {
-        sendResponse(req, res, error.response, true);
-    });
+        let limit  = (typeof req.query.limit === 'undefined')  ? 100 : req.query.limit;
+        let offset = (typeof req.query.offset === 'undefined') ?   0 : req.query.offset;
+        let filter = (typeof req.query.filter === 'undefined') ?  '' : req.query.filter;
+
+        let url = getTenantLink(req) + req.query.link + '?asc=title&limit=' + limit + '&offset=' + offset + '&filter=' + filter;
+        
+        axios.get(url, {
+            headers : req.session.headers
+        }).then(function(response) {
+            if(response.data === "") response.data = { 'items' : [] };
+            sendResponse(req, res, response, false);
+        }).catch(function (error) {
+            sendResponse(req, res, error.response, true);
+        });
+
+    }
 
 });
 
@@ -241,7 +418,7 @@ router.get('/filtered-picklist', function(req, res, next) {
     let offset  = (typeof req.query.offset  === 'undefined') ?   0 : req.query.offset;
     let filters = (typeof req.query.filters === 'undefined') ?  [] : req.query.filters;
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net' + req.query.link + '/options?';
+    let url = req.app.locals.tenantLink + req.query.link + '/options?';
     
     for(let filter of filters) {
         url += filter[0];
@@ -277,7 +454,7 @@ router.get('/related-workspaces', function(req, res, next) {
     console.log('  req.query.view   = ' + req.query.view);
     console.log();
     
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + req.query.wsId + '/views/' + req.query.view + '/related-workspaces';
+    let url = req.app.locals.tenantLink + '/api/v3/workspaces/' + req.query.wsId + '/views/' + req.query.view + '/related-workspaces';
     
     axios.get(url, {
         headers : req.session.headers
@@ -298,19 +475,26 @@ router.get('/linked-workspaces', function(req, res, next) {
     console.log(' ');
     console.log('  /linked-workspaces');
     console.log(' --------------------------------------------');  
-    console.log('  req.query.wsId   = ' + req.query.wsId);
+    console.log('  req.query.wsId     = ' + req.query.wsId);
+    console.log('  req.query.link     = ' + req.query.link);
+    console.log('  req.query.useCache = ' + req.query.useCache);
     console.log();
-    
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + req.query.wsId + '/views/11/linkedto-workspaces';
-    
-    axios.get(url, {
-        headers : req.session.headers
-    }).then(function(response) {
-        let result = (response.data.hasOwnProperty('workspaces')) ? response.data.workspaces : [];
-        sendResponse(req, res, { 'data' : result, 'status' : response.status }, false);
-    }).catch(function(error) {
-        sendResponse(req, res, error.response, true);
-    });
+
+    if(notCached(req, res)) {
+
+        let wsId = (typeof req.query.wsId !== 'undefined') ? req.query.wsId : req.query.link.split('/')[4];
+        let url  = req.app.locals.tenantLink + '/api/v3/workspaces/' + wsId + '/views/11/linkedto-workspaces';
+        
+        axios.get(url, {
+            headers : req.session.headers
+        }).then(function(response) {
+            let result = (response.data.hasOwnProperty('workspaces')) ? response.data.workspaces : [];
+            sendResponse(req, res, { 'data' : result, 'status' : response.status }, false);
+        }).catch(function(error) {
+            sendResponse(req, res, error.response, true);
+        });
+
+    }
     
 });
 
@@ -327,18 +511,17 @@ router.post('/create', function(req, res) {
     console.log(' ');
 
     let prefix   = '/api/v3/workspaces/' + req.body.wsId;
-    let url      = 'https://' + req.session.tenant + '.autodeskplm360.net' + prefix + '/items';
+    let url      = req.app.locals.tenantLink + prefix + '/items';
     let sections = [];
 
-    for(section of req.body.sections) {
+    for(let section of req.body.sections) {
 
         let sect = {
             'link'   : (typeof section.link === 'undefined') ? prefix + '/sections/' + section.id : section.link,
             'fields' : []
         }
-
         
-        for(field of section.fields) {
+        for(let field of section.fields) {
             
             let value = field.value;
             let type  = (typeof field.type === 'undefined') ? 'string' : field.type.toLowerCase();
@@ -353,14 +536,12 @@ router.post('/create', function(req, res) {
 
         sections.push(sect);
 
-        // console.log(sect);
-
     }
     
     axios.post(url, {
         'sections' : sections
     }, { headers : req.session.headers }).then(function (response) {
-        if(typeof req.body.image !== 'undefined') {
+        if((typeof req.body.image !== 'undefined') && (req.body.image !== null)) {
             uploadImage(req, response.headers.location, function() {
                 sendResponse(req, res, { 'data' : response.headers.location }, false);
             });
@@ -437,12 +618,8 @@ router.post('/clone', function(req, res) {
     console.log();
 
     let wsId            = req.body.link.split('/')[4];
-
-    // console.log(wsId);
-    // console.log(req.body);
-
     let prefix          = '/api/v3/workspaces/' + wsId;
-    let url             = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + wsId + '/items'
+    let url             = req.app.locals.tenantLink + '/api/v3/workspaces/' + wsId + '/items'
     let sections        = [];
     let formData        = new FormData();
     let cloneOptions    = (typeof req.body.options === 'undefined') ? [ 'ITEM_DETAILS' ] : req.body.options;
@@ -456,8 +633,6 @@ router.post('/clone', function(req, res) {
 
         if(section.hasOwnProperty('classificationId')) sect.classificationId = Number(section.classificationId);
 
-        // console.log(sect);
-
         for(let field of section.fields) {
             
             let value = field.value;
@@ -469,7 +644,7 @@ router.post('/clone', function(req, res) {
             sect.fields.push({
                 '__self__'      : prefix + '/views/1/fields/' + field.fieldId,
                 'value'         : value,
-                'urn'           : 'urn:adsk.plm:tenant.workspace.view.field:' + req.session.tenant.toUpperCase() + '.' + wsId + '.1.' + field.fieldId,
+                'urn'           : 'urn:adsk.plm:tenant.workspace.view.field:' + req.app.locals.tenant.toUpperCase() + '.' + wsId + '.1.' + field.fieldId,
                 'fieldMetadata' : null,
                 'dataTypeId'    : Number(field.typeId),
                 'title'         : field.title
@@ -478,7 +653,7 @@ router.post('/clone', function(req, res) {
             // console.log({
             //     '__self__'      : prefix + '/views/1/fields/' + field.fieldId,
             //     'value'         : value,
-            //     'urn'           : 'urn:adsk.plm:tenant.workspace.view.field:' + req.session.tenant.toUpperCase() + '.' + wsId + '.1.' + field.fieldId,
+            //     'urn'           : 'urn:adsk.plm:tenant.workspace.view.field:' + req.app.locals.tenant.toUpperCase() + '.' + wsId + '.1.' + field.fieldId,
             //     'fieldMetadata' : null,
             //     'dataTypeId'    : Number(field.typeId),
             //     'title'         : field.title
@@ -541,7 +716,7 @@ router.get('/archive', function(req, res, next) {
     
 
     let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-        url  = 'https://' + req.session.tenant + '.autodeskplm360.net' + url;
+        url  = req.app.locals.tenantLink + url;
         url += '?deleted=true';
 
     axios.patch(url, {}, {
@@ -568,7 +743,7 @@ router.get('/unarchive', function(req, res, next) {
 
 
     let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-        url  = 'https://' + req.session.tenant + '.autodeskplm360.net' + url;
+        url  = req.app.locals.tenantLink + url;
         url += '?deleted=false';
 
     axios.patch(url, {}, {
@@ -595,7 +770,7 @@ router.get('/is-archived', function(req, res, next) {
 
 
     let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-        url  = 'https://' + req.session.tenant + '.autodeskplm360.net' + url;
+        url  = req.app.locals.tenantLink + url;
 
     axios.get(url, {
         headers : req.session.headers
@@ -609,38 +784,38 @@ router.get('/is-archived', function(req, res, next) {
 
 
 /* ----- ITEM DETAILS UPDATE ----- */
-router.get('/edit', function(req, res) {
+router.post('/edit', function(req, res) {
 
     console.log(' ');
     console.log('  /edit');
     console.log(' --------------------------------------------');
-    console.log('  req.query.wsId       = ' + req.query.wsId);
-    console.log('  req.query.dmsId      = ' + req.query.dmsId);
-    console.log('  req.query.link       = ' + req.query.link);
-    console.log('  req.query.sections   = ' + req.query.sections);
+    console.log('  req.body.wsId       = ' + req.body.wsId);
+    console.log('  req.body.dmsId      = ' + req.body.dmsId);
+    console.log('  req.body.link       = ' + req.body.link);
+    console.log('  req.body.sections   = ' + req.body.sections);
     console.log();
 
-    let prefix   = (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-    let url      = 'https://' + req.session.tenant + '.autodeskplm360.net' + prefix;
+    let prefix   = (typeof req.body.link !== 'undefined') ? req.body.link : '/api/v3/workspaces/' + req.body.wsId + '/items/' + req.body.dmsId;
+    let url      = req.app.locals.tenantLink + prefix;
     let sections = [];
-    let wsId     = req.query.wsId;
-    let dmsId    = req.query.dmsId;
+    let wsId     = req.body.wsId;
+    let dmsId    = req.body.dmsId;
 
-    if (typeof req.query.link !== 'undefined') {
-        wsId  = req.query.link.split('/')[4];
-        dmsId = req.query.link.split('/')[6];
+    if (typeof req.body.link !== 'undefined') {
+        wsId  = req.body.link.split('/')[4];
+        dmsId = req.body.link.split('/')[6];
     }
 
-    for(let section of req.query.sections) {
+    for(let section of req.body.sections) {
 
         let sectionId =  (typeof section.link === 'undefined') ? section.id : section.link.split('/')[6];
 
         let sect = {
-            'link'   : prefix + '/views/1/sections/' + sectionId,
-            'fields' : []
+            link   : prefix + '/views/1/sections/' + sectionId,
+            fields : []
         }
 
-        for(field of section.fields) {
+        for(let field of section.fields) {
 
             let value = field.value;
             let type  = (typeof field.type === 'undefined') ? 'String' : field.type;
@@ -651,7 +826,7 @@ router.get('/edit', function(req, res) {
                 value = parseInt(field.value);
             } else if(type === 'multi-linking-picklist') {
                 value = [];
-                for(link of field.value) value.push({'link' : link});
+                for(let link of field.value) value.push({'link' : link});
             } else if(type === 'single selection') {
                 value = { 'link' : value };
             } else if(type === 'picklist') {
@@ -660,7 +835,7 @@ router.get('/edit', function(req, res) {
 
             sect.fields.push({
                 '__self__'  : prefix + '/views/1/fields/' + field.fieldId,
-                'urn'       : 'urn:adsk.plm:tenant.workspace.item.view.field:' + req.session.tenant.toUpperCase() + '.' + wsId + '.' + dmsId + '.1.' + field.fieldId,
+                'urn'       : 'urn:adsk.plm:tenant.workspace.item.view.field:' + req.app.locals.tenantLink.toUpperCase() + '.' + wsId + '.' + dmsId + '.1.' + field.fieldId,
                 'value'     : value
             });
 
@@ -671,7 +846,7 @@ router.get('/edit', function(req, res) {
     }
 
     axios.patch(url, {
-        'sections' : sections
+        sections : sections
     }, { headers : req.session.headers }).then(function (response) {
         sendResponse(req, res, response, false);
     }).catch(function (error) {
@@ -693,7 +868,7 @@ router.post('/update', function(req, res) {
     console.log();
 
     let prefix   = (typeof req.body.link !== 'undefined') ? req.body.link : '/api/v3/workspaces/' + req.body.wsId + '/items/' + req.body.dmsId;
-    let url      = 'https://' + req.session.tenant + '.autodeskplm360.net' + prefix;
+    let url      = req.app.locals.tenantLink + prefix;
     let sections = [];
     let wsId     = req.body.wsId;
     let dmsId    = req.body.dmsId;
@@ -732,7 +907,7 @@ router.post('/update', function(req, res) {
 
             sect.fields.push({
                 '__self__'  : prefix + '/views/1/fields/' + field.fieldId,
-                'urn'       : 'urn:adsk.plm:tenant.workspace.item.view.field:' + req.session.tenant.toUpperCase() + '.' + wsId + '.' + dmsId + '.1.' + field.fieldId,
+                'urn'       : 'urn:adsk.plm:tenant.workspace.item.view.field:' + req.app.locals.tenant.toUpperCase() + '.' + wsId + '.' + dmsId + '.1.' + field.fieldId,
                 'value'     : value
             });
 
@@ -764,9 +939,9 @@ router.get('/descriptor', function(req, res, next) {
     console.log('  req.query.link   = ' + req.query.link);
     console.log(' ');
         
-    let url = (typeof req.query.link !== 'undefined') ? req.query.link : 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
+    let url = (typeof req.query.link !== 'undefined') ? req.query.link : req.app.locals.tenantLink + '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
     
-    if(url.indexOf('/api/v3') === 0) url = 'https://' + req.session.tenant + '.autodeskplm360.net' + url;
+    if(url.indexOf('/api/v3') === 0) url = req.app.locals.tenantLink + url;
 
     axios.get(url, {
         headers : req.session.headers
@@ -791,7 +966,7 @@ router.get('/change-summary', function(req, res, next) {
     console.log(' ');
         
     let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-        url = 'https://' + req.session.tenant + '.autodeskplm360.net' + url + '/audit';
+        url = req.app.locals.tenantLink + url + '/audit';
 
     axios.get(url, {
         headers : req.session.headers
@@ -810,21 +985,26 @@ router.get('/details', function(req, res, next) {
     console.log(' ');
     console.log('  /details');
     console.log(' --------------------------------------------');
-    console.log('  req.query.wsId  = ' + req.query.wsId);
-    console.log('  req.query.dmsId = ' + req.query.dmsId);
-    console.log('  req.query.link  = ' + req.query.link);
+    console.log('  req.query.wsId     = ' + req.query.wsId);
+    console.log('  req.query.dmsId    = ' + req.query.dmsId);
+    console.log('  req.query.link     = ' + req.query.link);
+    console.log('  req.query.useCache = ' + req.query.useCache);
     console.log();
 
-    let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-        url = 'https://' + req.session.tenant + '.autodeskplm360.net' + url;
+    if(notCached(req, res)) {
 
-    axios.get(url, {
-        headers : req.session.headers
-    }).then(function(response) {
-        sendResponse(req, res, response, false);
-    }).catch(function(error) {
-        sendResponse(req, res, error.response, true);
-    });
+        let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
+            url = req.app.locals.tenantLink + url;
+
+        axios.get(url, {
+            headers : req.session.headers
+        }).then(function(response) {
+            sendResponse(req, res, response, false);
+        }).catch(function(error) {
+            sendResponse(req, res, error.response, true);
+        });
+
+    }
     
 });
 
@@ -840,7 +1020,7 @@ router.get('/derived', function(req, res, next) {
     console.log('  req.query.fieldId        = ' + req.query.fieldId);
     console.log();
 
-    let  url = 'https://' + req.session.tenant + '.autodeskplm360.net'
+    let  url = req.app.locals.tenantLink 
         + '/api/v3/workspaces/' + req.query.wsId + '/views/1/pivots/' + req.query.fieldId
         + '?pivotItemId=' + req.query.pivotItemId;
 
@@ -869,7 +1049,7 @@ router.get('/image', function(req, res) {
     console.log();
    
     let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v2/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId + '/field-values/' + req.query.fieldId + '/image/' + req.query.imageId;
-        url = 'https://' + req.session.tenant + '.autodeskplm360.net' + url;
+        url = req.app.locals.tenantLink + url;
 
     axios.get(url, { 
         responseType     : 'arraybuffer',
@@ -893,24 +1073,45 @@ router.get('/image-cache', function(req, res) {
     console.log(' ');
     console.log('  /image-cache');
     console.log(' --------------------------------------------');
-    console.log('  req.query.wsId    = ' + req.query.wsId);
-    console.log('  req.query.dmsId   = ' + req.query.dmsId);
-    console.log('  req.query.fieldId = ' + req.query.fieldId);
-    console.log('  req.query.imageId = ' + req.query.imageId);
-    console.log('  req.query.link    = ' + req.query.link);
+    console.log('  req.query.wsId      = ' + req.query.wsId);
+    console.log('  req.query.dmsId     = ' + req.query.dmsId);
+    console.log('  req.query.fieldId   = ' + req.query.fieldId);
+    console.log('  req.query.imageId   = ' + req.query.imageId);
+    console.log('  req.query.imageLink = ' + req.query.imageLink);
+    console.log('  req.query.link      = ' + req.query.link);
     console.log();
    
-    let wsId     = (typeof req.query.wsId    !== 'undefined') ? req.query.wsId    : req.query.link.split('/')[4];
-    let dmsId    = (typeof req.query.dmsId   !== 'undefined') ? req.query.dmsId   : req.query.link.split('/')[6];
-    let fieldId  = (typeof req.query.fieldId !== 'undefined') ? req.query.fieldId : req.query.link.split('/')[8];
-    let imageId  = (typeof req.query.imageId !== 'undefined') ? req.query.imageId : req.query.link.split('/')[10];
-    let link     = (typeof req.query.link    !== 'undefined') ? req.query.link    : '/api/v2/workspaces/' + wsId + '/items/' + dmsId + '/field-values/' + fieldId + '/image/' + imageId;
+    let wsId      = req.query.wsId      || '';
+    let dmsId     = req.query.dmsId     || '';
+    let fieldId   = req.query.fieldId   || '';
+    let imageId   = req.query.imageId   || '';
+    let imageLink = req.query.imageLink || '';
 
-    let url      = 'https://' + req.session.tenant + '.autodeskplm360.net' + link;
+    if(typeof req.query.link !== 'undefined') {
+        wsId  = (wsId  === '') ? req.query.link.split('/')[4] : wsId;
+        dmsId = (dmsId === '') ? req.query.link.split('/')[6] : dmsId;
+    }
+
+    if(imageLink === '') {
+
+        imageLink = '/api/v2/workspaces/' + wsId + '/items/' + dmsId + '/field-values/' + fieldId + '/image/' + imageId;
+
+    } else {
+
+        let split = imageLink.split('/');
+
+        wsId    = split[4];
+        dmsId   = split[6];
+        fieldId = split[8];
+        imageId = split[10];
+
+    }
+        
+    let url      = req.app.locals.tenantLink + imageLink;
     let fileName = wsId + '-' + dmsId + '-' + fieldId + '-' + imageId + '.jpg';
 
     fs.stat('public/cache/' + fileName, function(err, stat) {
-    
+
         if(err === null) {
             
             sendResponse(req, res, { 'data' : { 'url' : 'cache/' + fileName } }, false);
@@ -951,7 +1152,7 @@ router.post('/upload-image', function(req, res) {
     console.log('  req.body.image.fieldId   = ' + req.body.image.fieldId);
     console.log(' ');
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net' + req.body.link;
+    let url = req.app.locals.tenantLink + req.body.link;
 
     uploadImage(req, url, function() {
         sendResponse(req, res, { 'data' : 'success' }, false);
@@ -973,7 +1174,7 @@ router.get('/grid', function(req, res, next) {
     
 
     let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-        url  = 'https://' + req.session.tenant + '.autodeskplm360.net' + url;
+        url  = req.app.locals.tenantLink + url;
         url += '/views/13/rows';
 
     axios.get(url, {
@@ -1003,7 +1204,7 @@ router.get('/add-grid-row', function(req, res, next) {
     let wsId = (typeof req.query.wsId !== 'undefined') ? req.query.wsId : req.query.link.split('/')[4];
 
     let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-        url  = 'https://' + req.session.tenant + '.autodeskplm360.net' + url;
+        url  = req.app.locals.tenantLink + url;
         url += '/views/13/rows';
 
     let rowData = [];
@@ -1043,7 +1244,7 @@ router.get('/add-grid-row', function(req, res, next) {
     
 
 //     let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-//         url  = 'https://' + req.session.tenant + '.autodeskplm360.net' + url;
+//         url  = req.app.locals.tenantLink + url;
 //         url += '/views/13/rows';
 
 //     let rowData = [];
@@ -1093,7 +1294,7 @@ router.get('/update-grid-row', function(req, res, next) {
     console.log(); 
     
     let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-        url  = 'https://' + req.session.tenant + '.autodeskplm360.net' + url;
+        url  = req.app.locals.tenantLink + url;
         url += '/views/13/rows/' + req.query.rowId;
 
     let rowData = [];
@@ -1130,7 +1331,7 @@ router.get('/remove-grid-row', function(req, res, next) {
     console.log('  req.query.link    = ' + req.query.link);
     console.log(); 
 
-    let url  = 'https://' + req.session.tenant + '.autodeskplm360.net' + req.query.link;
+    let url  = req.app.locals.tenantLink + req.query.link;
     
     axios.delete(url, {
         headers : req.session.headers
@@ -1150,10 +1351,13 @@ router.get('/grid-columns', function(req, res, next) {
     console.log(' ');
     console.log('  /grid-columns');
     console.log(' --------------------------------------------'); 
-    console.log('  req.query.wsId    = ' + req.query.wsId);
+    console.log('  req.query.wsId   = ' + req.query.wsId);
+    console.log('  req.query.link   = ' + req.query.link);
+    console.log('  req.query.tenant = ' + req.query.tenant);
     console.log(); 
     
-    let url  = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + req.query.wsId + '/views/13/fields';
+    let wsId = (typeof req.query.wsId !== 'undefined') ? req.query.wsId : req.query.link.split('/')[4];
+    let url  = getTenantLink(req) + '/api/v3/workspaces/' + wsId + '/views/13/fields';
 
     axios.get(url, {
         headers : req.session.headers
@@ -1178,12 +1382,13 @@ router.get('/relationships', function(req, res, next) {
     console.log(); 
     
     let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-        url  = 'https://' + req.session.tenant + '.autodeskplm360.net' + url;
+        url  = req.app.locals.tenantLink + url;
         url += '/views/10';
 
     axios.get(url, {
         headers : req.session.headers
     }).then(function(response) {
+        if(response.data === '') response.data = [];
         sendResponse(req, res, response, false);
     }).catch(function(error) {
         sendResponse(req, res, error.response, true);
@@ -1207,7 +1412,7 @@ router.get('/add-relationship', function(req, res, next) {
     console.log(); 
     
     let urlBase     = (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-    let url         = 'https://' + req.session.tenant + '.autodeskplm360.net' + urlBase + '/views/10';
+    let url         = req.app.locals.tenantLink + urlBase + '/views/10';
     let description = (typeof req.query.description !== 'undefined') ? req.query.description : '';
     let type        = (typeof req.query.type !== 'undefined') ? req.query.type.toLowerCase() : 'bi';
     let direction   = (type === 'bi') ? 'Bi-Directional' : 'Uni-Directional';
@@ -1243,7 +1448,7 @@ router.get('/update-relationship', function(req, res, next) {
     console.log('  req.query.description = ' + req.query.description);
     console.log(); 
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net' + req.query.link;
+    let url = req.app.locals.tenantLink + req.query.link;
     
     axios.put(url, {
         'description' : req.query.description
@@ -1267,7 +1472,7 @@ router.get('/remove-relationship', function(req, res, next) {
     console.log('  req.query.link        = ' + req.query.link);
     console.log(); 
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net' + req.query.link;
+    let url = req.app.locals.tenantLink + req.query.link;
     
     axios.delete(url, {
         headers : req.session.headers
@@ -1287,12 +1492,12 @@ router.get('/manages', function(req, res, next) {
     console.log('  /manages');
     console.log(' --------------------------------------------');  
     console.log('  req.query.wsId   = ' + req.query.wsId);
-    console.log('  req.query.dsmId  = ' + req.query.dsmId);
+    console.log('  req.query.dmsId  = ' + req.query.dmsId);
     console.log('  req.query.link   = ' + req.query.link);
     
 
     let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-        url = 'https://' + req.session.tenant + '.autodeskplm360.net' + url + '/views/11';
+        url = req.app.locals.tenantLink + url + '/views/11';
 
     axios.get(url, {
         headers : req.session.headers
@@ -1306,25 +1511,63 @@ router.get('/manages', function(req, res, next) {
 });
 
 
+
+/* ----- GET MANAGED ITEM DETAILS ----- */
+router.get('/managed-item', function(req, res, next) {
+    
+    console.log(' ');
+    console.log('  /managed-item');
+    console.log(' --------------------------------------------');  
+    console.log('  req.query.wsId   = ' + req.query.wsId);
+    console.log('  req.query.dmsId  = ' + req.query.dmsId);
+    console.log('  req.query.itemId = ' + req.query.itemId);
+    console.log('  req.query.link   = ' + req.query.link);
+    
+
+    let link = (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId + '/views/11/affected-items/' + req.query.itemId;
+    let url  = req.app.locals.tenantLink + link;
+
+    console.log(url);
+
+    axios.get(url, {
+        headers : req.session.headers
+    }).then(function(response) {
+        console.log(response)
+        sendResponse(req, res, response, false);
+    }).catch(function(error) {
+        sendResponse(req, res, error.response, true);
+    });
+    
+});
+
+
 /* ----- COLUMNS OF MANAGED ITEMS TAB ----- */
 router.get('/managed-fields', function(req, res, next) {
     
     console.log(' ');
     console.log('  /managed-fields');
     console.log(' --------------------------------------------');  
-    console.log('  req.query.wsId  = ' + req.query.wsId);
-    console.log();
+    console.log('  req.query.wsId   = ' + req.query.wsId);
+    console.log('  req.query.link   = ' + req.query.link);
+    console.log('  req.query.tenant = ' + req.query.tenant);
+    console.log('  req.query.useCache = ' + req.query.useCache);
+    console.log('  ');
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + req.query.wsId + '/views/11/fields';
-    
-    axios.get(url, {
-        headers : req.session.headers
-    }).then(function(response) {
-        let result = (response.data === '') ? [] : response.data.fields;
-        sendResponse(req, res, { 'data' : result, 'status' : response.status }, false);
-    }).catch(function(error) {
-        sendResponse(req, res, error.response, true);
-    });
+    if(notCached(req, res)) {
+
+        let wsId = (typeof req.query.wsId !== 'undefined') ? req.query.wsId : req.query.link.split('/')[4];
+        let url  = getTenantLink(req) + '/api/v3/workspaces/' + wsId + '/views/11/fields';
+        
+        axios.get(url, {
+            headers : req.session.headers
+        }).then(function(response) {
+            let result = (response.data === '') ? [] : response.data.fields;
+            sendResponse(req, res, { 'data' : result, 'status' : response.status }, false);
+        }).catch(function(error) {
+            sendResponse(req, res, error.response, true);
+        });
+
+    }
     
 });
 
@@ -1341,7 +1584,7 @@ router.get('/add-managed-items', function(req, res, next) {
     console.log('  req.query.items  = ' + req.query.items);
 
     let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-        url = 'https://' + req.session.tenant + '.autodeskplm360.net' + url + '/affected-items';
+        url = req.app.locals.tenantLink + url + '/affected-items';
 
     let custHeaders = getCustomHeaders(req);
         custHeaders.Accept = 'application/vnd.autodesk.plm.affected.items.bulk+json';
@@ -1382,7 +1625,7 @@ router.get('/update-managed-item', function(req, res, next) {
     console.log('  req.query.fields     = ' + req.query.fields);
     console.log('  req.query.transition = ' + req.query.transition);
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net' + req.query.link;
+    let url = req.app.locals.tenantLink + req.query.link;
     
     let params = {
         'linkedFields' : req.query.fields
@@ -1417,7 +1660,7 @@ router.get('/remove-managed-item', function(req, res, next) {
     console.log('  req.query.itemId = ' + req.query.itemId);
 
     let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-        url = 'https://' + req.session.tenant + '.autodeskplm360.net' + url + '/views/11/affected-items/' + req.query.itemId;
+        url = req.app.locals.tenantLink + url + '/views/11/affected-items/' + req.query.itemId;
 
     return axios.delete(url, {
         headers : req.session.headers
@@ -1457,7 +1700,7 @@ router.get('/changes', function(req, res, next) {
     console.log();
     
     let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-    url = 'https://' + req.session.tenant + '.autodeskplm360.net' + url + '/views/2';
+    url = req.app.locals.tenantLink + url + '/views/2';
     
     axios.get(url, {
         headers : req.session.headers
@@ -1480,9 +1723,10 @@ router.get('/attachments', function(req, res, next) {
     console.log('  req.query.wsId  = ' + req.query.wsId);
     console.log('  req.query.dmsId = ' + req.query.dmsId);
     console.log('  req.query.link  = ' + req.query.link);
+    console.log();
 
     let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-        url = 'https://' + req.session.tenant + '.autodeskplm360.net' + url + '/attachments?asc=name';
+        url = req.app.locals.tenantLink + url + '/attachments?asc=name';
     
     let headers = getCustomHeaders(req);
         headers.Accept = 'application/vnd.autodesk.plm.attachments.bulk+json';
@@ -1510,8 +1754,9 @@ router.get('/download', function(req, res, next) {
     console.log('  req.query.link       = ' + req.query.link);
     console.log('  req.query.fileLink   = ' + req.query.fileLink);
     console.log('  req.query.fileId     = ' + req.query.fileId);
+    console.log();
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net';
+    let url = req.app.locals.tenantLink;
 
     if(typeof req.query.fileLink !== 'undefined') {
         url += req.query.fileLink;
@@ -1588,7 +1833,7 @@ function getAttachments(req, callback) {
    
     console.log('   > Getting list of existing attachments');
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + req.params.wsId + '/items/' + req.params.dmsId + '/attachments?asc=name';
+    let url = req.app.locals.tenantLink + '/api/v3/workspaces/' + req.params.wsId + '/items/' + req.params.dmsId + '/attachments?asc=name';
    
     let headers = getCustomHeaders(req);
         headers['Accept'] = 'application/vnd.autodesk.plm.attachments.bulk+json';
@@ -1615,7 +1860,7 @@ function parseAttachments(req, path, fileName, attachmentsList, folderName, call
         
             let attachments = attachmentsList.attachments;
             
-            for(attachment of attachments) {
+            for(let attachment of attachments) {
                 if(attachment.name === fileName) {
                     fileId = attachment.id;
                 } 
@@ -1654,7 +1899,7 @@ function createFolder(req, folderName, callback) {
    
    console.log('   > Creating folder ' + folderName);
        
-   let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + req.params.wsId + '/items/' + req.params.dmsId + '/folders';
+   let url = req.app.locals.tenantLink + '/api/v3/workspaces/' + req.params.wsId + '/items/' + req.params.dmsId + '/folders';
    
    axios.post(url, {
        'folderName' : folderName 
@@ -1677,9 +1922,8 @@ function createFile(req, folderId, path, fileName, callback) {
     console.log('   > Creating file record');
 
     let stats = fs.statSync(path);
-    let url   = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + req.params.wsId + '/items/' + req.params.dmsId + '/attachments';
+    let url   = req.app.locals.tenantLink + '/api/v3/workspaces/' + req.params.wsId + '/items/' + req.params.dmsId + '/attachments';
    
-    
     req.session.headers.Accept = 'application/json';
     
     if(folderId === '') folderId = null;
@@ -1698,13 +1942,11 @@ function createFile(req, folderId, path, fileName, callback) {
     },{
        headers : req.session.headers
     }).then(function (response) {
-        prepareUpload(req, response.data, function() {
-            uploadFile(req, path, response.data, function(fileId) {
-                setStatus(req, fileId, function() {
-                    callback();
-                });
-            });          
-        });
+        uploadFile(req, path, response.data, function(fileId) {
+            setStatus(req, fileId, function() {
+                callback();
+            });
+        });          
     }).catch(function (error) {
         console.log(error.message);
     }); 
@@ -1715,7 +1957,7 @@ function createVersion(req, folderId, fileId, path, fileName, callback) {
    console.log('   > Creating new version as file exists already');
    
    let stats   = fs.statSync(path);
-   let url     = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + req.params.wsId + '/items/' + req.params.dmsId + '/attachments/' + fileId;
+   let url     = req.app.locals.tenantLink + '/api/v3/workspaces/' + req.params.wsId + '/items/' + req.params.dmsId + '/attachments/' + fileId;
    
    if(folderId === '') folderId = null;
    
@@ -1730,41 +1972,14 @@ function createVersion(req, folderId, fileId, path, fileName, callback) {
    },{
        headers : req.session.headers
    }).then(function (response) {
-       prepareUpload(req, response.data, function() {
-           uploadFile(req, path, response.data, function(fileId) {
-               setStatus(req, fileId, function() {
-                   callback();
-               });
-           });
-       });
+        uploadFile(req, path, response.data, function(fileId) {
+            setStatus(req, fileId, function() {
+                callback();
+            });
+        });
    }).catch(function (error) {
        console.log(error.message);
    });    
-   
-}
-function prepareUpload(req, fileData, callback) {
-   
-   console.log('   > Preparing file upload to S3');
-
-   axios({
-       method  : 'options',
-       url     :  fileData.url, 
-       headers : {
-           'Accept'            : '*/*',
-           'Accept-Encoding'   : 'gzip, deflate, br',
-           'Accept-Language'   : 'en-US,en;q=0.9,de;q=0.8,en-GB;q=0.7',
-           'Access-Control-Request-Headers': 'content-type,x-amz-meta-filename',
-           'Access-Control-Request-Method' : 'PUT',
-           'Host'              : 'plm360-aws-useast.s3.amazonaws.com',
-           'Origin'            : 'https://' + req.session.tenant + '.autodeskplm360.net',
-           'Sec-Fetch-Mode'    : 'cors',
-           'Sec-Fetch-Site'    : 'cross-site'
-       }
-   }).then(function (response) {
-       callback();
-   }).catch(function (error) {
-       console.log(error.message);
-   }); 
    
 }
 function uploadFile(req, path, fileData, callback) {
@@ -1772,14 +1987,6 @@ function uploadFile(req, path, fileData, callback) {
     console.log('   > Uploading file now');
 
     let headers = fileData.extraHeaders;
-        
-    headers['Accept']           = '*/*',
-    headers['Accept-Encoding']  = 'gzip, deflate, br',
-    headers['Accept-Language']  = 'en-US,en;q=0.9,de;q=0.8,en-GB;q=0.7',
-    headers['Host']             = 'plm360-aws-useast.s3.amazonaws.com',
-    headers['Origin']           = 'https://' + req.session.tenant + '.autodeskplm360.net',
-    headers['Sec-Fetch-Mode']   = 'cors',
-    headers['Sec-Fetch-Site']   = 'cross-site';
 
     axios.put(fileData.url, fs.readFileSync(path), {
        headers : headers
@@ -1794,7 +2001,7 @@ function setStatus(req, fileId, callback) {
    
     console.log('   > Setting Status in PLM');
    
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + req.params.wsId + '/items/' + req.params.dmsId + '/attachments/' + fileId;
+    let url = req.app.locals.tenantLink + '/api/v3/workspaces/' + req.params.wsId + '/items/' + req.params.dmsId + '/attachments/' + fileId;
    
     axios.patch(url, {
        status : {
@@ -1823,7 +2030,7 @@ function setStatus(req, fileId, callback) {
 //     console.log('  req.query.link  = ' + req.query.link);
 //     console.log();
 
-//     let url  = 'https://' + req.session.tenant + '.autodeskplm360.net';
+//     let url  = req.app.locals.tenantLink ;
 //         url += (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
 //         url += '/attachments?asc=name';
  
@@ -1864,7 +2071,7 @@ router.get('/get-viewable', function(req, res, next) {
     console.log();
 
     let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-        url = 'https://' + req.session.tenant + '.autodeskplm360.net' + url;
+        url = req.app.locals.tenantLink + url;
 
     if(url.indexOf('/attachments/') === -1) url += '/attachments/' + req.query.attachmentId;
 
@@ -1876,9 +2083,7 @@ router.get('/get-viewable', function(req, res, next) {
 });
 function getViewerData(req, res, url, headers, enforce) {
 
-    let suffix = '';
-
-    if(enforce) suffix = '?force=true';
+    let suffix = (enforce) ? '?force=true' : '';
 
     axios.get(url + suffix, {
         headers : headers
@@ -1889,9 +2094,9 @@ function getViewerData(req, res, url, headers, enforce) {
             getViewerData(req, res, url, headers, true);
         } else if(response.data.status === 'DONE') {
             sendResponse(req, res, {
-                'data' : {
-                    'urn'       : response.data.fileUrn,
-                    'token'     : req.session.headers.token                
+                data : {
+                    urn   : response.data.fileUrn,
+                    token : req.session.headers.token                
                 }
             }, false);
         } else {
@@ -1923,9 +2128,10 @@ router.get('/get-viewables', function(req, res, next) {
     console.log('  req.query.filename       = ' + req.query.filename);
     console.log('  req.query.extensionsIn   = ' + req.query.extensionsIn);
     console.log('  req.query.extensionsEx   = ' + req.query.extensionsEx);
+    console.log();
     
     let link         = (typeof req.query.link === 'undefined') ? '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId : req.query.link;
-    let url          = 'https://' + req.session.tenant + '.autodeskplm360.net' + link + '/attachments?asc=name';
+    let url          = req.app.locals.tenantLink + link + '/attachments?asc=name';
     let fileId       = (typeof req.query.fileId       === 'undefined') ? '' : req.query.fileId;
     let filename     = (typeof req.query.filename     === 'undefined') ? '' : req.query.filename;
     let extensionsIn = (typeof req.query.extensionsIn === 'undefined') ? ['dwf', 'dwfx', 'ipt', 'stp', 'step', 'sldprt', 'nwd', 'rvt'] : req.query.extensionsIn;
@@ -1963,21 +2169,21 @@ router.get('/get-viewables', function(req, res, next) {
 
                     if(include) {
                         viewables.push({
-                            'id'            : attachment.id,
-                            'description'   : attachment.description,
-                            'version'       : attachment.version,
-                            'name'          : attachment.resourceName,
-                            'user'          : attachment.created.user.title,
-                            'type'          : attachment.type.fileType,
-                            'extension'     : attachment.type.extension,
-                            'status'        : '',
-                            'fileUrn'       : '',
-                            'thumbnail'     : attachment.thumbnails.large,
-                            'token'         : req.session.headers.token
+                            id            : attachment.id,
+                            description   : attachment.description,
+                            version       : attachment.version,
+                            name          : attachment.resourceName,
+                            user          : attachment.created.user.title,
+                            type          : attachment.type.fileType,
+                            extension     : attachment.type.extension,
+                            status        : '',
+                            fileUrn       : '',
+                            thumbnail     : attachment.thumbnails.large,
+                            token         : req.session.headers.token
                         });
                     }
+                    
                 }
-
             }
 
             headers.Accept = 'application/vnd.autodesk.plm.attachment.viewable+json';
@@ -1997,11 +2203,15 @@ function getViewables(req, res, headers, link, viewables, attempt) {
     let requests = [];
 
     for(let viewable of viewables) {
-
         if(viewable.status !== 'DONE') {
-            let url = 'https://' + req.session.tenant  + '.autodeskplm360.net' + link + '/attachments/' + viewable.id;
-            if(viewable.status === 'FAILED') url += '?force=true';
-            requests.push(runPromised(url, headers));
+            if(viewable.type === 'Adobe PDF') {
+                viewable.filename = viewable.name.split('.pdf')[0] + '-V' + viewable.version + '.pdf';
+                requests.push(downloadFileToCache(viewable.thumbnail, viewable.filename));
+            } else {
+                let url = req.app.locals.tenantLink + link + '/attachments/' + viewable.id;
+                if(viewable.status === 'FAILED') url += '?force=true';
+                requests.push(runPromised(url, headers));
+            }
         }
     }
 
@@ -2011,22 +2221,29 @@ function getViewables(req, res, headers, link, viewables, attempt) {
 
         for(let viewable of viewables) {
 
-            for(let response of responses) {
+            if(viewable.type !== 'Adobe PDF') {
 
-                if((viewable.name === response.fileName) || ((viewable.name + viewable.extension) === response.fileName)) {
-                    if(response.status !== 'DONE') {
-                        success = false;
-                        break
+                for(let response of responses) {
+
+                    if((viewable.name === response.fileName) || ((viewable.name + viewable.extension) === response.fileName)) {
+                        if(response.status !== 'DONE') {
+                            success = false;
+                            break
+                        }
+                        viewable.status = response.status;
+                        viewable.urn    = response.fileUrn;
                     }
-                    viewable.status = response.status;
-                    viewable.urn = response.fileUrn;
                 }
+
+            } else {
+                viewable.link = '/cache/' + viewable.filename;
             }
+
         }
 
         if(success) {
             sendResponse(req, res, { 'data' : viewables }, false);
-        } else if(attempt > 2) {
+        } else if(attempt > 20) {
             for(let index = viewables.length - 1; index >= 0; index--) {
                 if(viewables[index].status !== 'DONE') {
                     viewables.splice(index, 1);
@@ -2054,10 +2271,11 @@ router.get('/bom-views', function(req, res, next) {
     console.log(' --------------------------------------------');  
     console.log('  req.query.wsId   = ' + req.query.wsId);
     console.log('  req.query.link   = ' + req.query.link);
+    console.log('  req.query.tenant = ' + req.query.tenant);
     console.log();
     
     let wsId = (typeof req.query.link !== 'undefined') ? req.query.link.split('/')[4] : req.query.wsId;
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + wsId + '/views/5';
+    let url  = getTenantLink(req) + '/api/v3/workspaces/' + wsId + '/views/5';
     
     axios.get(url, {
         headers : req.session.headers
@@ -2076,38 +2294,47 @@ router.get('/bom-views-and-fields', function(req, res, next) {
     console.log(' ');
     console.log('  /bom-views-and-fields');
     console.log(' --------------------------------------------');  
-    console.log('  req.query.wsId   = ' + req.query.wsId);
-    console.log('  req.query.link   = ' + req.query.link);
-    
-    let wsId = (typeof req.query.link !== 'undefined') ? req.query.link.split('/')[4] : req.query.wsId;
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + wsId + '/views/5';
-    
-    axios.get(url, {
-        headers : req.session.headers
-    }).then(function(response) {
+    console.log('  req.query.wsId     = ' + req.query.wsId);
+    console.log('  req.query.link     = ' + req.query.link);
+    console.log('  req.query.tenant   = ' + req.query.tenant);
+    console.log('  req.query.useCache = ' + req.query.useCache);
+    console.log();
 
-        let requestsBasics  = [];
-        let requestsFields  = [];
+    if(notCached(req, res)) {
 
-        for(bomView of response.data.bomViews) {
-            requestsBasics.push(runPromised('https://' + req.session.tenant + '.autodeskplm360.net' + bomView.link, req.session.headers));
-            requestsFields.push(runPromised('https://' + req.session.tenant + '.autodeskplm360.net' + bomView.link + '/fields', req.session.headers));
-        }
+        let wsId = (typeof req.query.link !== 'undefined') ? req.query.link.split('/')[4] : req.query.wsId;
+        let url  = getTenantLink(req) + '/api/v3/workspaces/' + wsId + '/views/5';
 
-        Promise.all(requestsBasics).then(function(responses) {
+        axios.get(url, {
+            headers : req.session.headers
+        }).then(function(response) {
 
-            let result = responses;
-            let index = 0;
+            let requestsBasics  = [];
+            let requestsFields  = [];
 
-            Promise.all(requestsFields).then(function(responses) {
+            for(bomView of response.data.bomViews) {
+                requestsBasics.push(runPromised(getTenantLink(req) + bomView.link, req.session.headers));
+                requestsFields.push(runPromised(getTenantLink(req) + bomView.link + '/fields', req.session.headers));
+            }
 
-                for(entry of result) {
-                    entry.fields = responses[index++];
-                }
+            Promise.all(requestsBasics).then(function(responses) {
 
-                sortArray(result, 'name', 'string');
-                sendResponse(req, res, { 'data' : result }, false);
+                let result = responses;
+                let index = 0;
 
+                Promise.all(requestsFields).then(function(responses) {
+
+                    for(let entry of result) {
+                        entry.fields = responses[index++];
+                    }
+
+                    sortArray(result, 'name', 'string');
+                    sendResponse(req, res, { 'data' : result }, false);
+
+
+                }).catch(function(error) {
+                    sendResponse(req, res, error.response, true);
+                });
 
             }).catch(function(error) {
                 sendResponse(req, res, error.response, true);
@@ -2117,9 +2344,8 @@ router.get('/bom-views-and-fields', function(req, res, next) {
             sendResponse(req, res, error.response, true);
         });
 
-    }).catch(function(error) {
-        sendResponse(req, res, error.response, true);
-    });
+    }
+
     
 });
 
@@ -2135,7 +2361,7 @@ router.get('/bom-view-fields', function(req, res, next) {
     console.log('  req.query.viewId = ' + req.query.viewId);
    
     let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/views/5/viewdef/' + req.query.viewId;
-        url = 'https://' + req.session.tenant + '.autodeskplm360.net' + url + '/fields';
+        url = req.app.locals.tenantLink + url + '/fields';
     
     axios.get(url, {
         headers : req.session.headers
@@ -2165,7 +2391,7 @@ router.get('/bom', function(req, res, next) {
     let depth           = (typeof req.query.depth !== 'undefined') ? req.query.depth : 10;
     let link            = (typeof req.query.link  !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
     let rootId          = (typeof req.query.link  !== 'undefined') ? req.query.link.split('/')[6] : req.query.dmsId;
-    let url             = 'https://' + req.session.tenant + '.autodeskplm360.net' + link + '/bom?depth=' + depth + '&revisionBias=' + revisionBias + '&rootId=' + rootId;
+    let url             = req.app.locals.tenantLink + link + '/bom?depth=' + depth + '&revisionBias=' + revisionBias + '&rootId=' + rootId;
     let headers         = getCustomHeaders(req);
 
     if(typeof req.query.viewId !== 'undefined') url += '&viewDefId=' + req.query.viewId;
@@ -2200,7 +2426,9 @@ router.get('/bom-flat', function(req, res, next) {
     
     let link    = (typeof req.query.link   !== 'undefined') ? req.query.link  : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
     let dmsId   = (typeof req.query.dmsId  !== 'undefined') ? req.query.dmsId : link.split('/')[6];
-    let url     = 'https://' + req.session.tenant + '.autodeskplm360.net' + link + '/bom-items?revisionBias=' + req.query.revisionBias + '&rootId=' + dmsId + '&viewDefId=' + req.query.viewId;
+    let url     = req.app.locals.tenantLink + link + '/bom-items?revisionBias=' + req.query.revisionBias + '&rootId=' + dmsId + '&viewDefId=' + req.query.viewId;
+
+    console.log(url);
 
     let headers = getCustomHeaders(req);
         headers['accept'] = 'application/vnd.autodesk.plm.bom.flat.bulk+json';
@@ -2230,7 +2458,7 @@ router.get('/bom-item', function(req, res, next) {
     console.log('  req.query.link   = ' + req.query.link);
     console.log();
 
-    let url = (typeof req.query.link !== 'undefined') ? req.query.link : 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId + '/bom-items/' + req.query.edgeId;
+    let url = (typeof req.query.link !== 'undefined') ? req.query.link : req.app.locals.tenantLink + '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId + '/bom-items/' + req.query.edgeId;
 
     console.log(url);
 
@@ -2254,7 +2482,7 @@ router.get('/bom-edge', function(req, res, next) {
     console.log('  req.query.edgeLink = ' + req.query.edgeLink);
     console.log();
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net' + req.query.edgeLink;
+    let url = req.app.locals.tenantLink + req.query.edgeLink;
 
     console.log(url);
 
@@ -2292,7 +2520,7 @@ router.get('/bom-add', function(req, res, next) {
     let quantity   = (typeof   req.query.quantity === 'undefined') ? 1 : req.query.quantity;
     let isPinned   = (typeof     req.query.pinned === 'undefined') ? false : req.query.pinned;
     
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net' + linkParent + '/bom-items';
+    let url = req.app.locals.tenantLink + linkParent + '/bom-items';
     
     let params = {
         'quantity'  : quantity,
@@ -2352,7 +2580,7 @@ router.get('/bom-update', function(req, res, next) {
     console.log('  req.query.fields      = ' + req.query.fields);
     console.log();
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + req.query.wsIdParent + '/items/' + req.query.dmsIdParent + '/bom-items/' + req.query.edgeId;
+    let url = req.app.locals.tenantLink + '/api/v3/workspaces/' + req.query.wsIdParent + '/items/' + req.query.dmsIdParent + '/bom-items/' + req.query.edgeId;
 
     let isPinned = (typeof req.query.pinned === 'undefined') ? false : req.query.pinned;
 
@@ -2418,7 +2646,7 @@ router.get('/bom-remove', function(req, res, next) {
         edgeLink += '/bom-items/' + req.query.edgeId;
     }
     
-    let url  = 'https://' + req.session.tenant + '.autodeskplm360.net' + edgeLink;
+    let url  = req.app.locals.tenantLink + edgeLink;
 
     axios.delete(url, {
         headers : req.session.headers
@@ -2445,7 +2673,7 @@ router.get('/where-used', function(req, res, next) {
     let depth = (typeof req.query.depth !== 'undefined') ? req.query.depth : 10;
     
     let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-        url = 'https://' + req.session.tenant + '.autodeskplm360.net' + url + '/where-used?depth=' + depth;
+        url = req.app.locals.tenantLink + url + '/where-used?depth=' + depth;
 
     axios.get(url, {
         headers : req.session.headers
@@ -2473,7 +2701,7 @@ router.get('/parents', function(req, res, next) {
     console.log('  req.query.wsId  = ' + req.query.wsId);
     console.log('  req.query.dmsId = ' + req.query.dmsId);
     
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId + '/where-used?limit=100&offset=0';
+    let url = req.app.locals.tenantLink + '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId + '/where-used?limit=100&offset=0';
     
     axios.get(url, {
         headers : req.session.headers
@@ -2497,11 +2725,14 @@ router.get('/related-items', function(req, res, next) {
     console.log('  req.query.wsId        = ' + req.query.wsId);
     console.log('  req.query.dmsId       = ' + req.query.dmsId);
     console.log('  req.query.link        = ' + req.query.link);
+    console.log('  req.query.limit        = ' + req.query.limit);
     console.log('  req.query.relatedWSID = ' + req.query.relatedWSID);
     console.log();
     
+    let limit = (typeof req.query.limit === 'undefined') ? 100 : req.query.limit;
+
     let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-        url = 'https://' + req.session.tenant + '.autodeskplm360.net' + url + '/related-items?includeChildren=all&includeItems=workingVersionHasChanged&includeParents=none&limit=100&offset=0&relatedWorkspaceId=' + req.query.relatedWSID + '&revisionBias=working';
+        url = req.app.locals.tenantLink + url + '/related-items?includeChildren=all&includeItems=workingVersionHasChanged&includeParents=none&limit=' + limit + '&offset=0&relatedWorkspaceId=' + req.query.relatedWSID + '&revisionBias=working';
 
     axios.get(url, {
         headers : req.session.headers
@@ -2528,11 +2759,13 @@ router.get('/project', function(req, res, next) {
     console.log();
     
     let url =  (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
-        url = 'https://' + req.session.tenant + '.autodeskplm360.net' + url + '/views/16';
+        url = req.app.locals.tenantLink + url + '/views/16';
 
     axios.get(url, {
         headers : req.session.headers
     }).then(function(response) {
+        console.log(response);
+        if(response.data === '') response.data = { projectItems : [] };
         sendResponse(req, res, response, false);
     }).catch(function(error) {
         sendResponse(req, res, error.response, true);
@@ -2551,7 +2784,7 @@ router.get('/logs', function(req, res, next) {
     console.log('  req.query.dmsId = ' + req.query.dmsId);
     console.log('  req.query.link = ' + req.query.link);
 
-    let url  = 'https://' + req.session.tenant + '.autodeskplm360.net';
+    let url  = req.app.locals.tenantLink ;
         url += (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
         url += '/logs?desc=timeStamp&limit=500&offset=0';
     
@@ -2580,7 +2813,7 @@ router.get('/versions', function(req, res, next) {
     console.log();
     
     let link = (typeof req.query.link === 'undefined') ? '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId : req.query.link;
-    let url  = 'https://' + req.session.tenant + '.autodeskplm360.net' + link + '/versions';
+    let url  = req.app.locals.tenantLink + link + '/versions';
     
     axios.get(url, {
         headers : req.session.headers
@@ -2604,7 +2837,7 @@ router.get('/transitions', function(req, res, next) {
     console.log('  req.query.link       = ' + req.query.link);
     console.log();
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net';
+    let url = req.app.locals.tenantLink ;
         url += (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
         url += '/workflows/1/transitions';
 
@@ -2632,7 +2865,7 @@ router.get('/transition', function(req, res, next) {
     console.log('  req.query.comment    = ' + req.query.comment);
     console.log();
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net';
+    let url = req.app.locals.tenantLink ;
         url += (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
         url += '/workflows/1/transitions';
 
@@ -2640,9 +2873,9 @@ router.get('/transition', function(req, res, next) {
         custHeaders['content-location'] = req.query.transition;
 
     axios.post(url, {
-        'comment' : req.query.commment
+        comment : req.query.comment
     },{
-        'headers' : custHeaders
+        headers : custHeaders
     }).then(function(response) {
         sendResponse(req, res, response, false);
     }).catch(function(error) {
@@ -2667,7 +2900,7 @@ router.get('/workflow-history', function(req, res, next) {
     console.log('  req.query.link       = ' + req.query.link);
     console.log();
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net';
+    let url = req.app.locals.tenantLink ;
         url += (typeof req.query.link !== 'undefined') ? req.query.link : '/api/v3/workspaces/' + req.query.wsId + '/items/' + req.query.dmsId;
         url += '/workflows/1/history';
 
@@ -2694,7 +2927,7 @@ router.get('/mow', function(req, res, next) {
     console.log(' --------------------------------------------');  
     console.log('  ');
     
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/users/@me/outstanding-work';
+    let url = req.app.locals.tenantLink + '/api/v3/users/@me/outstanding-work';
     
     axios.get(url, {
         headers : req.session.headers
@@ -2712,19 +2945,24 @@ router.get('/bookmarks', function(req, res, next) {
     
     console.log(' ');
     console.log('  /bookmarks');
-    console.log(' --------------------------------------------');  
+    console.log(' --------------------------------------------'); 
+    console.log('  req.query.useCache = ' + req.query.useCache);
     console.log('  ');
+
+    if(notCached(req, res)) {
     
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/users/@me/bookmarks';
-    
-    axios.get(url, {
-        headers : req.session.headers
-    }).then(function(response) {
-        if(response.data === '') response.data = { 'bookmarks' : [] };
-        sendResponse(req, res, response, false);
-    }).catch(function(error) {
-        sendResponse(req, res, error.response, true);
-    });
+        let url = req.app.locals.tenantLink + '/api/v3/users/@me/bookmarks';
+        
+        axios.get(url, {
+            headers : req.session.headers
+        }).then(function(response) {
+            if(response.data === '') response.data = { 'bookmarks' : [] };
+            sendResponse(req, res, response, false);
+        }).catch(function(error) {
+            sendResponse(req, res, error.response, true);
+        });
+
+    }
     
 });
 
@@ -2739,7 +2977,7 @@ router.get('/add-bookmark', function(req, res, next) {
     console.log('  req.query.comment = ' + req.query.comment);
     console.log('  ');
     
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/users/@me/bookmarks';
+    let url = req.app.locals.tenantLink + '/api/v3/users/@me/bookmarks';
     
     let params = {
         'dmsId' : req.query.dmsId,
@@ -2766,7 +3004,7 @@ router.get('/remove-bookmark', function(req, res, next) {
     console.log('  req.query.dmsId   = ' + req.query.dmsId);
     console.log('  ');
     
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/users/@me/bookmarks/' + req.query.dmsId;
+    let url = req.app.locals.tenantLink + '/api/v3/users/@me/bookmarks/' + req.query.dmsId;
     
     axios.delete(url, {
         headers : req.session.headers
@@ -2787,7 +3025,7 @@ router.get('/recent', function(req, res, next) {
     console.log(' --------------------------------------------');  
     console.log('  ');
     
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/users/@me/recently-viewed';
+    let url = req.app.locals.tenantLink + '/api/v3/users/@me/recently-viewed';
     
     axios.get(url, {
         headers : req.session.headers
@@ -2806,24 +3044,35 @@ router.get('/items', function(req, res) {
     console.log(' ');
     console.log('  /items');
     console.log(' --------------------------------------------');
-    console.log('  req.query.wsId   = ' + req.query.wsId);
-    console.log('  req.query.bulk   = ' + req.query.bulk); 
+    console.log('  req.query.wsId     = ' + req.query.wsId);
+    console.log('  req.query.offset   = ' + req.query.offset); 
+    console.log('  req.query.limit    = ' + req.query.limit); 
+    console.log('  req.query.bulk     = ' + req.query.bulk); 
+    console.log('  req.query.useCache = ' + req.query.useCache); 
     console.log();
 
-    let url         = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + req.query.wsId + '/items';
-    let bulk        = (typeof req.query.bulk !== 'undefined') ? (req.query.bulk.toLowerCase() === 'true') : false;
-    let custHeaders = getCustomHeaders(req);
+    if(notCached(req, res)) {
 
-    if(bulk) custHeaders['Accept'] = 'application/vnd.autodesk.plm.items.bulk+json';
+        let url         = req.app.locals.tenantLink + '/api/v3/workspaces/' + req.query.wsId + '/items';
+        let offset      = (typeof req.query.offset === 'undefined') ? 0 : req.query.offset;
+        let limit       = (typeof req.query.limit  === 'undefined') ? 100 : req.query.limit;
+        let bulk        = (typeof req.query.bulk   !== 'undefined') ? (req.query.bulk.toLowerCase() === 'true') : false;
+        let custHeaders = getCustomHeaders(req);
 
-    axios.get(url, { 
-        'headers' : custHeaders
-    }).then(function (response) {
-        if(response.data === '') response.data = { 'items' : []};
-        sendResponse(req, res, response, false); 
-    }).catch(function (error) {
-        sendResponse(req, res, error.response, true);
-    });
+        url += '?offset=' + offset + '&limit=' + limit;
+
+        if(bulk) custHeaders['Accept'] = 'application/vnd.autodesk.plm.items.bulk+json';
+
+        axios.get(url, { 
+            'headers' : custHeaders
+        }).then(function (response) {
+            if(response.data === '') response.data = { 'items' : []};
+            sendResponse(req, res, response, false); 
+        }).catch(function (error) {
+            sendResponse(req, res, error.response, true);
+        });
+
+    }
    
 });
 
@@ -2841,7 +3090,7 @@ router.get('/search', function(req, res) {
     console.log('  req.query.filter = ' + req.query.filter);
     console.log();
 
-   let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/rest/v1/workspaces/' + req.query.wsId + '/items/search';
+   let url = req.app.locals.tenantLink + '/api/rest/v1/workspaces/' + req.query.wsId + '/items/search';
    
    let params = {
        'pageNo'        : 1,
@@ -2851,7 +3100,7 @@ router.get('/search', function(req, res) {
        'filter'        : [],
        'sort'          : []
    };
-   
+
    setBodyFields(params, req.query.fields);
    setBodySort(params, req.query.sort);
    setBodyFilter(params, req.query.filter);
@@ -2947,18 +3196,22 @@ function setBodyFilter(body, filters) {
    
    body.filter = [];
    
-   for(var i = 0; i < filters.length; i++) {
+   for(let filter of filters) {
 
-       var filter = {
-           'fieldID'       : filters[i].field,
-           'fieldTypeID'   : filters[i].type,
-           'filterType'    : { 'filterID' : filters[i].comparator },
-           'filterValue'   : filters[i].value         
-       }
-       
-       body.filter.push(filter);
-       
-   }
+        if(typeof filter.value === 'undefined') {
+            console.log();
+            console.log('  !! ERROR !! Ignoring filter for ' + filter.field + ' as value is undefined');
+            console.log();
+        } else {
+            body.filter.push({
+                'fieldID'       : filter.field,
+                'fieldTypeID'   : filter.type,
+                'filterType'    : { 'filterID' : filter.comparator },
+                'filterValue'   : filter.value         
+            });
+        }
+        
+    }
    
 }
 
@@ -2970,6 +3223,7 @@ router.get('/search-descriptor', function(req, res, next) {
     console.log('  /search-descriptor');
     console.log(' --------------------------------------------'); 
     console.log('  req.query.wsId       = ' + req.query.wsId);
+    console.log('  req.query.workspaces = ' + req.query.workspaces);
     console.log('  req.query.query      = ' + req.query.query);
     console.log('  req.query.limit      = ' + req.query.limit);
     console.log('  req.query.offset     = ' + req.query.offset); 
@@ -2986,12 +3240,12 @@ router.get('/search-descriptor', function(req, res, next) {
     let revision    = (typeof req.query.revision === 'undefined') ?   '1'    : req.query.revision;
     let wildcard    = (typeof req.query.wildcard === 'undefined') ?   true   : (req.query.wildcard.toLowerCase() === 'true');
 
-    let url    = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/search-results?limit=' + limit + '&offset=' + offset + '&page=' + page + '&revision=' + revision + '&query=';
+    let url    = req.app.locals.tenantLink + '/api/v3/search-results?limit=' + limit + '&offset=' + offset + '&page=' + page + '&revision=' + revision + '&query=';
     let values = req.query.query.split(' ');
     
     if(values.length > 1) {
         let query  = '';
-        for(value of values) {
+        for(let value of values) {
             if(value !== '-') {
                 if(query !== '') query += '+OR+'
                 if(!isNaN(value)) query += 'itemDescriptor%3D*' + value + '*'
@@ -3006,6 +3260,17 @@ router.get('/search-descriptor', function(req, res, next) {
     }
 
     if(typeof req.query.wsId !== 'undefined') url += '+AND+(workspaceId%3D' + req.query.wsId + ')';
+
+    if(typeof req.query.workspaces !== 'undefined') {
+        url += '+AND+(';
+        let isFirst = true;
+        for(let workspace of req.query.workspaces) {
+            if(!isFirst) url += '+OR+';
+            url += 'workspaceId%3D' + workspace;
+            isFirst = false;
+        }
+        url += ')';
+    }
 
     let headers = getCustomHeaders(req);
 
@@ -3037,6 +3302,7 @@ router.get('/search-bulk', function(req, res, next) {
     console.log('  req.query.bulk       = ' + req.query.bulk); 
     console.log('  req.query.page       = ' + req.query.page); 
     console.log('  req.query.revision   = ' + req.query.revision); 
+    console.log('  req.query.useCache   = ' + req.query.useCache); 
     console.log();
 
     let limit       = (typeof req.query.limit    === 'undefined') ?   100 : req.query.limit;
@@ -3045,24 +3311,28 @@ router.get('/search-bulk', function(req, res, next) {
     let page        = (typeof req.query.page     === 'undefined') ?   '1' : req.query.page;
     let revision    = (typeof req.query.revision === 'undefined') ?   '1' : req.query.revision;
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/search-results?limit=' + limit + '&offset=' + offset + '&page=' + page + '&revision=' + revision + '&query=' + req.query.query;
+
+    
+    let url = req.app.locals.tenantLink + '/api/v3/search-results?limit=' + limit + '&offset=' + offset + '&page=' + page + '&revision=' + revision + '&query=' + req.query.query;
     
     if(typeof req.query.wsId !== 'undefined') url += '+AND+(workspaceId%3D' + req.query.wsId + ')';
-
+    
     let headers = getCustomHeaders(req);
-
+    
     if(bulk) headers.Accept = 'application/vnd.autodesk.plm.items.bulk+json';
+    
+    if(notCached(req, res, 'search-bulk', url)) {
 
-    axios.get(url, {
-        headers : headers
-    }).then(function(response) {
+        axios.get(url, {
+            headers : headers
+        }).then(function(response) {
+            if(response.data === "") response.data = { 'items' : [] }
+            sendResponse(req, res, response, false);
+        }).catch(function(error) {
+            sendResponse(req, res, error.response, true);
+        });
 
-        if(response.data === "") response.data = { 'items' : [] }
-
-        sendResponse(req, res, response, false);
-    }).catch(function(error) {
-        sendResponse(req, res, error.response, true);
-    });
+    }
     
 });
 
@@ -3073,20 +3343,36 @@ router.get('/tableaus', function(req, res, next) {
     console.log(' ');
     console.log('  /tableaus');
     console.log(' --------------------------------------------');  
-    console.log('  req.query.wsId  = ' + req.query.wsId);
-    
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + req.query.wsId + '/tableaus';
-    
-    axios.get(url, {
-        headers : req.session.headers
-    }).then(function(response) {
-        let result = [];
-        if(response.data !== '') result = response.data.tableaus;
-        sendResponse(req, res, { 'data' : result, 'status' : response.status }, false);
-    }).catch(function(error) {
-        sendResponse(req, res, error.response, true);
-    });
-    
+    console.log('  req.query.wsId     = ' + req.query.wsId);
+    console.log('  req.query.link     = ' + req.query.link);
+    console.log('  req.query.tenant   = ' + req.query.tenant);
+    console.log('  req.query.user     = ' + req.query.user);
+    console.log('  req.query.useCache = ' + req.query.useCache);
+    console.log();
+
+    if(notCached(req, res)) {
+
+        let wsId    = (typeof req.query.wsId === 'undefined') ? req.query.link.split('/')[4] : req.query.wsId
+        let url     = getTenantLink(req) + '/api/v3/workspaces/' + wsId + '/tableaus';
+        let headers = getCustomHeaders(req);
+
+        if(typeof req.query.user !== 'undefined') {
+            headers['Authorization'] = req.session.admin;
+            headers['X-user-id']     = req.query.user;
+        }
+
+        axios.get(url, {
+            headers : headers
+        }).then(function(response) {
+            let result = [];
+            if(response.data !== '') result = response.data.tableaus;
+            sendResponse(req, res, { 'data' : result, 'status' : response.status }, false);
+        }).catch(function(error) {
+            sendResponse(req, res, error.response, true);
+        });
+
+    }
+
 });
 
 
@@ -3098,7 +3384,7 @@ router.get('/tableau-init', function(req, res, next) {
     console.log(' --------------------------------------------');  
     console.log('  req.query.wsId  = ' + req.query.wsId);
     
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + req.query.wsId + '/tableaus';
+    let url = req.app.locals.tenantLink + '/api/v3/workspaces/' + req.query.wsId + '/tableaus';
     
     axios.post(url, {}, {
         headers : req.session.headers
@@ -3111,26 +3397,33 @@ router.get('/tableau-init', function(req, res, next) {
 });
 
 
-/* ----- CREATE BASE VIEW ----- */
-router.get('/tableau-add', function(req, res, next) {
+/* ----- CREATE WORKSPACE VIEW ----- */
+router.post('/tableau-add', function(req, res, next) {
     
     console.log(' ');
     console.log('  /tableau-add');
     console.log(' --------------------------------------------');  
-    console.log('  req.query.wsId    = ' + req.query.wsId);
-    console.log('  req.query.name    = ' + req.query.name);
-    console.log('  req.query.columns = ' + req.query.columns);
+    console.log('  req.body.wsId        = ' + req.body.wsId);
+    console.log('  req.body.name        = ' + req.body.name);
+    console.log('  req.body.columns     = ' + req.body.columns);
+    console.log('  req.body.filters     = ' + req.body.filters);
+    console.log('  req.body.default     = ' + req.body.default);
+    console.log('  req.body.showDeleted = ' + req.body.showDeleted);
+    console.log('  req.body.user        = ' + req.body.user);
+    console.log();
     
-    let title       = (typeof req.query.name === 'undefined') ? 'New View' : req.query.name;
-    let columns     = (typeof req.query.columns === 'undefined') ? ['descriptor', 'created_on', 'last_modified_on'] : req.query.columns;
-    let url         = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + req.query.wsId + '/tableaus';
-    let urlFields   = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + req.query.wsId + '/fields';
-    let index       = 0;
-    let params      = {
-        'name'          : title,
-        'createdDate'   : new Date(),
-        'isDefault'     : false,
-        'columns'       : []
+    let title       = (typeof req.body.name        === 'undefined') ? 'New View' : req.body.name;
+    let isDefault   = (typeof req.body.default     === 'undefined') ? false : req.body.default;
+    let showDeleted = (typeof req.body.showDeleted === 'undefined') ? false : req.body.showDeleted;
+    let url         = getTenantLink(req) + '/api/v3/workspaces/' + req.body.wsId + '/tableaus';
+    let headers     = getCustomHeaders(req);
+    
+    let params = {
+        name                    : title,
+        createdDate             : new Date(),
+        isDefault               : isDefault,
+        showOnlyDeletedRecords  : showDeleted,
+        columns                 : []
     };
 
     if(title.length > 30) {
@@ -3142,76 +3435,21 @@ router.get('/tableau-add', function(req, res, next) {
 
     } else {
 
-        axios.get(urlFields, {
-            headers : req.session.headers
-        }).then(function(response) {
+        if(typeof req.body.user !== 'undefined') {
+            headers['Authorization'] = req.session.admin;
+            headers['X-user-id']     = req.body.user;
+        }
 
-            for(column of columns) {
+        genTableauColumms(req, headers, function(result) {
 
-                let col = {
-                    'displayOrder' : index++,
-                    'field' : {},
-                    'group' : {}
-                }
+            params.columns = result;
 
-                switch(column.toLowerCase()) {
-
-                    case 'descriptor':
-                        col.field.title     = 'Item Descriptor';
-                        col.field.__self__  = '/api/v3/workspaces/' + req.query.wsId + '/views/0/fields/DESCRIPTOR';
-                        col.field.urn       = '';
-                        col.field.type      = { 'link' : '/api/v3/field-types/4' }
-                        col.group           = { 'label' : 'ITEM_DESCRIPTOR_FIELD' };
-                        break;
-
-                    case 'created_on':
-                        col.field.title     = 'Created On';
-                        col.field.__self__  = '/api/v3/workspaces/' + req.query.wsId + '/views/0/fields/CREATED_ON';
-                        col.field.urn       = '';
-                        col.field.type      = { 'link' : '/api/v3/field-types/3' };
-                        col.group           = { 'label' : 'LOG_FIELD' };
-                        break;
-
-                    case 'last_modified_on':
-                        col.field.title     = 'Last Modified On';
-                        col.field.__self__  = '/api/v3/workspaces/' + req.query.wsId + '/views/0/fields/LAST_MODIFIED_ON';
-                        col.field.urn       = '';
-                        col.field.type      = { 'link' : '/api/v3/field-types/3' };
-                        col.group           = { 'label' : 'LOG_FIELD' };
-                        break;
-
-                    case 'wf_current_state':
-                        col.field.title     = 'Currrent State';
-                        col.field.__self__  = '/api/v3/workspaces/' + req.query.wsId + '/views/0/fields/WF_CURRENT_STATE';
-                        col.field.urn       = '';
-                        col.field.type      = { 'link' : '/api/v3/field-types/3' };
-                        col.group           = { 'label' : 'WORKFLOW_FIELD' };
-                        break;
-
-                    default:
-                        for(field of response.data.fields) {
-                            let fieldId = field.__self__.split('/')[8];
-                            if(fieldId === column) {
-                                col.field.title     = field.name;
-                                col.field.__self__  = field.__self__;
-                                col.field.urn       = '';
-                                col.field.type      = { 'link' : field.type.link };
-                                col.group           = { 'label' : 'ITEM_DETAILS_FIELD' };
-                            }
-                        }
-                        break;
-                }
-
-                params.columns.push(col);
-
-            }
-        
-            let headers = getCustomHeaders(req);
-                headers['Content-Type'] = 'application/vnd.autodesk.plm.meta+json';
+            headers['Content-Type'] = 'application/vnd.autodesk.plm.meta+json';
 
             axios.post(url, params, {
                 headers : headers
             }).then(function(response) {
+                response.data = response.headers.location.split('.autodeskplm360.net')[1];
                 sendResponse(req, res, response, false);
             }).catch(function(error) {
                 sendResponse(req, res, error.response, true);
@@ -3220,6 +3458,274 @@ router.get('/tableau-add', function(req, res, next) {
         });
 
     }
+    
+});
+function genTableauColumms(req, headers, callback) {
+
+    let wsId        = (typeof req.body.wsId === 'undefined') ? req.body.link.split('/')[4] : req.body.wsId;
+    let urlFields   = getTenantLink(req) + '/api/v3/workspaces/' + wsId + '/fields';
+    let urlGrid     = getTenantLink(req) + '/api/v3/workspaces/' + wsId + '/views/13/fields';
+    let requests    = [ axios.get(urlFields, { headers : headers }) ];
+    let columns     = (typeof req.body.columns     === 'undefined') ? ['descriptor', 'created_on', 'last_modified_on'] : req.body.columns;
+    let filters     = (typeof req.body.filters     === 'undefined') ? [] : req.body.filters;
+    let result      = [];
+    let reuse       = true;
+    let index       = 0;
+
+    for(let column of columns) {
+        if(typeof column === 'string') {
+            reuse = false;
+            if(column.toLowerCase().indexOf('grid.') === 0) {
+                if(!requests.includes(urlGrid)) requests.push( axios.get(urlGrid, { headers : headers }));
+            }
+        }
+    }
+
+    if(reuse) {
+        callback(columns);
+        return;
+    } 
+
+    axios.all(requests).then(function(responses) {
+
+        let allFields = [];
+
+        for(let response of responses) {
+            allFields = allFields.concat(response.data.fields);
+        }
+
+        for(let column of columns) {
+
+            let col = {
+                displayOrder : index++,
+                field        : {},
+                group        : {}
+            }
+
+            switch(column.toLowerCase()) {
+
+                case 'descriptor':
+                    col.field.title     = 'Item Descriptor';
+                    col.field.__self__  = '/api/v3/workspaces/' + wsId + '/views/0/fields/DESCRIPTOR';
+                    col.field.urn       = '';
+                    col.field.type      = { 'link' : '/api/v3/field-types/4' }
+                    col.group           = { 'label' : 'ITEM_DESCRIPTOR_FIELD' };
+                    break;
+
+                case 'created_on':
+                    col.field.title     = 'Created On';
+                    col.field.__self__  = '/api/v3/workspaces/' + wsId + '/views/0/fields/CREATED_ON';
+                    col.field.urn       = '';
+                    col.field.type      = { 'link' : '/api/v3/field-types/3' };
+                    col.group           = { 'label' : 'LOG_FIELD' };
+                    break;
+
+                case 'last_modified_on':
+                    col.field.title     = 'Last Modified On';
+                    col.field.__self__  = '/api/v3/workspaces/' + wsId + '/views/0/fields/LAST_MODIFIED_ON';
+                    col.field.urn       = '';
+                    col.field.type      = { 'link' : '/api/v3/field-types/3' };
+                    col.group           = { 'label' : 'LOG_FIELD' };
+                    break;
+
+                case 'wf_current_state':
+                    col.field.title     = 'Currrent State';
+                    col.field.__self__  = '/api/v3/workspaces/' + wsId + '/views/0/fields/WF_CURRENT_STATE';
+                    col.field.urn       = '';
+                    col.field.type      = { 'link' : '/api/v3/field-types/3' };
+                    col.group           = { 'label' : 'WORKFLOW_FIELD' };
+                    break;
+
+                default:
+
+                    let columnView  = '1';
+                    let columnField = column;
+                    let columnGroup = 'ITEM_DETAILS_FIELD';
+
+                    if(columnField.toLowerCase().indexOf('grid.') === 0) { 
+                        columnView  = '13'; 
+                        columnField = columnField.split('grid.')[1]; 
+                        columnGroup = 'GRID_FIELD';
+                    }
+
+                    for(let field of allFields) {
+                        
+                        let viewId  = field.__self__.split('/')[6];
+                        let fieldId = field.__self__.split('/')[8];
+
+                        if(viewId === columnView) {
+                            if(fieldId === columnField) {
+
+                                col.field.title     = field.name;
+                                col.field.__self__  = field.__self__;
+                                col.field.urn       = '';
+                                col.field.type      = { 'link' : field.type.link };
+                                col.group           = { 'label' : columnGroup };
+
+                                for(let filter of filters) {
+
+                                    if(filter.fieldId === fieldId) {
+
+                                        let matchRule = (typeof filter.match === 'undefined') ? 'ALL' : filter.match;
+
+                                        col.appliedFilters = {
+                                            matchRule : matchRule,
+                                            filters   : []
+                                        };
+
+                                        for(let condition of filter.filters) {
+
+                                            col.appliedFilters.filters.push({
+                                                type : '/api/v3/filter-types/15',
+                                                value : condition[1],
+                                            })
+
+                                        }
+
+                                    }
+
+                                }
+
+                            }
+                        }
+
+                    }
+
+                    break;
+            }
+
+            result.push(col);
+
+        }
+
+        callback(result);
+
+    });
+
+}
+
+
+/* ----- CREATE WORKSPACE VIEW ----- */
+router.post('/tableau-clone', function(req, res, next) {
+    
+    console.log(' ');
+    console.log('  /tableau-clone');
+    console.log(' --------------------------------------------');  
+    console.log('  req.body.wsId        = ' + req.body.wsId);
+    console.log('  req.body.name        = ' + req.body.name);
+    console.log('  req.body.columns     = ' + req.body.columns);
+    console.log('  req.body.default     = ' + req.body.default);
+    console.log('  req.body.showDeleted = ' + req.body.showDeleted);
+    console.log('  req.body.user        = ' + req.body.user);
+    console.log();
+    
+    let isDefault   = (typeof req.body.default     === 'undefined') ? false : req.body.default;
+    let showDeleted = (typeof req.body.showDeleted === 'undefined') ? false : req.body.showDeleted;
+    let url         = getTenantLink(req) + '/api/v3/workspaces/' + req.body.wsId + '/tableaus';
+    let headers     = getCustomHeaders(req);
+    let params      = {
+        name                   : req.body.name,
+        createdDate            : new Date(),
+        isDefault              : isDefault,
+        columns                : req.body.columns,
+        showOnlyDeletedRecords : showDeleted
+    };
+
+    if(typeof req.body.user !== 'undefined') {
+        headers['Authorization'] = req.session.admin;
+        headers['X-user-id']     = req.body.user;
+    }
+
+    headers['Content-Type'] = 'application/vnd.autodesk.plm.meta+json';
+
+    axios.post(url, params, {
+        headers : headers
+    }).then(function(response) {
+        sendResponse(req, res, response, false);
+    }).catch(function(error) {
+        sendResponse(req, res, error.response, true);
+    });
+    
+});
+
+
+/* ----- UPDATE WORKSPACE VIEW ----- */
+router.post('/tableau-update', function(req, res, next) {
+    
+    console.log(' ');
+    console.log('  /tableau-update');
+    console.log(' --------------------------------------------');  
+    console.log('  req.body.link        = ' + req.body.link);
+    console.log('  req.body.name        = ' + req.body.name);
+    console.log('  req.body.columns     = ' + req.body.columns);
+    console.log('  req.body.filters     = ' + req.body.filters);
+    console.log('  req.body.default     = ' + req.body.default);
+    console.log('  req.body.showDeleted = ' + req.body.showDeleted);
+    console.log('  req.body.user        = ' + req.body.user);
+    console.log();
+    
+    let isDefault   = (typeof req.body.default     === 'undefined') ? false : (req.body.default.toLowerCase() === 'true');
+    let showDeleted = (typeof req.body.showDeleted === 'undefined') ? false : (req.body.showDeleted.toLowerCase() === 'true');
+    let url         = getTenantLink(req) + req.body.link;
+    let headers     = getCustomHeaders(req);
+    
+    let params = {
+        name                    : req.body.name,
+        createdDate             : new Date(),
+        isDefault               : isDefault,
+        showOnlyDeletedRecords  : showDeleted,
+        columns                 : req.body.columns
+    };
+
+    if(typeof req.body.user !== 'undefined') {
+        headers['Authorization'] = req.session.admin;
+        headers['X-user-id']     = req.body.user;
+    }
+    
+    genTableauColumms(req, headers, function(result) {
+
+        params.columns = result;
+
+        headers['Content-Type'] = 'application/vnd.autodesk.plm.meta+json';
+
+        axios.put(url, params, {
+            headers : headers
+        }).then(function(response) {
+            sendResponse(req, res, response, false);
+        }).catch(function(error) {
+            sendResponse(req, res, error.response, true);
+        });
+        
+    });
+    
+});
+
+
+/* ----- DELETE WORKSPACE VIEW ----- */
+router.post('/tableau-delete', function(req, res, next) {
+    
+    console.log(' ');
+    console.log('  /tableau-delete');
+    console.log(' --------------------------------------------');  
+    console.log('  req.body.link  = ' + req.body.link);
+    console.log('  req.body.user  = ' + req.body.user);
+    console.log();
+
+    let url     = getTenantLink(req) + req.body.link;
+    let headers = getCustomHeaders(req);
+
+    if(typeof req.body.user !== 'undefined') {
+        headers['Authorization'] = req.session.admin;
+        headers['X-user-id']     = req.body.user;
+    }
+
+    axios.delete(url, {
+        headers : headers
+    }).then(function(response) {
+        sendResponse(req, res, response, false);
+    }).catch(function(error) {
+        sendResponse(req, res, error.response, true);
+    });
     
 });
 
@@ -3232,7 +3738,7 @@ router.get('/tableau-columns', function(req, res, next) {
     console.log(' --------------------------------------------');  
     console.log('  req.query.link  = ' + req.query.link);
     
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net'  + req.query.link;
+    let url = req.app.locals.tenantLink  + req.query.link;
     
     let headers = getCustomHeaders(req);
         headers.Accept = 'application/vnd.autodesk.plm.meta+json';
@@ -3262,7 +3768,7 @@ router.get('/tableau-data', function(req, res, next) {
     let page = (typeof req.query.page === 'undefined') ?  '1' : req.query.page;
     let size = (typeof req.query.size === 'undefined') ? '50' : req.query.size;
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net'  + req.query.link + '?page=' + page + '&size=' + size;
+    let url = req.app.locals.tenantLink  + req.query.link + '?page=' + page + '&size=' + size;
     
     axios.get(url, {
         headers : req.session.headers
@@ -3286,7 +3792,7 @@ router.get('/reports', function(req, res, next) {
     console.log(' --------------------------------------------');  
     console.log();
 
-   let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/rest/v1/reports';
+   let url = req.app.locals.tenantLink + '/api/rest/v1/reports';
 
     axios.get(url, {
         headers : req.session.headers
@@ -3308,7 +3814,7 @@ router.get('/report', function(req, res, next) {
     console.log('  req.query.reportId  = ' + req.query.reportId);
     console.log();
 
-   let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/rest/v1/reports/' + req.query.reportId;
+   let url = req.app.locals.tenantLink + '/api/rest/v1/reports/' + req.query.reportId;
 
     axios.get(url, {
         headers : req.session.headers
@@ -3321,19 +3827,61 @@ router.get('/report', function(req, res, next) {
 });
 
 
-/* ----- GET USERS ----- */
+/* ----- GET ALL GROUPS ----- */
+router.get('/groups', function(req, res, next) {
+    
+    console.log(' ');
+    console.log('  /groups');
+    console.log(' --------------------------------------------');  
+    console.log('  req.query.bulk     = ' + req.query.bulk);
+    console.log('  req.query.tenant   = ' + req.query.tenant);
+    console.log();
+
+    let bulk    = (typeof req.query.bulk === 'undefined') ? true : req.query.bulk;
+    let url     = getTenantLink(req) + '/api/v3/groups';
+    let headers = getCustomHeaders(req);
+        
+    if(bulk) headers.Accept = 'application/vnd.autodesk.plm.groups.bulk+json';
+
+    axios.get(url, {
+        headers : headers
+    }).then(function(response) {
+        sendResponse(req, res, response, false);
+    }).catch(function(error) {
+        sendResponse(req, res, error.response, true);
+    });
+
+});
+
+
+/* ----- GET ALL USERS ----- */
 router.get('/users', function(req, res, next) {
     
     console.log(' ');
     console.log('  /users');
     console.log(' --------------------------------------------');  
-    console.log('  req.query.offset  = ' + req.query.offset);
+    console.log('  req.query.bulk       = ' + req.query.bulk);
+    console.log('  req.query.offset     = ' + req.query.offset);
+    console.log('  req.query.limit      = ' + req.query.limit);
+    console.log('  req.query.activeOnly = ' + req.query.activeOnly);
+    console.log('  req.query.mappedOnly = ' + req.query.mappedOnly);
+    console.log('  req.query.tenant     = ' + req.query.tenant);
     console.log();
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/users?limit=100&activeOnly=false&sort=displayName&mappedOnly=false&offset=' + req.query.offset;
+    let bulk       = (typeof req.query.bulk       === 'undefined') ?    true : req.query.bulk;
+    let limit      = (typeof req.query.limit      === 'undefined') ?     100 : req.query.limit;
+    let offset     = (typeof req.query.offset     === 'undefined') ?       0 : req.query.offset;
+    let activeOnly = (typeof req.query.activeOnly === 'undefined') ? 'false' : req.query.activeOnly;
+    let mappedOnly = (typeof req.query.mappedOnly === 'undefined') ? 'false' : req.query.mappedOnly;
+    let url = getTenantLink(req) + '/api/v3/users?sort=displayName'
+        + '&activeOnly=' + activeOnly
+        + '&mappedOnly=' + mappedOnly
+        + '&offset='     + offset
+        + '&limit='      + limit;
 
     let headers = getCustomHeaders(req);
-        headers.Accept = 'application/vnd.autodesk.plm.users.bulk+json';
+        
+    if(bulk) headers.Accept = 'application/vnd.autodesk.plm.users.bulk+json';
 
     axios.get(url, {
         headers : headers
@@ -3351,10 +3899,87 @@ router.get('/me', function(req, res, next) {
     
     console.log(' ');
     console.log('  /me');
+    console.log(' --------------------------------------------'); 
+    console.log('  req.query.useCache = ' + req.query.useCache);  
+    console.log();
+
+    if(notCached(req, res)) {
+    
+        let url = req.app.locals.tenantLink + '/api/v3/users/@me';
+
+        axios.get(url, {
+            headers : req.session.headers
+        }).then(function(response) {
+            sendResponse(req, res, response, false);
+        }).catch(function(error) {
+            sendResponse(req, res, error.response, true);
+        });
+
+    }
+
+});
+
+
+/* ----- SET USER PREFERENCE ----- */
+router.get('/preference', function(req, res, next) {
+    
+    console.log(' ');
+    console.log('  /preference');
+    console.log(' --------------------------------------------');  
+    console.log('  req.query.property = ' + req.query.property);
+    console.log('  req.query.value    = ' + req.query.value);
+    console.log('  req.query.user     = ' + req.query.user);
+    console.log();
+
+    let headers  = getCustomHeaders(req);
+    let url      = getTenantLink(req) + '/api/v3/users/@me';
+    let property = req.query.property.toLowerCase();
+    let value    = {};
+
+    switch(property) {
+
+        case 'theme':
+            value =  { selected : req.query.value }
+            break;
+
+    }   
+
+    if(typeof req.query.user !== 'undefined') {
+        headers['Authorization'] = req.session.admin;
+        headers['X-user-id']     = req.query.user;
+    }
+
+    axios.get(url + '/preferences', {
+        headers : headers
+    }).then(function(response) {
+        response.data[property] = value;
+        headers['Content-Type'] = "application/json-patch+json";
+        axios.patch(url, [{
+            op    : 'replace',
+            path  : '/preferences',
+            value : JSON.stringify(response.data)
+        }], {
+            headers : headers
+        }).then(function(response) {
+            sendResponse(req, res, response, false);
+        }).catch(function(error) {
+            sendResponse(req, res, error.response, true);
+        });
+
+    });
+
+});
+
+
+/* ----- GET AVAILABLE CHARTS ----- */
+router.get('/charts-available', function(req, res, next) {
+    
+    console.log(' ');
+    console.log('  /charts-available');
     console.log(' --------------------------------------------');  
     console.log();
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/users/@me';
+    let url = getTenantLink(req) + '/api/v3/users/@me/available-charts';
 
     axios.get(url, {
         headers : req.session.headers
@@ -3362,6 +3987,120 @@ router.get('/me', function(req, res, next) {
         sendResponse(req, res, response, false);
     }).catch(function(error) {
         sendResponse(req, res, error.response, true);
+    });
+
+});
+
+
+/* ----- SET DASHBOARD CHART ----- */
+router.get('/chart-set', function(req, res, next) {
+    
+    console.log(' ');
+    console.log('  /chart-set');
+    console.log(' --------------------------------------------');  
+    console.log('  req.query.index  = ' + req.query.index);
+    console.log('  req.query.link   = ' + req.query.link);
+    console.log('  req.query.eMail  = ' + req.query.eMail);
+    console.log('  req.query.userId = ' + req.query.userId);
+    console.log();
+
+    let headers = getCustomHeaders(req);
+    let userId  = req.query.userId;
+    let url     = getTenantLink(req) + '/api/v3/users/' + userId + '/dashboard-charts/' + req.query.index;
+    let method  = (typeof req.query.link === 'undefined') ? 'delete' : 'put';
+    let params  = (typeof req.query.link === 'undefined') ? {} : { chart : { link : req.query.link } };
+
+    if(typeof req.query.userId !== 'undefined') {
+        headers['Authorization'] = req.session.admin;
+        headers['X-user-id']     = req.query.eMail;
+    }
+
+    axios({
+        method  : method,
+        url     : url,
+        data    : params,
+        headers : headers
+    }).then(function(response) {
+        sendResponse(req, res, response, false);
+    }).catch(function(error) {
+        sendResponse(req, res, error.response, true);
+    });
+
+});
+
+
+/* ----- GET DASHBOARD CHARTS ----- */
+router.get('/charts-pinned', function(req, res, next) {
+    
+    console.log(' ');
+    console.log('  /charts-pinned');
+    console.log(' --------------------------------------------');  
+    console.log('  req.query.user     = ' + req.query.user);
+    console.log();
+
+    let headers = getCustomHeaders(req);
+    let url     = getTenantLink(req) + '/api/rest/v1/reports/dashboard';
+
+    if(typeof req.query.user !== 'undefined') {
+        headers['Authorization'] = req.session.admin;
+        headers['X-user-id'] = req.query.user;
+    }
+
+    axios.get(url, {
+        headers : headers
+    }).then(function(response) {
+        if(response.data.dashboardReportList === null) response.data.dashboardReportList = { list : [] };
+        sendResponse(req, res, response, false);
+    }).catch(function(error) {
+        sendResponse(req, res, error.response, true);
+    });
+
+});
+
+/* ----- LOGIN SYSTEM ADMIN ----- */
+router.get('/login-admin', function(req, res, next) {
+    
+    console.log(' ');
+    console.log('  /login-admin');
+    console.log(' --------------------------------------------');  
+    console.log();
+   
+    let data = {
+        'grant_type' : 'client_credentials',
+        'scope'      : 'data:read'
+    }
+    
+    axios.post('https://developer.api.autodesk.com/authentication/v2/token', data, {
+        headers : {
+            'accept'        : 'application/json',
+            'authorization' : 'Basic ' + btoa(req.app.locals.adminClientId + ':' + req.app.locals.adminClientSecret),
+            'content-type'  : 'application/x-www-form-urlencoded'
+        }
+    }).then(function (response) {
+
+        if (response.status == 200) {               
+
+            req.session.admin = 'Bearer ' + response.data.access_token;
+
+            req.session.save(function(err) {
+                sendResponse(req, res, {}, false);
+            });            
+
+        } else {
+
+            console.log();      
+            console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');      
+            console.log('          ADMIN LOGIN FAILED');
+            console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'); 
+            console.log(); 
+            
+            console.log(error);
+            sendResponse(req, res, {}, true);
+
+        }
+    }).catch(function (error) {
+        console.log(error);
+        sendResponse(req, res, {}, true);
     });
 
 });
@@ -3373,23 +4112,28 @@ router.get('/workspace', function(req, res, next) {
     console.log(' ');
     console.log('  /workspace');
     console.log(' --------------------------------------------');  
-    console.log('  req.query.wsId  = ' + req.query.wsId);
-    console.log('  req.query.link  = ' + req.query.link);
+    console.log('  req.query.wsId     = ' + req.query.wsId);
+    console.log('  req.query.link     = ' + req.query.link);
+    console.log('  req.query.tenant   = ' + req.query.tenant);
+    console.log('  req.query.useCache = ' + req.query.useCache);
     console.log();
 
-    let wsId = (typeof req.query.wsId === 'undefined') ? req.query.link.split('/')[4] : req.query.wsId;
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces/' + wsId;
+    if(notCached(req, res)) {
 
-    axios.get(url, {
-        headers : req.session.headers
-    }).then(function(response) {
-        sendResponse(req, res, response, false);
-    }).catch(function(error) {
-        sendResponse(req, res, error.response, true);
-    });
+        let wsId = (typeof req.query.wsId === 'undefined') ? req.query.link.split('/')[4] : req.query.wsId;
+        let url  = getTenantLink(req) + '/api/v3/workspaces/' + wsId;
+
+        axios.get(url, {
+            headers : req.session.headers
+        }).then(function(response) {
+            sendResponse(req, res, response, false);
+        }).catch(function(error) {
+            sendResponse(req, res, error.response, true);
+        });
+
+    }
 
 });
-
 
 
 /* ----- GET WORKSPACES ----- */
@@ -3398,22 +4142,27 @@ router.get('/workspaces', function(req, res, next) {
     console.log(' ');
     console.log('  /workspaces');
     console.log(' --------------------------------------------');  
-    console.log('  req.query.offset  = ' + req.query.offset);
-    console.log('  req.query.limit   = ' + req.query.limit);
+    console.log('  req.query.offset   = ' + req.query.offset);
+    console.log('  req.query.limit    = ' + req.query.limit);
+    console.log('  req.query.tenant   = ' + req.query.tenant);
+    console.log('  req.query.useCache = ' + req.query.useCache);
     console.log();
 
-    if(typeof req.query.offset === 'undefined') req.query.offset = 0;
-    if(typeof req.query.limit === 'undefined') req.query.limit = 500;
+    if(notCached(req, res)) {
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces?offset=' + req.query.offset + '&limit=' + req.query.limit;
+        let offset = (typeof req.query.offset === 'undefined') ?   0 : req.query.offset;
+        let limit  = (typeof req.query.limit  === 'undefined') ? 250 : req.query.limit;
+        let url    = getTenantLink(req) + '/api/v3/workspaces?offset=' + offset + '&limit=' + limit;
 
-    axios.get(url, {
-        headers : req.session.headers
-    }).then(function(response) {
-        sendResponse(req, res, response, false);
-    }).catch(function(error) {
-        sendResponse(req, res, error.response, true);
-    });
+        axios.get(url, {
+            headers : req.session.headers
+        }).then(function(response) {
+            sendResponse(req, res, response, false);
+        }).catch(function(error) {
+            sendResponse(req, res, error.response, true);
+        });
+
+    }
 
 });
 
@@ -3427,7 +4176,7 @@ router.get('/workspace-counter', function(req, res, next) {
     console.log('  req.query.wsId = ' + req.query.wsId);
     console.log();
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/search-results?limit=1&offset=0&query=workspaceId%3D' + req.query.wsId;
+    let url = req.app.locals.tenantLink + '/api/v3/search-results?limit=1&offset=0&query=workspaceId%3D' + req.query.wsId;
 
     axios.get(url, {
         headers : req.session.headers
@@ -3454,7 +4203,7 @@ router.get('/get-workspace-id', function(req, res, next) {
     if(typeof req.query.offset === 'undefined') req.query.offset = 0;
     if(typeof req.query.limit  === 'undefined') req.query.limit  = 500;
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/workspaces?offset=' + req.query.offset + '&limit=' + req.query.limit;
+    let url = req.app.locals.tenantLink + '/api/v3/workspaces?offset=' + req.query.offset + '&limit=' + req.query.limit;
 
     axios.get(url, {
         headers : req.session.headers
@@ -3477,23 +4226,259 @@ router.get('/get-workspace-id', function(req, res, next) {
 });
 
 
+/* ----- GET WORKSPACE SCRIPTS ----- */
+router.get('/workspace-scripts', function(req, res, next) {
+    
+    console.log(' ');
+    console.log('  /workspace-scripts');
+    console.log(' --------------------------------------------');  
+    console.log('  req.query.wsId   = ' + req.query.wsId);
+    console.log('  req.query.link   = ' + req.query.link);
+    console.log('  req.query.tenant = ' + req.query.tenant);
+    console.log();
+
+    let wsId = (typeof req.query.wsId === 'undefined') ? req.query.link.split('/')[4] : req.query.wsId;
+    let url  = getTenantLink(req) + '/api/v3/workspaces/' + wsId + '/scripts';
+
+    axios.get(url, {
+        headers : req.session.headers
+    }).then(function(response) {
+        if(response.data === '') response.data = { scripts : [] };
+        sendResponse(req, res, response, false);
+    }).catch(function(error) {
+        sendResponse(req, res, error.response, true);
+    });
+
+});
+
+
+/* ----- GET WORKSPACE RELATIONSHIPS ----- */
+router.get('/workspace-relationships', function(req, res, next) {
+    
+    console.log(' ');
+    console.log('  /workspace-relationships');
+    console.log(' --------------------------------------------');  
+    console.log('  req.query.wsId   = ' + req.query.wsId);
+    console.log('  req.query.link   = ' + req.query.link);
+    console.log('  req.query.type   = ' + req.query.type);
+    console.log('  req.query.tenant = ' + req.query.tenant);
+    console.log();
+
+    let type = (typeof req.query.type === 'undefined') ? 'relationships' : req.query.type;
+    let view = ''
+    
+         if(type.toLowerCase().indexOf('rel')  === 0) view =  '10';
+    else if(type.toLowerCase().indexOf('bom')  === 0) view = '200';
+    else if(type.toLowerCase().indexOf('proj') === 0) view =  '16';
+    else if(type.toLowerCase().indexOf('mana') === 0) view = '100';
+    else if(type.toLowerCase().indexOf('aff')  === 0) view = '100';
+
+    let wsId = (typeof req.query.wsId === 'undefined') ? req.query.link.split('/')[4] : req.query.wsId;
+    let url  = getTenantLink(req) + '/api/v3/workspaces/' + wsId + '/views/' + view + '/related-workspaces';
+
+    axios.get(url, {
+        headers : req.session.headers
+    }).then(function(response) {
+        console.log(response.data);
+        if(response.data === "") response.data = { workspaces : [] };
+        sendResponse(req, res, response, false);
+    }).catch(function(error) {
+        sendResponse(req, res, error.response, true);
+    });
+
+});
+
+
+/* ----- GET WORKSPACE PRINT VIEWS ----- */
+router.get('/workspace-print-views', function(req, res, next) {
+    
+    console.log(' ');
+    console.log('  /workspace-print-views');
+    console.log(' --------------------------------------------');  
+    console.log('  req.query.wsId   = ' + req.query.wsId);
+    console.log('  req.query.link   = ' + req.query.link);
+    console.log('  req.query.tenant = ' + req.query.tenant);
+    console.log();
+
+    let wsId = (typeof req.query.wsId === 'undefined') ? req.query.link.split('/')[4] : req.query.wsId;
+    let url  = getTenantLink(req) + '/api/v3/workspaces/' + wsId + '/print-views?desc=type&asc=title';
+
+    axios.get(url, {
+        headers : req.session.headers
+    }).then(function(response) {
+        if(response.data === '') response.data = { links : [] };
+        sendResponse(req, res, response, false);
+    }).catch(function(error) {
+        sendResponse(req, res, error.response, true);
+    });
+
+});
+
+
+/* ----- GET WORKSPACE WORKFLOW STATES ----- */
+router.get('/workspace-workflow-states', function(req, res, next) {
+    
+    console.log(' ');
+    console.log('  //workspace-workflow-states');
+    console.log(' --------------------------------------------');  
+    console.log('  req.query.wsId   = ' + req.query.wsId);
+    console.log('  req.query.link   = ' + req.query.link);
+    console.log('  req.query.tenant = ' + req.query.tenant);
+    console.log();
+
+    let wsId = (typeof req.query.wsId === 'undefined') ? req.query.link.split('/')[4] : req.query.wsId;
+    let url  = getTenantLink(req) + '/api/v3/workspaces/' + wsId + '/workflows/1/states';
+
+    axios.get(url, {
+        headers : req.session.headers
+    }).then(function(response) {
+        if(response.data === "") response.data = { states : [] };
+        sendResponse(req, res, response, false);
+    }).catch(function(error) {
+        sendResponse(req, res, error.response, true);
+    });
+
+});
+
+
+/* ----- GET WORKSPACE WORKFLOW TRANSITIONS ----- */
+router.get('/workspace-workflow-transitions', function(req, res, next) {
+    
+    console.log(' ');
+    console.log('  /workspace-workflow-transitions');
+    console.log(' --------------------------------------------');  
+    console.log('  req.query.wsId   = ' + req.query.wsId);
+    console.log('  req.query.link   = ' + req.query.link);
+    console.log('  req.query.tenant = ' + req.query.tenant);
+    console.log();
+
+    let wsId = (typeof req.query.wsId === 'undefined') ? req.query.link.split('/')[4] : req.query.wsId;
+    let url  = getTenantLink(req) + '/api/v3/workspaces/' + wsId + '/workflows/1/transitions';
+
+    axios.get(url, {
+        headers : req.session.headers
+    }).then(function(response) {
+        console.log(response.data);
+        if(response.data === "") response.data = [];
+        sendResponse(req, res, response, false);
+    }).catch(function(error) {
+        sendResponse(req, res, error.response, true);
+    });
+
+});
+
+
+/* ----- GET ALL SCRIPTS ----- */
+router.get('/scripts', function(req, res, next) {
+    
+    console.log(' ');
+    console.log('  /scripts');
+    console.log(' --------------------------------------------');  
+    console.log('  req.query.tenant  = ' + req.query.tenant);
+    console.log();
+
+    let url = getTenantLink(req) + '/api/v3/scripts';
+
+    axios.get(url, {
+        headers : req.session.headers
+    }).then(function(response) {
+        sendResponse(req, res, response, false);
+    }).catch(function(error) {
+        sendResponse(req, res, error.response, true);
+    });
+
+});
+
+
+/* ----- GET SCRIPT SOURCE ----- */
+router.get('/script', function(req, res, next) {
+    
+    console.log(' ');
+    console.log('  /script');
+    console.log(' --------------------------------------------');  
+    console.log('  req.query.link    = ' + req.query.link);
+    console.log('  req.query.tenant  = ' + req.query.tenant);
+    console.log();
+
+    let url = getTenantLink(req) + req.query.link;
+
+    axios.get(url, {
+        headers : req.session.headers
+    }).then(function(response) {
+        sendResponse(req, res, response, false);
+    }).catch(function(error) {
+        sendResponse(req, res, error.response, true);
+    });
+
+});
+
+
+/* ----- GET ROLES (V1) ----- */
+router.get('/roles', function(req, res, next) {
+    
+    console.log(' ');
+    console.log('  /roles');
+    console.log(' --------------------------------------------');  
+    console.log('  req.query.tenant  = ' + req.query.tenant);
+    console.log();
+
+    let url = getTenantLink(req) + '/api/rest/v1/roles';
+
+    axios.get(url, {
+        headers : req.session.headers
+    }).then(function(response) {
+        sendResponse(req, res, response, false);
+    }).catch(function(error) {
+        sendResponse(req, res, error.response, true);
+    });
+
+});
+
+
+/* ----- GET PERMISSIONS DEFINITION (V1) ----- */
+router.get('/permissions-definition', function(req, res, next) {
+    
+    console.log(' ');
+    console.log('  /permissions-definition');
+    console.log(' --------------------------------------------');  
+    console.log('  req.query.tenant  = ' + req.query.tenant);
+    console.log();
+
+    let url = getTenantLink(req) + '/api/rest/v1/permissions';
+
+    axios.get(url, {
+        headers : req.session.headers
+    }).then(function(response) {
+        sendResponse(req, res, response, false);
+    }).catch(function(error) {
+        sendResponse(req, res, error.response, true);
+    });
+
+});
+
+
 /* ----- GET ASSIGNED GROUPS ----- */
 router.get('/groups-assigned', function(req, res, next) {
     
     console.log(' ');
     console.log('  /groups-assigned');
     console.log(' --------------------------------------------');  
+    console.log('  req.query.useCache = ' + req.query.useCache);
     console.log();
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/users/@me'
+    if(notCached(req, res)) {    
 
-    axios.get(url, {
-        headers : req.session.headers
-    }).then(function(response) {
-        sendResponse(req, res, { 'data' : response.data.groups, 'status' : response.status }, false);
-    }).catch(function(error) {
-        sendResponse(req, res, error.response, true);
-    });
+        let url = req.app.locals.tenantLink + '/api/v3/users/@me'
+
+        axios.get(url, {
+            headers : req.session.headers
+        }).then(function(response) {
+            sendResponse(req, res, { 'data' : response.data.groups, 'status' : response.status }, false);
+        }).catch(function(error) {
+            sendResponse(req, res, error.response, true);
+        });
+
+    }
 
 });
 
@@ -3504,46 +4489,55 @@ router.get('/permissions', function(req, res, next) {
     console.log(' ');
     console.log('  /permissions');
     console.log(' --------------------------------------------');  
-    console.log('  req.query.wsId  = ' + req.query.wsId);
-    console.log('  req.query.dmsId = ' + req.query.dmsId);
-    console.log('  req.query.link  = ' + req.query.link);
+    console.log('  req.query.wsId     = ' + req.query.wsId);
+    console.log('  req.query.dmsId    = ' + req.query.dmsId);
+    console.log('  req.query.link     = ' + req.query.link);
+    console.log('  req.query.useCache = ' + req.query.useCache);
     console.log();
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net'
+    if(notCached(req, res)) {
 
-    if(typeof req.query.link === 'undefined') {
-        url += '/api/v3/workspaces/' + req.query.wsId;
-        if(typeof req.query.dmsId !== 'undefined') {
-            url += '/items/' + req.query.dmsId;
-        }     
-    } else {
-        url += req.query.link;
+        let url = req.app.locals.tenantLink 
+
+        if(typeof req.query.link === 'undefined') {
+            url += '/api/v3/workspaces/' + req.query.wsId;
+            if(typeof req.query.dmsId !== 'undefined') {
+                url += '/items/' + req.query.dmsId;
+            }     
+        } else {
+            url += req.query.link;
+        }
+
+        url += '/users/@me/permissions';
+
+        axios.get(url, {
+            headers : req.session.headers
+        }).then(function(response) {
+            sendResponse(req, res, { 'data' : response.data.permissions, 'status' : response.status }, false);
+        }).catch(function(error) {
+            sendResponse(req, res, error.response, true);
+        });
+
     }
-
-    url += '/users/@me/permissions';
-
-    axios.get(url, {
-        headers : req.session.headers
-    }).then(function(response) {
-        sendResponse(req, res, { 'data' : response.data.permissions, 'status' : response.status }, false);
-    }).catch(function(error) {
-        sendResponse(req, res, error.response, true);
-    });
 
 });
 
 
 /* ----- SYSTEM-LOG ----- */
-router.get('/system-logs', function(req, res, next) {
+router.get('/system-logs', function(req, res) {
     
     console.log(' ');
     console.log('  /system-logs');
     console.log(' --------------------------------------------');  
-    console.log('  req.query.offset  = ' + req.query.offset);
-    console.log('  req.query.limit   = ' + req.query.limit);
+    console.log('  req.query.offset   = ' + req.query.offset);
+    console.log('  req.query.limit    = ' + req.query.limit);
+    console.log('  req.query.extended = ' + req.query.extended);
     console.log();
 
-    let url = 'https://' + req.session.tenant + '.autodeskplm360.net/api/v3/tenants/' + req.session.tenant.toUpperCase() + '/system-logs?offset=' + req.query.offset + '&limit=' + req.query.limit;
+    let url      = req.app.locals.tenantLink + '/api/v3/tenants/' + req.app.locals.tenant.toUpperCase() + '/system-logs?offset=' + req.query.offset + '&limit=' + req.query.limit;
+    let extended = (typeof req.query.extended === 'undefined') ? false : req.query.extended;
+
+    if(extended) url += '&type=item';
 
     axios.get(url, {
         headers : req.session.headers

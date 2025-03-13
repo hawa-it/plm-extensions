@@ -3,7 +3,10 @@ let colorModelHighlighted       = new THREE.Vector4(0.9, 0.1, 0.1, 0.5);
 let newInstance                 = true;
 let ghosting                    = true;
 let disableViewerSelectionEvent = false;
+let viewerId                    = 'viewer';
 let viewerDone                  = false;
+let viewerGeometryLoaded        = false;
+let viewerObjectTreeCreated     = false;
 let viewerFiles                 = [];
 let dataInstances               = [];
 let hiddenInstances             = [];
@@ -28,21 +31,21 @@ let vectorRange  = [
 ]; 
 
 let viewerBGColors = {
-    'light' : {
+    light : {
         'level-1' : [255, 255, 255],
         'level-2' : [245, 245, 245],
         'level-3' : [238, 238, 238],
         'level-4' : [217, 217, 217],
         'level-5' : [204, 204, 204]
     },
-    'dark' : {
+    dark : {
         'level-1' : [69, 79, 97],
         'level-2' : [59, 68, 83],
         'level-3' : [46, 52, 64],
         'level-4' : [34, 41, 51],
         'level-5' : [26, 31, 38]
     },
-    'black' : {
+    black : {
         'level-1' : [83, 83, 83],
         'level-2' : [71, 71, 71],
         'level-3' : [55, 55, 55],
@@ -52,26 +55,28 @@ let viewerBGColors = {
 }
 
 let viewerSettings = {
-    'backgroundColor'  : [255, 255, 255, 255, 255, 255],
-    'antiAliasing'     : true,
-    'ambientShadows'   : true,
-    'groundReflection' : false,
-    'groundShadow'     : true,
-    'lightPreset'      : 4
+    backgroundColor  : [255, 255, 255, 255, 255, 255],
+    antiAliasing     : true,
+    ambientShadows   : true,
+    groundReflection : false,
+    groundShadow     : true,
+    lightPreset      : 4
 }
 
 // Launch Viewer
 function initViewer(id, viewables, params) {
 
-    if(isBlank(viewables)) return;
-    if(isBlank(id)       ) id = 'viewer';
-    if(isBlank(params)   ) params = {};
+    if( isBlank(viewables)) return;
+    if(!isBlank(id)       ) viewerId = id;
+    if( isBlank(params)   ) params   = {};
 
     if(!Array.isArray(viewables)) viewables = [viewables];
 
-    viewerFiles = viewables;
+    viewerFiles             = viewables;
+    viewerGeometryLoaded    = false;
+    viewerObjectTreeCreated = false;
 
-    let surfaceLevel = getSurfaceLevel($('#' + id)).split('surface-')[1];
+    let surfaceLevel = getSurfaceLevel($('#' + viewerId)).split('surface-')[1];
     viewerSettings.backgroundColor = viewerBGColors[theme][surfaceLevel];
 
     if(!isBlank(params.backgroundColor)) {
@@ -117,17 +122,19 @@ function initViewer(id, viewables, params) {
     }
 
     $('body').addClass('no-viewer-cube');
-    $('#' + id + '-message').hide();
-    $('#' + id + '-processing').hide();
-    $('#' + id).show();
-    $('#viewer-file-browser').remove();
+    $('#' + viewerId + '-message').hide();
+    $('#' + viewerId + '-processing').hide();
+    $('#' + viewerId).show();
+    $('#' + viewerId + '-file-browser').remove();
 
     dataInstances = [];
 
     let options = {
-        // logLevel    : 1,
+        logLevel    : 1,
         env         : 'AutodeskProduction',
         api         : 'derivativeV2',  // for models uploaded to EMEA change this option to 'derivativeV2_EU'
+        // region : 'EMEA',
+        // api         : 'derivativeV2_EU',  // for models uploaded to EMEA change this option to 'derivativeV2_EU'
         // env: 'AutodeskProduction2',
         // api: 'streamingV2',   // for models uploaded to EMEA change this option to 'streamingV2_EU'
         getAccessToken  : function(onTokenReady) {
@@ -137,7 +144,7 @@ function initViewer(id, viewables, params) {
         }
     }; // see https://aps.autodesk.com/en/docs/viewer/v7/reference/globals/TypeDefs/InitOptions/
 
-    if(typeof viewer === 'undefined') { 
+    if((typeof viewer === 'undefined') || (params.restartViewer)) { 
 
         splitPartNumberBy      = (isBlank(config.viewer.splitPartNumberBy))      ? ''  : config.viewer.splitPartNumberBy;
         splitPartNumberIndexes = (isBlank(config.viewer.splitPartNumberIndexes)) ? [0] : config.viewer.splitPartNumberIndexes;
@@ -145,24 +152,38 @@ function initViewer(id, viewables, params) {
 
         Autodesk.Viewing.Initializer(options, function() {
 
-            var htmlDiv = document.getElementById(id);
+            var htmlDiv = document.getElementById(viewerId);
             viewer = new Autodesk.Viewing.Private.GuiViewer3D(htmlDiv, { 
                 modelBrowserExcludeRoot     : false,
                 modelBrowserStartCollapsed  : true
             });
 
-            viewer.addEventListener(Autodesk.Viewing.TOOLBAR_CREATED_EVENT, onViewerToolbarCreated);
-            viewer.addEventListener(Autodesk.Viewing.GEOMETRY_LOADED_EVENT, onViewerGeometryLoaded);
-            viewer.addEventListener(Autodesk.Viewing.SELECTION_CHANGED_EVENT, onViewerSelectionChanged);
-            viewer.addEventListener(Autodesk.Viewing.VIEWER_STATE_RESTORED_EVENT, onViewerRestore);
+            viewer.addEventListener(Autodesk.Viewing.TOOLBAR_CREATED_EVENT,       onViewerToolbarCreated   );
+            viewer.addEventListener(Autodesk.Viewing.GEOMETRY_LOADED_EVENT,       onViewerGeometryLoaded   );
+            viewer.addEventListener(Autodesk.Viewing.OBJECT_TREE_CREATED_EVENT,   onObjectTreeCreated      );
+            viewer.addEventListener(Autodesk.Viewing.SELECTION_CHANGED_EVENT,     onViewerSelectionChanged );
+            viewer.addEventListener(Autodesk.Viewing.VIEWER_STATE_RESTORED_EVENT, onViewerRestore          );
 
             var startedCode = viewer.start();
             if (startedCode > 0) {
                 console.error('Failed to create a Viewer: WebGL not supported.');
                 return;
+            }      
+            
+            if(!isBlank(viewerFeatures.contextMenu)) {
+                if(!viewerFeatures.contextMenu) viewer.setContextMenu(null);
             }
 
-            Autodesk.Viewing.Document.load('urn:'+ viewables[0].urn, onDocumentLoadSuccess, onDocumentLoadFailure);
+            if(viewables[0].type === 'Adobe PDF') {
+                viewer.loadExtension('Autodesk.PDF').then( () => {
+                    viewerFeatures.markup = true;
+                    viewer.setBackgroundColor(viewerSettings.backgroundColor[0], viewerSettings.backgroundColor[1], viewerSettings.backgroundColor[2], viewerSettings.backgroundColor[3], viewerSettings.backgroundColor[4], viewerSettings.backgroundColor[5]);
+                    viewer.loadModel(viewables[0].link, viewer, onPDFLoadSuccess, onDocumentLoadFailure);
+                });
+
+            } else {
+                Autodesk.Viewing.Document.load('urn:'+ viewables[0].urn, onDocumentLoadSuccess, onDocumentLoadFailure);
+            }
             
         });
     
@@ -175,6 +196,10 @@ function initViewer(id, viewables, params) {
     } 
     
 }
+function onPDFLoadSuccess(doc) {
+
+    setViewerFeatures();
+}
 function onDocumentLoadSuccess(doc) {
 
     viewer.setGhosting(true);
@@ -186,10 +211,10 @@ function onDocumentLoadSuccess(doc) {
     viewer.setProgressiveRendering(true);
 
     let viewable = doc.getRoot().getDefaultGeometry();
-
+    
     if (viewable) {
-        // viewer.loadDocumentNode(doc, viewable).then(function(result) {
-        viewer.loadDocumentNode(doc, viewable, {globalOffset: {x:0,y:0,z:0}}).then(function(result) {
+        viewer.loadDocumentNode(doc, viewable).then(function(result) {
+        // viewer.loadDocumentNode(doc, viewable, {globalOffset: {x:0,y:0,z:0}}).then(function(result) {
             // viewer.hideAll
             viewer.setBackgroundColor(viewerSettings.backgroundColor[0], viewerSettings.backgroundColor[1], viewerSettings.backgroundColor[2], viewerSettings.backgroundColor[3], viewerSettings.backgroundColor[4], viewerSettings.backgroundColor[5]);
             viewerDone = true;
@@ -208,33 +233,39 @@ function initViewerDone() {
 function onViewerToolbarCreated(event) {  
     event.target.toolbar.setVisible(false); 
 }
+
 function onViewerGeometryLoaded() {
+    viewerGeometryLoaded = true;
+    if(viewerObjectTreeCreated) processViewerFeaturesAndData();
+}
+function onObjectTreeCreated() {
+    viewerObjectTreeCreated = true;
+    if(viewerGeometryLoaded) processViewerFeaturesAndData(); 
+}
+function processViewerFeaturesAndData() {
     setViewerFeatures();
     setViewerInstancedData();
 }
 function onViewerLoadingDone() {}
 function setViewerFeatures() {
 
-    if (Object.keys(applicationFeatures).length === 0) {
+    if (Object.keys(viewerFeatures).length === 0) {
         viewer.toolbar.setVisible(true);
         return;
     }
-
-    if(isBlank(applicationFeatures)) return;
-    if(isBlank(applicationFeatures.viewer)) return;
 
     let selectionToolbarFeatures = [];
     let viewsToolbar             = false;
     let selectFiles              = false;
 
-    for(let applicationFeature of Object.keys(applicationFeatures.viewer)) {
+    for(let viewerFeature of Object.keys(viewerFeatures)) {
 
-        if(applicationFeatures.viewer[applicationFeature] === false) {
+        if(viewerFeatures[viewerFeature] === false) {
 
             let elemParent = null;
             let controlId  = '';
 
-            switch(applicationFeature) {
+            switch(viewerFeature) {
 
                 case 'orbit'        : elemParent = viewer.toolbar.getControl('navTools');       controlId = 'toolbar-orbitTools'; break;
                 case 'firstPerson'  : elemParent = viewer.toolbar.getControl('navTools');       controlId = 'toolbar-bimWalkTool'; break;
@@ -257,24 +288,24 @@ function setViewerFeatures() {
                     
         } else {
 
-            if(applicationFeature === 'markup') {
+            if(viewerFeature === 'markup') {
 
                 viewerAddMarkupControls(); 
             
-            } else if(applicationFeature === 'selectFile') {
+            } else if(viewerFeature === 'selectFile') {
 
-                selectFiles = applicationFeatures.viewer[applicationFeature]; 
+                selectFiles = viewerFeatures[viewerFeature]; 
 
             } else if(viewer.model.is3d()) {
 
-                switch(applicationFeature) {
+                switch(viewerFeature) {
                     
-                    case 'hide'      : selectionToolbarFeatures.push(applicationFeature); break;
-                    case 'ghosting'  : selectionToolbarFeatures.push(applicationFeature); break;
-                    case 'highlight' : selectionToolbarFeatures.push(applicationFeature); break;
-                    case 'single'    : selectionToolbarFeatures.push(applicationFeature); break;
-                    case 'fitToView' : selectionToolbarFeatures.push(applicationFeature); break;
-                    case 'reset'     : selectionToolbarFeatures.push(applicationFeature); break;
+                    case 'hide'      : selectionToolbarFeatures.push(viewerFeature); break;
+                    case 'ghosting'  : selectionToolbarFeatures.push(viewerFeature); break;
+                    case 'highlight' : selectionToolbarFeatures.push(viewerFeature); break;
+                    case 'single'    : selectionToolbarFeatures.push(viewerFeature); break;
+                    case 'fitToView' : selectionToolbarFeatures.push(viewerFeature); break;
+                    case 'reset'     : selectionToolbarFeatures.push(viewerFeature); break;
                     case 'views'     : viewsToolbar = true;      break;
 
                 }
@@ -296,8 +327,8 @@ function setViewerFeatures() {
 
     }
 
-    if(!isBlank(applicationFeatures.viewer.cube)) {
-        if(applicationFeatures.viewer.cube) $('body').removeClass('no-viewer-cube');
+    if(!isBlank(viewerFeatures.cube)) {
+        if(viewerFeatures.cube) $('body').removeClass('no-viewer-cube');
     }
 
     if(selectFiles) insertFileBrowser();
@@ -345,7 +376,7 @@ function insertFileBrowser() {
             let elemFilesList = $('<div></div>').appendTo(elemFileBrowserPanel)
                 .addClass('tiles')    
                 .addClass('list')    
-                .addClass('l')    
+                .addClass('xl')    
                 .attr('id', 'viewer-file-browser-list');
 
             for(let viewerFile of viewerFiles) {
@@ -443,7 +474,7 @@ const getPropertiesAsync = (id) => {
 }
 function getInstancePartNumber(instance) {
 
-    for(let partNumberPropery of config.viewer.partNumberProperties) {
+    for(let partNumberPropery of config.viewer.numberProperties) {
         for(let property of instance.properties) {
             // if(partNumberPropery === property.attributeName) {
             if(partNumberPropery === property.displayName) {
@@ -619,15 +650,11 @@ function viewerSelectModels(partNumbers, params) {
     if(isolate)     viewer.hideAll();
     if(resetColors) viewer.clearThemingColors();
 
-    if(!isBlank(applicationFeatures)) {
-        if(!isBlank(applicationFeatures.viewer)) {
-            if(!isBlank(applicationFeatures.viewer.highlight)) {
-                if(applicationFeatures.viewer.highlight) {
-                    let toolbar = $('#customSelectionToolbar');
-                    if(toolbar.length > 0) {
-                        highlight = toolbar.hasClass('highlight-on');
-                    }
-                }
+    if(!isBlank(viewerFeatures.highlight)) {
+        if(viewerFeatures.highlight) {
+            let toolbar = $('#customSelectionToolbar');
+            if(toolbar.length > 0) {
+                highlight = toolbar.hasClass('highlight-on');
             }
         }
     }
@@ -791,11 +818,13 @@ function viewerHighlightInstances(partNumber, ids, params) {
     if(isolate)     viewer.hideAll();
     if(resetColors) viewer.clearThemingColors();
 
-    for(let dataInstance of dataInstances) {
-        if(dataInstance.partNumber === partNumber) {
-            if(hiddenInstances.indexOf(dbId < 0)) {
-                dbIds.push(dataInstance.dbId);
-                viewer.show(dataInstance.dbId);
+    for(let dbId of ids) {
+        for(let dataInstance of dataInstances) {
+            if(dataInstance.partNumber === partNumber) {
+                if(hiddenInstances.indexOf(dbId < 0)) {
+                    dbIds.push(dataInstance.dbId);
+                    viewer.show(dataInstance.dbId);
+                }
             }
         }
     }
@@ -826,14 +855,16 @@ function viewerResetSelection(params) {
     let resetView   = false;    // Reset view to initial view from file
     let resetColors = true;     // Highlight given partNumber(s) by defined color (colorModelSelected)
     let keepHidden  = true;     // Keep selectively hidden components hidden
+    let showAll     = true;     // Show all components
 
     if( isBlank(params)            )      params = {};
     if(!isBlank(params.fitToView)  )   fitToView = params.fitToView;
     if(!isBlank(params.resetView)  )   resetView = params.resetView;
     if(!isBlank(params.resetColors)) resetColors = params.resetColors;
     if(!isBlank(params.keepHidden) )  keepHidden = params.keepHidden;
+    if(!isBlank(params.showAll)    )     showAll = params.showAll;
 
-    viewer.showAll();
+    if(showAll) viewer.showAll();
     viewer.clearSelection();
 
     if(keepHidden) {
@@ -1543,15 +1574,11 @@ function viewerSetGhosting(value) {
 
     let ghosting = value; 
 
-    if(!isBlank(applicationFeatures)) {
-        if(!isBlank(applicationFeatures.viewer)) {
-            if(!isBlank(applicationFeatures.viewer.ghosting)) {
-                if(applicationFeatures.viewer.ghosting) {
-                    let toolbar  = $('#customSelectionToolbar');
-                    if(toolbar.length > 0) {
-                        ghosting = (toolbar.hasClass('ghosting'));
-                    }
-                }
+    if(!isBlank(viewerFeatures.ghosting)) {
+        if(viewerFeatures.ghosting) {
+            let toolbar  = $('#customSelectionToolbar');
+            if(toolbar.length > 0) {
+                ghosting = (toolbar.hasClass('ghosting'));
             }
         }
     }
@@ -1739,19 +1766,20 @@ function viewerAddNoteControls() {
 
 
 // Custom Controls : Markups
-function viewerAddMarkupControls(includeSaveButton) {
+function viewerAddMarkupControls() {
 
-    if(typeof includeSaveButton === 'undefined') includeSaveButton = false;
+    // if(typeof includeSaveButton === 'undefined') includeSaveButton = false;
 
-    let elemToolbar = $('#my-custom-markup-toolbar');
+    let elemToolbar       =  $('#' + viewerId + '-custom-markup-toolbar');
+    let includeSaveButton = ($('#' + viewerId + '-markups-list').length > 0);
 
     if(elemToolbar.length > 0) { elemToolbar.show(); return; }
 
-    let elemMarkupToolbar = $('<div></div>');
-        elemMarkupToolbar.attr('id', 'viewer-markup-toolbar');
-        elemMarkupToolbar.addClass('hidden');
-        elemMarkupToolbar.addClass('set-defaults');
-        elemMarkupToolbar.appendTo($('#viewer'));
+    let elemMarkupToolbar = $('<div></div>').appendTo($('#' + viewerId))
+        .attr('id', viewerId + '-markup-toolbar')
+        .addClass('viewer-markup-toolbar')
+        .addClass('hidden')
+        .addClass('set-defaults');
 
     let elemMarkupGroupColors = addMarkupControlGroup(elemMarkupToolbar, 'markup-toolbar-colors', 'Color');
 
@@ -1764,7 +1792,6 @@ function viewerAddMarkupControls(includeSaveButton) {
     addMarkupColorControl(elemMarkupGroupColors, '87b340');
     addMarkupColorControl(elemMarkupGroupColors, '0696d7');
     // addMarkupColorControl(elemMarkupGroupColors, '8CE5FC');
-
 
     let elemMarkupGroupWidth = addMarkupControlGroup(elemMarkupToolbar, 'markup-toolbar-sizes', 'Width');
 
@@ -1791,7 +1818,7 @@ function viewerAddMarkupControls(includeSaveButton) {
         addMarkupActionControl(elemMarkupGroupActions, true, 'redo', 'markup.redo();', 'Redo');
         addMarkupActionControl(elemMarkupGroupActions, true, 'delete', 'markup.clear();', 'Clear all markups');
         addMarkupActionControl(elemMarkupGroupActions, true, 'close', 'viewerLeaveMarkupMode();', 'Close markup toolbar');
-        addMarkupActionControl(elemMarkupGroupActions, false, 'Save', 'viewerSaveMarkup();', 'Save markup');
+        addMarkupActionControl(elemMarkupGroupActions, false, 'Save', 'viewerSaveItemMarkup();', 'Save markup');
         elemMarkupGroupActions.addClass('with-save-button');
     } else {
         addMarkupActionControl(elemMarkupGroupActions, true, 'undo', 'markup.undo();', 'Undo');
@@ -1800,13 +1827,14 @@ function viewerAddMarkupControls(includeSaveButton) {
         addMarkupActionControl(elemMarkupGroupActions, false, 'Close', 'viewerLeaveMarkupMode();', 'Close markup toolbar');
     }
 
-     $('<canvas>').appendTo($('body'))
-        .attr('id', 'viewer-markup-image')
-        .addClass('hidden');
+    $('<canvas>').appendTo($('body')).attr('id', 'viewer-markup-image').addClass('hidden');
 
-    let newToolbar = new Autodesk.Viewing.UI.ControlGroup('my-custom-markup-toolbar');
-    let newButton  = addCustomControl(newToolbar, 'my-markup-button', 'icon-markup', 'Markup');
-
+    let newToolbar = new Autodesk.Viewing.UI.ControlGroup(viewerId + '-custom-markup-toolbar');
+    // let newButton  = addCustomControl(newToolbar, 'my-markup-button', 'icon-markup', 'Markup');
+    let newButton  = addCustomControl(newToolbar, viewerId + '-markup-button', 'icon-markup', 'Markup');
+    
+    newButton.addClass('viewer-markup-button');
+    newButton.addClass('enable-markup');
     newButton.onClick = function() {
 
         if(restoreMarkupState !== '') {
@@ -1819,15 +1847,20 @@ function viewerAddMarkupControls(includeSaveButton) {
         markup.enterEditMode();
         markup.show();
 
-        if($('#markup-list').children('.selected').length === 0) {
-            let placeholders = $('#markup-list').children('.placeholder');
-            if(placeholders.length === 0) $('#markup-list').children().first().addClass('selected');
-            else placeholders.first().addClass('selected');
+        // let markupsId   = viewerId.split('-viewer')[0] + '-markups-list';
+        let elemMarkups = $('#' + viewerId + '-markups-list');
+
+        if(elemMarkups.length > 0) {
+            if(elemMarkups.children('.selected').length === 0) {
+                let placeholders = elemMarkups.children('.placeholder');
+                if(placeholders.length === 0) elemMarkups.children().first().addClass('selected');
+                else placeholders.first().addClass('selected');
+            }
         }
 
         baseStrokeWidth = markup.getStyle()['stroke-width'];
             
-        if($('#viewer-markup-toolbar').hasClass('set-defaults')) {
+        if($('#' + viewerId + '-markup-toolbar').hasClass('set-defaults')) {
             $('.viewer-markup-toggle.color').first().click();
             $('.viewer-markup-toggle.width').first().click();
             $('.viewer-markup-toggle.shape').first().click();
@@ -1838,9 +1871,9 @@ function viewerAddMarkupControls(includeSaveButton) {
             $('.viewer-markup-toggle.shape.selected').click();
         }
         
-        $('#viewer-markup-toolbar').toggleClass('hidden');
+        $('#' + viewerId + '-markup-toolbar').toggleClass('hidden');
 
-        let elemNoteControl = $('#viewer-note-toolbar');
+        let elemNoteControl = $('#' + viewerId+ '-note-toolbar');
 
         if(elemNoteControl.length > 0) elemNoteControl.toggleClass('hidden');
 
@@ -1964,14 +1997,14 @@ function viewerLeaveMarkupMode() {
 
     if(!isViewerStarted()) return;
 
-    let elemNoteControl = $('#viewer-note-toolbar');
+    let elemNoteControl = $('#' + viewerId + '-note-toolbar');
 
     if(elemNoteControl.length > 0) {
         elemNoteControl.toggleClass('hidden');
         closedViewerMarkup(markup.generateData(), viewer.getState());
     }
 
-    $('#viewer-markup-toolbar').addClass('hidden');
+    $('#' + viewerId + '-markup-toolbar').addClass('hidden');
 
     if(typeof markup === 'undefined') return;
 
@@ -1981,11 +2014,43 @@ function viewerLeaveMarkupMode() {
     restoreMarkupSVG   = '';
     restoreMarkupState = '';
 
-    $('#markup-list').children('.selected').removeClass('selected');
+    $('#' + viewerId + '-markups-list').children('.selected').removeClass('selected');
 
 
 }
-function viewerSaveMarkup() {}
+function viewerSaveItemMarkup() {
+
+    let fieldId  = $('#' + viewerId + '-markups-list').find('.markup.selected').first().attr('id');
+    let linkItem = $('#' + viewerId).closest('.item').attr('data-link');
+
+    $('#overlay').show();
+
+    viewerCaptureScreenshot(fieldId, function() {
+
+        let elemMarkupImage = $('#' + fieldId);
+
+        let params = { 
+            link      : linkItem,
+            image     : {
+                fieldId : fieldId,
+                value   : elemMarkupImage[0].toDataURL('image/jpg')
+            }
+        };
+
+        $.post({
+            url         : '/plm/upload-image', 
+            contentType : 'application/json',
+            data        : JSON.stringify(params)
+        }, function() {
+            $('#overlay').hide();
+            elemMarkupImage.removeClass('placeholder');
+        });
+
+    });
+
+
+
+}
 
 
 // Capture screenshot with markup for image upload

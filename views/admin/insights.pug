@@ -1,0 +1,191 @@
+extends ../framework/layout
+
+block head
+    
+    link(rel='stylesheet', href='/stylesheets/admin/insights.css')
+    script(src='https://cdn.jsdelivr.net/npm/chart.js')
+    script(src='https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js')
+    script(src='https://cdn.jsdelivr.net/npm/moment@^2')
+    script(src='https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@^1')
+    script(src='../javascripts/admin/insights.js')
+    script.
+        config = !{JSON.stringify(config)};
+
+block body
+
+    body.surface-level-2.loading
+
+        #progress-bar-complete(title='0% completed')
+        #progress-bar-pending(title='0% completed')
+
+        #header
+            #header-logo
+            #header-title= title
+            #header-subtitle
+            #header-toolbar
+                .button#options.with-icon.icon-info Review Settings
+                #header-avatar
+
+        #main.screen.panel
+            .tabs.surface-level-3(data-tab-group="tab-group-main")
+                div System
+                div Last Login
+                div Login History
+                div User Activity
+                div Workspaces Activity
+                div Item Count
+                div Item Creation
+                div Item Edits
+                div#tab-event-log Event Log
+            .panel-content.tab-group-main.dashboard.surface-level-2-5#system
+                .counters
+                    .counter
+                        #workspaces-count.counter-number ?
+                        .counter-label Workspaces accessible for you
+                    .counter
+                        #users-count.counter-number ?
+                        .counter-label Active Users 
+                    .counter
+                        #entries-count.counter-number ?
+                        #entries-label.counter-label Log entries to process     
+                    .counter
+                        #processed-count.counter-number ?
+                        .counter-label Log entries processed     
+                    .counter
+                        #days-count.counter-number ?
+                        .counter-label Log days processed
+                .dashboard-chart
+                    .title Users by status
+                    .chart
+                        canvas#status 
+                .dashboard-chart
+                    .title Active users by mail domain
+                    .chart
+                        canvas#domains 
+            .panel-content.tab-group-main
+                .panel-left.surface-level-1#timelineLastLoginsChart
+                    .panel-chart
+                        canvas#timelineLastLogins       
+                    .panel-chart-toolbar#timelineLastLoginsToolbar
+                        .panel-action.button.with-icon.icon-toggle-off#sortTimelineLastLogin Sort by name
+                        #timelineLastLoginsReset
+                            .panel-label Keep CTRL key pressed to zoom with your mousewheel
+                            .panel-action.button#resetTimelineLastLogins Click to reset zoom
+                .panel-right#timelineLastLoginsCounters
+                    .panel-counter 
+                        .panel-counter-value#logins-today ?
+                        .panel-counter-label Users logged in today 
+                    .panel-counter 
+                        .panel-counter-value#logins-week ?
+                        .panel-counter-label Users logged in this week 
+                    .panel-counter 
+                        .panel-counter-value#logins-month ?
+                        .panel-counter-label Users logged in this month 
+                    .panel-counter 
+                        .panel-counter-value#logins-year ?
+                        .panel-counter-label Users logged in this year 
+                    .panel-counter 
+                        .panel-counter-value#logins-days7 ?
+                        .panel-counter-label Users logged in last 7 days 
+                    .panel-counter 
+                        .panel-counter-value#logins-days30 ?
+                        .panel-counter-label Users logged in last 30 days  
+                    .panel-counter 
+                        .panel-counter-value#logins-days60 ?
+                        .panel-counter-label Users logged in last 60 days 
+                    .panel-counter 
+                        .panel-counter-value#logins-days180 ?
+                        .panel-counter-label Users logged in last 180 days  
+                    .panel-counter 
+                        .panel-counter-value#logins-days365 ?
+                        .panel-counter-label Users logged in last 365 days 
+            .panel-content.tab-group-main.surface-level-2-5.dashboard#logins
+                #summary
+                    #summary-bar
+                        #summary-bar-logins.left
+                        #summary-bar-nologin.left
+                    #summary-text
+                        span#summary-logins 0
+                        span.text-block out of
+                        span#summary-active 0
+                        span.text-block active users logged in the past 
+                        span#summary-days 0 
+                        span.text-block days
+                #summary-chart
+                    .title Active users / unique logins per day 
+                    .panel-chart
+                        canvas#timelineLogins
+                    .panel-chart-toolbar 
+                        .panel-label Keep CTRL key pressed to zoom with your mousewheel
+                        .panel-action.button#resetTimelineLogins Click to reset zoom
+            .panel-content.tab-group-main.surface-level-1#panelTimelineUsers
+                .panel-chart
+                    canvas#timelineUsers
+                .panel-chart-toolbar 
+                    .panel-label Keep CTRL key pressed to zoom with your mousewheel
+                    .panel-action.button#resetTimelineUsers Click to reset zoom            
+            .panel-content.tab-group-main.surface-level-1
+                .panel-chart
+                    canvas#workspaceActivities
+                .panel-chart-toolbar 
+                    .panel-label Keep CTRL key pressed to zoom with your mousewheel
+                    .panel-action.button#resetWorkspaceActivities Click to reset zoom            
+            .panel-content.tab-group-main.surface-level-1
+                .panel-chart
+                    canvas#workspaces
+                .panel-chart-toolbar 
+                    .panel-label Keep CTRL key pressed to zoom with your mousewheel
+                    .panel-action.button#resetWorkspaceCount Click to reset zoom  
+            .panel-content.tab-group-main.surface-level-1
+                .panel-chart
+                    canvas#timelineCreation
+                .panel-chart-toolbar 
+                    .panel-label Keep CTRL key pressed to zoom with your mousewheel
+                    .panel-action.button#resetTimelineCreation Click to reset zoom  
+            .panel-content.tab-group-main.surface-level-1
+                .panel-chart
+                    canvas#timelineEdits
+                .panel-chart-toolbar 
+                    .panel-label Keep CTRL key pressed to zoom with your mousewheel
+                    .panel-action.button#resetTimelineEdits Click to reset zoom  
+            .panel-content.tab-group-main.surface-level-1 
+                .toolbar
+                    span.select-label Select user:
+                    select.button#select-user
+                        option(value='*') - All Entries -
+                .wrapper
+                    table.fixed-header.row-hovering#events
+                        tr
+                            th User
+                            th Event
+                            th Date
+                            th Link
+                            th Description
+        #options-dialog.dialog
+            .dialog-header Dashboard Settings
+            .dialog-content
+                span The following options were defined in settings.js
+                table   
+                    tr 
+                        td Maximum Log Entries 
+                        td#maxLogEntries
+                    tr 
+                        td Maximum Event Log Entries 
+                        td#maxEventLogEntries
+                    tr 
+                        td Excluded User Accounts 
+                        td#usersExcluded
+                    tr 
+                        td Excluded Workspaces
+                        td#workspacesExcluded
+            .dialog-footer
+                #options-close.default.button Close
+
+        #processing
+            #circle-wrap
+                .circle
+                    .mask.rotate.full
+                        .rotate.fill
+                    .mask.half
+                        .rotate.fill
+                    #percent 0%

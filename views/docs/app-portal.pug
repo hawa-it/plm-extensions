@@ -1,0 +1,87 @@
+.tile(data-name='PLM Portal')
+    .tile-image(style="background: url('images/app-portal.jpg') no-repeat;background-size:contain;")
+    .tile-details
+        .tile-title PLM Portal
+        .tile-subtitle Provide quick access to latest product data in PLM using a very basic frontend for casual users, working well on tablets
+        .tile-access 
+            .tile-endpoint /portal
+            .tile-button.button.default(href="portal" target="_blank") Open
+            .tile-button.button.icon.icon-start.default(href="https://youtu.be/tM8why6ybAU" target="_blank")
+    .instructions
+        h1 Features
+        p Search for any design using its number and descriptor or access your most recent items to continue where you left. Once a design is selected, the following features are available:
+        ul
+            li 3D Viewer with exploded view
+            li Item Details
+            li Item Attachments
+            li BOM with cross-highlight
+        h1 Define Startup Item 
+        p You can pass the parameters dmsId and wsId in your URL to skip the search and let the portal open the given item direclty. Searches are still possible by using the toggle button in the main toolbar.
+        img(src='images/apps/portal-1.png' style='width:100%;max-width:1280px;margin:10px 0px 30px;')
+        h1 Configuration Settings
+        p The following settings can be adjusted in your settings file within the portal parameter to adjust the application's behavior:
+        p 
+            table 
+                tr 
+                    th Setting 
+                    th Description 
+                    th Default Value
+                tr 
+                    td portal.autoClick
+                    td When set to true and the search returns one result only, the given item will be selected automaticall
+                    td true
+                tr 
+                    td portal.sectionsExcluded
+                    td Provide list of sections (by name) that should be excluded from the Details display
+                    td ['AML Summary', 'Quality Inspection', 'Sustainability', 'Compliance', 'Others']
+                tr 
+                    td portal.sectionsIncluded
+                    td Restrict the Details display to a defined list of sections (defined by name) 
+                    td []
+                tr 
+                    td portal.sectionsOrder
+                    td Defines the order of the sections being shown, defined by an array with list of section names 
+                    td ['Basic', 'Technical Details', 'PDM Data']
+                tr 
+                    td portal.fieldsExcluded
+                    td Provide list of fields (by field ID) that should be excluded from the Details display
+                    td ['ESTIMATED_COST', 'PENDING_PACKAGES']
+                tr 
+                    td portal.fieldsIncluded
+                    td Restrict the Details display to a defined list of fields (defined by field ID) 
+                    td []
+        p.code
+            span export.config = {
+            span.indent 'service' : {
+            span.indent-2 autoClick : true
+            span.indent-2 sectionsExcluded : ['AML Summary', 'Quality Inspection', 'Sustainability', 'Compliance', 'Others'],
+            span.indent-2 sectionsIncluded : [],
+            span.indent-2 sectionsOrder    : ['Basic', 'Technical Details', 'PDM Data'],
+            span.indent-2 fieldsExcluded   : ['ESTIMATED_COST', 'PENDING_PACKAGES'],
+            span.indent-2 fieldsIncluded   : [],
+            span.indent-2 viewerFeatures   : { .. }
+            span.indent }
+            span }  
+        p This utility also uses the following common configuration settings
+        table(style='margin:10px 0px 30px')
+            tr
+                th Setting
+                th Description
+                th Default Value 
+            tr  
+                td config.items.wsId
+                td The Items workspace ID
+                td 57       
+        h1 Configuring Viewer Features
+        include ../framework/viewer.pug
+    .log 
+        h1 PLM Portal Change Log 
+        table 
+            tr 
+                td September 23, 2024
+                td Enhancement
+                td Added settings 'settionsOrder' that optionally allows for alternate orders of sections in the Item Details display
+            tr 
+                td September 20, 2024
+                td Initial Release
+                td Addition of this utility to the UX Extensions
