@@ -136,6 +136,8 @@ body.with-details #details { right : 0px; }
 body.with-processes #processes { right : 0px; }
 
 
+#select-version { background : var(--color-blue-500) !important; }
+
 
 /* HOME */
 /* ----------------------------------------------------------------------------- */
