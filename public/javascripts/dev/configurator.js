@@ -18,7 +18,7 @@ $(document).ready(function() {
 
     setUIEvents();
 
-    getApplicationFeatures('configurator', [], function(responses) {   
+    getFeatureSettings('configurator', [], function(responses) {   
         
         if(isBlank(dmsId)) {
 
@@ -298,7 +298,7 @@ function insertVariants(title) {
         tileTitle       : 'NUMBER',
         tileSubtitle    : 'TITLE',
         tileDetails     : 'DESCRIPTION',
-        tileSize        : 'xl',
+        contentSize     : 'xl',
         tableCounters   : false
     }
 
@@ -1004,7 +1004,7 @@ function setProductBOMLink() {
 
     console.log(params);
 
-    $.get('/plm/edit', params, function(response) {
+    $.post('/plm/edit', params, function(response) {
         console.log(response);
     });
 
