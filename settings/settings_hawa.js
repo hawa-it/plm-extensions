@@ -413,7 +413,7 @@ exports.config = {
         fieldIdMarkupState            : 'MARKUP_STATE',
         revisionBias                  : 'working', // change to release if needed
         pinMBOMItems                  : false,
-        suffixItemNumber              : '',
+        suffixItemNumber              : 'M',
         incrementOperatonsItemNumber  : true,
         newDefaults                   : [ 
             //['TYPE',        { link : '/api/v3/lookups/CUSTOM_LOOKUP_ITEM_TYPES/options/34'      }],
