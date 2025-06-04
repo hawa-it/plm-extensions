@@ -152,7 +152,7 @@ exports.config = {
         contents    : [ 
             { type : 'details'         , params : { id : 'details', collapseContents : true, editable : true, toggles : true, singleToolbar : 'controls' } },
             { type : 'attachments'     , params : { id : 'attachments', editable : true, headerLabel : 'Files', singleToolbar : 'controls', layout : 'list', tileSize : 'xs' } },
-            { type : 'managed-items'   , params : { id : 'AFFECTED_ITEM', editable : true, columnsIn : [ 'Item', 'Lifecycle', 'Problem Description', 'Proposed Change'], openInPLM : true } }, //id : 'managed-items'
+            { type : 'managed-items'   , params : { id : 'managed-items', editable : true, columnsIn : [ 'Item', 'Lifecycle', 'Problem Description', 'Proposed Change'], openInPLM : true } },
             { type : 'workflow-history', params : { id : 'workflow-history' } }
         ],
         icon     : 'icon-workflow',
