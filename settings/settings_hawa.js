@@ -199,9 +199,9 @@ exports.config = {
             { label : 'Completed',   color : colors.green,  states : ['Completed'] }
         ]
     },{
-        title       : 'Project Tasks Management',
-        wsId        : 90,
-        className   : 'project-task',
+        title       : 'Change Tasks Management',
+        wsId        : 80,
+        className   : 'change-task',
         contents    : [ 
             { type : 'workflow-history', className : 'surface-level-1', params : { id : 'workflow-history' } },
             { type : 'details'         , className : 'surface-level-1', params : { id : 'details', collapseContents : true, editable : true, toggles : true, singleToolbar : 'controls' } },
