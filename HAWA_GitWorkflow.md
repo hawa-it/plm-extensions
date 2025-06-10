@@ -79,12 +79,11 @@ git push origin sandbox
 
 ```mermaid
 graph TD
-    A["Update sandbox branch<br/>on GitHub"] -->|"Sync fork"| B["Clone/Pull repo<br/>locally"]
-    B --> C["Modify<br/>hawa_settings.js"]
-    C --> D["Test changes<br/>locally"]
-    D -->|"If tests pass"| E["Commit & Push<br/>to sandbox"]
-    E --> F["Create PR:<br/>sandbox → main"]
-    F --> G["Run tests"]
-    G -->|"Tests pass"| H["Merge PR"]
-    G -->|"Tests fail"| C
+    A["Update sandbox branch<br/>on GitHub"] -->|"Sync fork"| B["Clone/Pull repo<br/>locally"]
+    B --> C["Modify<br/>hawa_settings.js"]
+    C --> D["Commit & Push<br/>to sandbox"]    
+    D --> E["Test changes<br/> in sandbox environment"]   
+    E --> F["Run tests"]   
+    F -->|"Tests pass"| G["Create PR:<br/>sandbox → main"]
+    F -->|"Tests fail"| C
 ``` 
