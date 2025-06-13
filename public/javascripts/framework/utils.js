@@ -36,7 +36,8 @@ let settings = {
     workspaceViews    : {},
     workspaceItems    : {},
     workflowHistory   : {},
-    pdmFileProperties : {}
+    pdmFileProperties : {},
+    users             : {}
 }
 
 const includesAny = (arr, values) => values.some(v => arr.includes(v));
@@ -232,6 +233,148 @@ function hideStartupDialog() {
     $('#startup').remove();
     $('#startup-logo').remove();
     $('body').children().removeClass('hidden');
+
+}
+
+
+// Insert Main Menu to switch utilities
+function insertMenu() {
+
+    if(menu.length === 0) return;
+
+    let curUrl   = document.location.href;
+    let showMenu = false;
+    let endpoint = curUrl.split('/').pop();
+        endpoint = endpoint.split('?')[0];
+    
+    for(let column of menu) {
+        for(let category of column) {
+            for(let command of category.commands) {
+                if(command.url.indexOf('/' + endpoint) === 0) {
+                    showMenu = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    if(!showMenu) return;
+
+    $(document).click(function() { $('#menu').fadeOut(150); })
+
+    $('<div></div>').insertBefore($('#header-logo'))
+        .attr('id', 'menu-button')
+        .addClass('icon')
+        .addClass('icon-menu')
+        .addClass('button')
+        .click(function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $('#menu').fadeIn(150);
+        });
+
+    let elemMenu = $('<div></div>').appendTo($('body'))
+        .attr('id', 'menu')
+        .click(function(e) {
+            e.preventDefault();
+            e.stopPropagation();     
+        })
+
+    $('<div></div>').appendTo(elemMenu)
+        .attr('id', 'menu-icon')
+        .addClass('icon')
+        .addClass('icon-menu')
+        .click(function() {
+            $('#menu').fadeOut(150);
+        });
+
+    let elemColumns = $('<div></div>').appendTo(elemMenu).attr('id', 'menu-columns');
+
+    for(let column of menu) {
+
+        let elemColumn = $('<div></div>').appendTo(elemColumns)
+        let first      = true;
+
+        for(let category of column) {
+
+            let elemTitle = $('<div></div>').appendTo(elemColumn)
+                .addClass('menu-title')
+                .html(category.label);
+
+            if(!first) elemTitle.css('margin-top', '78px');
+
+            let elemCommands = $('<div></div>').appendTo(elemColumn)
+                .addClass('menu-commands');
+
+            for(let command of category.commands) {
+
+                let elemCommand = $('<div></div>').appendTo(elemCommands)
+                    .addClass('menu-command')
+                    .attr('data-url', command.url)
+                    .click(function(e) {
+                        clickMenuCommand($(this));
+                    });
+
+                $('<div></div>').appendTo(elemCommand)
+                    .addClass('menu-command-icon')
+                    .addClass('icon')
+                    .addClass(command.icon);
+
+                let elemCommandName = $('<div></div>').appendTo(elemCommand)
+                    .addClass('menu-command-name');
+
+                $('<div></div>').appendTo(elemCommandName)
+                    .addClass('menu-command-title')
+                    .html(command.title);
+
+                $('<div></div>').appendTo(elemCommandName)
+                    .addClass('menu-command-subtitle')
+                    .html(command.subtitle);
+
+            }
+
+            first = false;
+
+        }
+    }
+
+}
+function clickMenuCommand(elemCommand) {
+
+    let url        = elemCommand.attr('data-url');
+    let location   = document.location.href.split('?');
+    let newParams  = (url.indexOf('?') > -1) ? url.split('?')[1].split('&') : [];
+    let keepParams = ['theme']
+
+    if(location.length > 1) {
+        
+        let curParams = location[1].split('&');
+
+        for(let curParam of curParams) {
+
+            let curName = curParam.split('=')[0];
+            let add = keepParams.includes(curName);
+
+            for(let newParam of newParams) {
+
+                let newName = newParam.split('=')[0];
+
+                if(newName.toLowerCase() === curName.toLowerCase()) {
+                    add = false;
+                    break;
+                }
+
+            }
+
+            if(add) {
+                url += (url.indexOf('?') > 0) ? '&' : '?';
+                url += curParam;
+            }
+
+        }
+    }
+
+    document.location.href = url;
 
 }
 
@@ -807,6 +950,7 @@ function insertCalendarMonth(id, currentDate) {
 // Generate default settings object for item based and navigation views using genPanel*
 function getPanelSettings(link, params, defaults, additional) {
 
+    if(isBlank(defaults.counters)         ) defaults.counters          = false;
     if(isBlank(defaults.hidePanel)        ) defaults.hidePanel         = false;
     if(isBlank(defaults.hideHeader)       ) defaults.hideHeader        = false;
     if(isBlank(defaults.hideHeaderLabel)  ) defaults.hideHeaderLabel   = false;
@@ -822,12 +966,13 @@ function getPanelSettings(link, params, defaults, additional) {
     if(isBlank(defaults.multiSelect)      ) defaults.multiSelect       = false;
     if(isBlank(defaults.filterBySelection)) defaults.filterBySelection = false;
     if(isBlank(defaults.layout)           ) defaults.layout            = 'list';
+    if(isBlank(defaults.number)           ) defaults.number            = true;
     if(isBlank(defaults.collapsePanel)    ) defaults.collapsePanel     = false;
     if(isBlank(defaults.collapseContents) ) defaults.collapseContents  = false;
     if(isBlank(defaults.groupBy)          ) defaults.groupBy           = '';
     if(isBlank(defaults.groupLayout)      ) defaults.groupLayout       = 'column';
     if(isBlank(defaults.additionalData)   ) defaults.additionalData    = [];
-    if(isBlank(defaults.contentSize)      ) defaults.contentSize       = 'xs';
+    if(isBlank(defaults.contentSize)      ) defaults.contentSize       = 'm';
     if(isBlank(defaults.contentSizes)     ) defaults.contentSizes      = [];
     if(isBlank(defaults.tileIcon)         ) defaults.tileIcon          = 'icon-product';
     if(isBlank(defaults.tileImage)        ) defaults.tileImage         = true;
@@ -839,7 +984,6 @@ function getPanelSettings(link, params, defaults, additional) {
     if(isBlank(defaults.tableRanges)      ) defaults.tableRanges       = false;
     if(isBlank(defaults.textNoData)       ) defaults.textNoData        = 'No Entries';
     if(isBlank(defaults.stateColors)      ) defaults.stateColors       = [];
-    if(isBlank(defaults.counters)         ) defaults.counters          = false;
     if(isBlank(defaults.useCache)         ) defaults.useCache          = false;
     if(isBlank(defaults.singleToolbar)    ) defaults.singleToolbar     = '';
     if(isBlank(defaults.disconnectLabel)  ) defaults.disconnectLabel   = 'Remove';
@@ -873,7 +1017,7 @@ function getPanelSettings(link, params, defaults, additional) {
         groupBy           : isBlank(params.groupBy)           ? defaults.groupBy : params.groupBy,
         groupLayout       : isBlank(params.groupLayout)       ? defaults.groupLayout : params.groupLayout,
         additionalData    : isBlank(params.additionalData)    ? defaults.additionalData : params.additionalData,
-        number            : isBlank(params.number)            ? true : params.number,
+        number            : isBlank(params.number)            ? defaults.number : params.number,
         contentSize       : isBlank(params.contentSize)       ? defaults.contentSize  : params.contentSize,
         contentSizes      : isBlank(params.contentSizes)      ? defaults.contentSizes  : params.contentSizes,
         tileIcon          : isBlank(params.tileIcon)          ? defaults.tileIcon  : params.tileIcon,
@@ -1150,6 +1294,23 @@ function genPanelCloneButton(id, settings) {
         });
 
     return elemButtonClone;
+
+}
+function genPanelWorkflowActions(id, settings) {
+
+
+    if(isBlank(settings.workflowActions)) return;
+    if(!settings.workflowActions) return;
+
+    let elemToolbar = genPanelToolbar(id, settings, 'controls');
+
+    let elemWorkflowActions = $('<select></select>').prependTo(elemToolbar)
+        .attr('id', id + '-workflow-actions')
+        .addClass('item-workflow-actions')
+        .addClass('button')
+        .hide();
+    
+    return elemWorkflowActions;
 
 }
 function genPanelOpenInPLMButton(id, settings) {
@@ -2602,7 +2763,8 @@ function genSingleTile(params, settings) {
 
     if(isBlank(settings)) settings = {};
     if(isBlank(params  ))   params = {};
-    if(isBlank(params.tileIcon)) params.tileIcon = 'icon-product';
+    if(isBlank(params.tileIcon )) params.tileIcon  = 'icon-product';
+    if(isBlank(params.imageLink)) params.imageLink = '';
 
     let elemTile        = $('<div></div>').addClass('tile').addClass('content-item');
     let elemTileImage   = $('<div></div>').appendTo(elemTile).addClass('tile-image');
@@ -2703,7 +2865,10 @@ function genSingleTile(params, settings) {
 
     if(isBlank(params.imageId) && isBlank(params.imageLink)) elemTile.addClass('no-image');
     
-    if(params.number) {
+    if(params.imageLink.indexOf('https://images.profile.autodesk.com') === 0) {
+        $('<img>').appendTo(elemTileImage)
+            .attr('src', params.imageLink);
+    } else if(params.number) {
         $('<div></div>').appendTo(elemTileImage)
             .addClass('tile-counter')
             .html(params.tileNumber);
@@ -2805,10 +2970,10 @@ function addTilesListChevrons(id, settings, callback) {
 function genTable(id, items, settings) {
 
     if(isBlank(settings.multiSelect)) settings.multiSelect = false;
-    if(isBlank(settings.editable)   )    settings.editable = false;
-    if(isBlank(settings.position)   )    settings.position = false;
-    if(isBlank(settings.descriptor) )  settings.descriptor = false;
-    if(isBlank(settings.quantity)   )    settings.quantity = false;
+    if(isBlank(settings.editable)   ) settings.editable    = false;
+    if(isBlank(settings.position)   ) settings.position    = false;
+    if(isBlank(settings.descriptor) ) settings.descriptor  = false;
+    if(isBlank(settings.quantity)   ) settings.quantity    = false;
     if(isBlank(settings.hideDetails)) settings.hideDetails = false;
 
     let elemContent = $('#' + id + '-content');
