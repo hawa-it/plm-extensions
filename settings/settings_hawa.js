@@ -782,6 +782,11 @@ exports.menu = [
             subtitle : 'Capture and resolve problem reports',
             url      : '/dashboard?wsId=82'
         },{
+            icon     : 'icon-workflow', // Hawa in Use
+            title    : 'Change Requests Management',
+            subtitle : 'Capture and resolve change requests',
+            url      : '/dashboard?wsId=83'
+        },{
             icon     : 'icon-released',
             title    : 'Non Conformances Dashboard',
             subtitle : 'Capture and resolve quality issues',
