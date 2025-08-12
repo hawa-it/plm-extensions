@@ -14,6 +14,7 @@ let records          = null;
 $(document).ready(function() {
 
     setUIEvents();
+    insertMenu();
 
     validateSystemAdminAccess(function(isAdmin) {
 
@@ -49,6 +50,9 @@ function setUIEvents() {
         if($(this).attr('id') !== 'properties') {
             getMatches();
         }
+    });
+    $('.filter .value input').on('change', function() { 
+        getMatches();
     });
     $('.filter .inputs input').on('change', function() { 
         getMatches();
@@ -237,6 +241,7 @@ function updatefilters() {
 
     $('.select-user' ).each(function() { $(this).val('--'); });
     $('.select-group').each(function() { $(this).val('--'); });
+    $('#lifecycle').val('');
 
     Promise.all(requests).then(function(responses) {
 
@@ -767,6 +772,21 @@ function getSearchFilters() {
 
     });
 
+    if(wsConfig.type === '6') {
+
+        let valueLifecycle = $('#lifecycle').val();
+
+        if(!isBlank(valueLifecycle)) {
+
+            filters.push({ 
+                field        : 'LIFECYCLE_NAME',
+                type         : 10,
+                comparator   : 15,
+                value        : valueLifecycle
+            });
+        }
+    }
+
     return filters;
 
 }
@@ -1211,6 +1231,7 @@ function genRequests(limit) {
             } else if(run.actionId === 'set-owner') {
 
                 params.owner = $('#select-set-owner').children('option:selected').attr('data-id');
+                params.notify = ($('#select-notify-new-owner').val() === 'y');
 
                 requests.push($.post('/plm/set-owner', params));
 

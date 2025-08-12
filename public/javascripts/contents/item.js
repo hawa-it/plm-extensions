@@ -833,7 +833,6 @@ function insertWorkflowActions(link, params) {
 
     $('<option></option>')
         .attr('value', '')
-        .attr('hidden', '')
         .attr('selected', '')
         .html(label)
         .appendTo(elemActions);
@@ -869,7 +868,8 @@ function clickWorkflowAction(elemClicked, params) {
     let link       = elemClicked.attr('data-link');
     let transition = elemClicked.val();
 
-    $.get('/plm/transition', { 'link' : link, 'transition' : transition }, function(response) {
+    $.get('/plm/transition', { link : link, transition : transition }, function(response) {
+        if(response.error) showErrorMessage('Workflow Action Failed', response.data.message);
         $('#overlay').hide();
         clickWorkflowActionDone(response.params.link, response.params.tranistion, response);
         params.onComplete(link);
@@ -1103,8 +1103,6 @@ function insertCreateData(id) {
                     viewerImage  : 'viewer-markup-image'
                 })
             }
-
-            console.log(settings.create[id]);
 
             insertCreateDataSetFieldValues(id, settings.create[id]);
             finishPanelContentUpdate(id, settings.create[id]);
@@ -1522,6 +1520,7 @@ function insertDetails(link, params) {
         [ 'saveButtonLabel'    , 'Save' ],
         [ 'suppressLinks'      , false ],
         [ 'toggles'            , false ],
+        [ 'workflowActions'    , false ],
         [ 'sectionsIn'         , [] ],
         [ 'sectionsEx'         , [] ],
         [ 'sectionsOrder'      , [] ],
@@ -1542,6 +1541,7 @@ function insertDetails(link, params) {
     genPanelBookmarkButton(id, settings.details[id]);
     genPanelCloneButton(id, settings.details[id]);
     genPanelOpenInPLMButton(id, settings.details[id]);
+    genPanelWorkflowActions(id, settings.details[id]);
     genPanelSearchInput(id, settings.details[id]);
     genPanelResizeButton(id, settings.details[id]);
     genPanelReloadButton(id, settings.details[id]);
@@ -1608,6 +1608,8 @@ function insertDetailsData(id) {
 
     Promise.all(requests).then(function(responses) {
 
+        console.log(responses);
+
         if(stopPanelContentUpdate(responses[0], settings.details[id])) return;
 
         settings.details[id].descriptor = responses[0].data.title;
@@ -1615,10 +1617,19 @@ function insertDetailsData(id) {
         setPanelBookmarkStatus(id, settings.details[id], responses);
         setPanelCloneStatus(id, settings.details[id], responses);
 
+        if(settings.details[id].workflowActions) {
+            insertWorkflowActions(settings.details[id].link, {
+                id : id + '-workflow-actions',
+                hideIfEmpty : true,
+                onComplete : function() { settings.details[id].load() }
+            });
+        }
+
         insertDetailsFields(id, responses[1].data, responses[2].data, responses[0].data, settings.details[id], function() {
             finishPanelContentUpdate(id, settings.details[id]);
             insertDetailsDataDone(id, responses[1].data, responses[2].data, responses[0].data);
         });
+
 
     });
 
@@ -1770,6 +1781,13 @@ function insertDetailsFields(id, sections, fields, data, settings, callback) {
                     .attr('data-id', sectionId);
 
                 if(className !== 'expanded') elemFields.toggle();
+
+                let sectionFields = section.fields;
+
+                if(section.type === 'CLASSIFICATION') {
+
+                    
+                }
 
                 for(let sectionField of section.fields) {
 

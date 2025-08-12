@@ -17,10 +17,10 @@ let enableCache     = false;
 // ---------------------------------------------------------------------------------------------------------------------------
 //  OPTIONAL ADDITIONAL CLIENT ID FOR 2-LEGGED AUTHENTICATION
 // ---------------------------------------------------------------------------------------------------------------------------
-// The application USER SETTINGS MANAGER requires an APS application with Client ID and Client Secret for 2-legged authentications, please proivde the given settings in the next variables.
-// This application must be different from the one provided in clientId as this time, a Client Secret is required whereas the previous application must not require a Client Secret.
-// Only 2-legged applications enables impersonation - which is required for the USER SETTINGS MANAGER utility to work. 
-// However, as this impacts security, its is recommended to provide the following settings only if the USER SETTINGS MANAGER will be used, maybe even only temporarily or in a local copy of this server.
+// The applications OUTSTANDING WORK REPORT and  USER SETTINGS MANAGER require an APS application with Client ID and Client Secret for 2-legged authentications, please proivde the given settings in the next variables.
+// This APS application must be different from the one provided in clientId above as this one must require a Client Secret, to be provided ad adminClientSecret.
+// Only 2-legged applications enable impersonation - which is required for the two advanced admin applications (OUTSTANDING WORK REPORT and USER SETTINGS MANAGER). 
+// However, as this impacts security, its is recommended to provide the following settings only if these advanced admin utilities will be used, maybe even only temporarily or in a local copy of this server.
 // All other applications will work even if the following 2 settings are not provided as they use the clientId variable instead. 
 // Note that you can also provide these settings using the given environment variables ADMIN_CLIENT_ID and ADMIN_CLIENT_SECRET.
 let adminClientId     = '***********************';
@@ -163,6 +163,25 @@ exports.config = {
             { label : 'Completed',   color : colors.green,  states : ['Completed'] }
         ]
     }, {
+        title       : 'Change Tasks Dashboard',
+        wsId        : 80,
+        className   : 'change-task',
+        contents    : [ 
+            { type : 'details'         , params : { id : 'details', expandSections : ['Task Details', 'Follow-Up & Status Updates'], editable : true, toggles : true, singleToolbar : 'controls' } },
+            { type : 'attachments'     , params : { id : 'attachments', editable : true, headerLabel : 'Files', singleToolbar : 'controls', layout : 'row', contentSize : 'l' } },
+            { type : 'grid'            , params : { id : 'grid', editable : true, headerLabel : 'Efforts'} },
+            { type : 'relationships'   , params : { id : 'relationships', headerLabel : 'Deliverables', editable : true, columnsIn : [ 'Item', 'Lifecycle', 'Problem Description', 'Proposed Change'], openInPLM : true } },
+            { type : 'workflow-history', params : { id : 'workflow-history' } }
+        ],
+        icon     : 'icon-mow',
+        progress : [
+            { label : 'Planned',      color : '#000000',     states : ['Planned' ]},
+            { label : 'New',          color : colors.red,    states : ['Assigned']},
+            { label : 'In Work',      color : colors.yellow, states : ['In Work' ]},
+            { label : 'Owner Review', color : colors.green,  states : ['On Hold', 'Review']},
+            { label : 'Done',         color : '#000000',     states : ['Completed']}
+        ]
+    }, {
         title       : 'Non Conformances Tracking Dashboard',
         wsId        : 98,
         className   : 'non-conformance',
@@ -199,9 +218,9 @@ exports.config = {
             { label : 'Completed',   color : colors.green,  states : ['Completed'] }
         ]
     },{
-        title       : 'Change Tasks Management',
-        wsId        : 80,
-        className   : 'change-task',
+        title       : 'Project Tasks Management',
+        wsId        : 90,
+        className   : 'project-task',
         contents    : [ 
             { type : 'workflow-history', className : 'surface-level-1', params : { id : 'workflow-history' } },
             { type : 'details'         , className : 'surface-level-1', params : { id : 'details', collapseContents : true, editable : true, toggles : true, singleToolbar : 'controls' } },
@@ -662,7 +681,7 @@ exports.config = {
 
         wsIdProblemReports     : 82,
         wsIdSparePartsRequests : 241,
-        requestSectionsExcluded: [ 'Real Time KPIs', 'Workflow Activity' ],
+        requestSectionsExcluded: [ 'Planning & Tracking', 'Request Confirmation', 'Quote Submission & Response', 'Real Time KPIs', 'Workflow Activity', 'Quote Summary', 'Order Processing', 'Related Processes' ],
         requestSectionsExpanded: [ 'Requestor Contact Details', 'Request Details' ],
         requestColumnsExcluded : [ 'Line Item Cost', 'Availability [%]', 'Manufacturer', 'Manufacturer P/N', 'Unit Cost', 'Total Cost', 'Make or Buy', 'Lead Time (w)', 'Long Lead Time'],
 
@@ -736,6 +755,106 @@ exports.config = {
     }
 
 }
+
+
+
+// ---------------------------------------------------------------------------------------------------------------------------
+//  MAIN MENU CONFIGURATION
+// ---------------------------------------------------------------------------------------------------------------------------
+// Configure the main menu for the main toolbar enabling users to quickly switch the UX utilities
+// Set exports.menu = [] to disable the menu in all utilities
+exports.menu = [
+    [{
+        label : 'Business Applications',
+        commands : [{
+            icon     : 'icon-3d',
+            title    : 'Portal',
+            subtitle : 'Quick access to all product data',
+            url      : '/portal'
+        },{
+            icon     : 'icon-trend-chart',
+            title    : 'Product Data Explorer',
+            subtitle : 'Track design maturity using defined KPIs',
+            url      : '/explorer'
+        },{
+            icon     : 'icon-important',
+            title    : 'Problem Reporting Dashboard',
+            subtitle : 'Capture and resolve problem reports',
+            url      : '/dashboard?wsId=82'
+        },{
+            icon     : 'icon-workflow', // Hawa in Use
+            title    : 'Change Requests Management',
+            subtitle : 'Capture and resolve change requests',
+            url      : '/dashboard?wsId=83'
+        },{
+            icon     : 'icon-released',
+            title    : 'Non Conformances Dashboard',
+            subtitle : 'Capture and resolve quality issues',
+            url      : '/dashboard?wsId=98'
+        },{
+            icon     : 'icon-mow',
+            title    : 'Change Tasks Dashboard',
+            subtitle : 'Review, perform and complete assigned tasks',
+            url      : '/dashboard?wsId=80'    
+        },{
+            icon     : 'icon-columns',
+            title    : 'Workspace Navigator',
+            subtitle : 'Manage your master data easily',
+            url      : '/navigator'
+        },{
+            icon     : 'icon-tiles',
+            title    : 'Product Portfolio',
+            subtitle : 'Browse your current product portfolio',
+            url      : '/portfolio'
+        },{
+            icon     : 'icon-dashboard',
+            title    : 'Reports Dashboard',
+            subtitle : 'Gain insights using your PLM reports',
+            url      : '/reports'
+        },{
+            icon     : 'icon-timeline',
+            title    : 'Projects Dashboard',
+            subtitle : 'Review timeline of NPI projects in progress',
+            url      : '/projects'
+        },{
+            icon     : 'icon-service',
+            title    : 'Service Portal',
+            subtitle : 'Real time spare parts information',
+            url      : '/service'
+        }]
+    }], [{
+        label : 'Administration Utilities',
+        commands : [{
+            icon     : 'icon-status',
+            title    : 'Data Manager',
+            subtitle : 'Automate data processing tasks',
+            url      : '/data'
+        },{
+            icon     : 'icon-rules',
+            title    : 'Workspace Comparison',
+            subtitle : 'Deploy changes securely with automated comparison',
+            url      : '/workspace-comparison'
+        },{
+            icon     : 'icon-bar-chart-stack',
+            title    : 'Tenant Insights',
+            subtitle : 'Track user activity and data creation in your tenant',
+            url      : '/insights'
+        }]
+    },{
+        label : 'Advanced Administration Utilities',
+        commands : [{
+            icon     : 'icon-problem',
+            title    : 'Outstanding Work Report',
+            subtitle : 'Review &amp update Outstanding Work lists of users',
+            url      : '/outstanding-work'
+        },{
+            icon     : 'icon-group',
+            title    : 'User Settings Manager',
+            subtitle : 'Configure standards for new and existing users',
+            url      : '/users'
+        }]
+    }]
+]
 
 
 
