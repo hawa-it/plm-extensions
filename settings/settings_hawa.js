@@ -655,8 +655,8 @@ exports.config = {
             filterLabelIn : 'Show items contained in Sales BOM only', //Show items contained in Service BOM only
             filterLabelEx : 'Hide items contained in Sales BOM', //Hide items contained in Service BOM
 			defaults : {
-                number      : { copyFrom : 'bom.NUMBER'     , prefix  : ''               , suffix : '-SBOM' },
-                title       : { copyFrom : 'ctx.TITLE'      , prefix  : 'Service BOM of ', suffix : ''      },
+                number      : { copyFrom : 'bom.NUMBER'     , prefix  : ''               , suffix : '-V' }, //-SBOM
+                title       : { copyFrom : 'ctx.TITLE'      , prefix  : 'Service BOM of ', suffix : ''      }, // ctx für context, Inhalt aus Produkt
                 description : { copyFrom : 'bom.DESCRIPTION', prefix  : ''               , suffix : ''      },
             }
         },
