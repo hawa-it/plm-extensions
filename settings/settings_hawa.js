@@ -641,7 +641,7 @@ exports.config = {
     },
 
     sbom : {
-        appTitle  : 'Service BOM Editor',
+        appTitle  : 'Vertriebs-BOM Editor',
         sourceBOM : {
             fieldId     : 'EBOM',
             bomViewName : 'MBOM Transition', //Service
