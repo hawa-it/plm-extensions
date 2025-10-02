@@ -525,6 +525,7 @@ exports.config = {
 
     portal : {
         autoClick        : true,
+		searchInputText  : 'Enter part number',
         workspacesIn     : ['Articles'], //Items
         expandSections   : ['Basic'],
         sectionsExcluded : ['AML Summary', 'Quality Inspection', 'Sustainability', 'Compliance', 'Others'],
@@ -532,6 +533,7 @@ exports.config = {
         sectionsOrder    : ['Basic', 'Technical Details', 'PDM Data'],
         fieldsExcluded   : ['ESTIMATED_COST', 'PENDING_PACKAGES'],
         fieldsIncluded   : [],
+		suppressLinks    : false,
         viewerFeatures   : {
             contextMenu   : true,
             cube          : true,
@@ -651,12 +653,20 @@ exports.config = {
             itemTypeValue : 'Service BOM',
             prefixTitle   : 'Service BOM of ',
             filterLabelIn : 'Show items contained in Service BOM only',
-            filterLabelEx : 'Hide items contained in Service BOM'
+            filterLabelEx : 'Hide items contained in Service BOM',
+			defaults : {
+                number      : { copyFrom : 'bom.NUMBER'     , prefix  : ''               , suffix : '-SBOM' },
+                title       : { copyFrom : 'ctx.TITLE'      , prefix  : 'Service BOM of ', suffix : ''      },
+                description : { copyFrom : 'bom.DESCRIPTION', prefix  : ''               , suffix : ''      },
+            }
         },
-        itemType : {
-            fieldId    : 'TYPE',
-            picklistId : 'CUSTOM_LOOKUP_ITEM_TYPES'
+        itemsFieldIds : {
+            number      : 'NUMBER',
+            title       : 'TITLE',
+            description : 'DESCRIPTION',
+            type        : 'TYPE'
         },
+        picklistIdItemType : 'CUSTOM_LOOKUP_ITEM_TYPES',
         itemHighlight : {
             fieldId        : 'SPARE_WEAR_PART',
             fieldValues    : ['spare', 'spare part', 'yes', 'x', 'y', 'true'],
@@ -673,7 +683,7 @@ exports.config = {
             color         : colors.red,
             filterLabelIn : 'Show Spare Parts List Items Only',
             filterLabelEx : 'Hide Spare Parts List Items',
-            basePosNumber : 301,
+            basePosNumber : 101,
             hideQuantity  : true
         },{
             mode          : '1-level-bom',
@@ -694,7 +704,7 @@ exports.config = {
             color         : colors.yellow,
             filterLabelIn : 'Show Services Items Only',
             filterLabelEx : 'Hide Services Items',
-            basePosNumber : 101
+            basePosNumber : 301
         }],
         enableBOMPin : false,
         viewerFeatures : {
@@ -878,6 +888,11 @@ exports.menu = [
             subtitle : 'Quick access to all product data',
             url      : '/portal'
         },{
+            icon     : 'icon-tiles',
+            title    : 'Product Portfolio Catalog',
+            subtitle : 'Browse your current product portfolio',
+            url      : '/portfolio'
+        },{
             icon     : 'icon-trend-chart',
             title    : 'Product Data Explorer',
             subtitle : 'Track design maturity using defined KPIs',
@@ -945,9 +960,9 @@ exports.menu = [
             title    : 'Tenant Insights',
             subtitle : 'Track user activity and data creation in your tenant',
             url      : '/insights'
-        },{
+		},{
             icon     : 'icon-stopwatch',
-            title    : 'Shortcuts Panel',
+            title    : 'Administration Shortcuts',
             subtitle : 'Provides quick access to frequently used admin panels',
             url      : '/shortcuts'
         }]
