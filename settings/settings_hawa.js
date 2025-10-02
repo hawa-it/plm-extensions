@@ -92,7 +92,7 @@ exports.config = {
     
     // Set default settings for all viewer instances
     viewer  : {
-        numberProperties        : ['Artikelnummer', 'Bauteilnummer', 'Part Number', 'Name', 'label'],
+        numberProperties        : ['TEILENUMMER', 'Artikelnummer', 'Bauteilnummer', 'DOKUMENTNUMMER_3D', 'Name', 'label'],
         splitPartNumberBy       : ' v',
         splitPartNumberIndexes  : [0],
         splitPartNumberSpacer   : '',
@@ -644,16 +644,16 @@ exports.config = {
         appTitle  : 'Service BOM Editor',
         sourceBOM : {
             fieldId     : 'EBOM',
-            bomViewName : 'Service',
+            bomViewName : 'MBOM Transition', //Service
             headerLabel : 'Engineering BOM'
         },
         targetBOM : {
-            fieldId       : 'SERVICE_BOM',
-            bomViewName   : 'Service',
-            itemTypeValue : 'Service BOM',
+            fieldId       : 'SALES_BOM',
+            bomViewName   : 'MBOM Transition', //Service
+            itemTypeValue : 'Product',
             prefixTitle   : 'Service BOM of ',
-            filterLabelIn : 'Show items contained in Service BOM only',
-            filterLabelEx : 'Hide items contained in Service BOM',
+            filterLabelIn : 'Show items contained in Sales BOM only', //Show items contained in Service BOM only
+            filterLabelEx : 'Hide items contained in Sales BOM', //Hide items contained in Service BOM
 			defaults : {
                 number      : { copyFrom : 'bom.NUMBER'     , prefix  : ''               , suffix : '-SBOM' },
                 title       : { copyFrom : 'ctx.TITLE'      , prefix  : 'Service BOM of ', suffix : ''      },
@@ -661,12 +661,12 @@ exports.config = {
             }
         },
         itemsFieldIds : {
-            number      : 'NUMBER',
-            title       : 'TITLE',
+            number      : 'ARTIKEL', //NUMBER
+            title       : 'BEZEICHNUNG1_ITEM', //TITLE
             description : 'DESCRIPTION',
-            type        : 'TYPE'
+            type        : 'CATEGORY_TYPE' //TYPE
         },
-        picklistIdItemType : 'CUSTOM_LOOKUP_ITEM_TYPES',
+        picklistIdItemType : 'CUSTOM_LOOKUP_WS_ARTICLE_CATEGORY', //CUSTOM_LOOKUP_ITEM_TYPES
         itemHighlight : {
             fieldId        : 'SPARE_WEAR_PART',
             fieldValues    : ['spare', 'spare part', 'yes', 'x', 'y', 'true'],
@@ -687,14 +687,14 @@ exports.config = {
             hideQuantity  : true
         },{
             mode          : '1-level-bom',
-            tabLabel      : 'Maintenance Kits',
-            buttonLabels  : ['New Kit'],
-            bomItemTypes  : ['Service Kit'],
+            tabLabel      : 'Vertriebs BOM', //Maintenance Kits
+            buttonLabels  : ['New V-Level'], //New Kit
+            bomItemTypes  : ['Sales Assembly'], //Service Kit
             icon          : 'icon-product',
             color         : colors.green,
             filterLabelIn : 'Show Maintenance Kit Items Only',
             filterLabelEx : 'Hide Maintenance Items',
-            basePosNumber : 201
+            basePosNumber : 1 //201
         },{
             mode          : '2-levels-bom',
             tabLabel      : 'Services',
