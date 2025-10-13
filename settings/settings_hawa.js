@@ -12,7 +12,6 @@ let tenant          = '';
 let defaultTheme    = 'dark';   // Set the standard theme to dark or light
 let enableCache     = false;    
 
-// test
 
 // ---------------------------------------------------------------------------------------------------------------------------
 //  OPTIONAL ADDITIONAL CLIENT ID FOR 2-LEGGED AUTHENTICATION
@@ -658,13 +657,15 @@ exports.config = {
                 number      : { copyFrom : 'bom.ARTIKEL'     , prefix  : ''               , suffix : 'V' }, //-SBOM
                 title       : { copyFrom : 'ctx.TITLE'      , prefix  : 'Service BOM of ', suffix : ''      }, // ctx für context, Inhalt aus Produkt
                 description : { copyFrom : 'bom.DESCRIPTION', prefix  : ''               , suffix : ''      },
+				salesBomCopy: { value: true } // <— Literal true schreiben
             }
         },
         itemsFieldIds : {
             number      : 'ARTIKEL', //NUMBER
             title       : 'BEZEICHNUNG1_ITEM', //TITLE
             description : 'DESCRIPTION',
-            type        : 'CATEGORY_TYPE' //TYPE
+            type        : 'CATEGORY_TYPE', //TYPE
+			salesBomCopy : 'SALES_BOM_COPY' // <— Feld-ID mappen
         },
         picklistIdItemType : 'CUSTOM_LOOKUP_WS_ARTICLE_CATEGORY', //CUSTOM_LOOKUP_ITEM_TYPES
         itemHighlight : {
