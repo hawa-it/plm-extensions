@@ -657,7 +657,7 @@ exports.config = {
                 number      : { copyFrom : 'bom.ARTIKEL'     , prefix  : ''               , suffix : 'V' }, //-SBOM
                 title       : { copyFrom : 'ctx.TITLE'      , prefix  : 'Service BOM of ', suffix : ''      }, // ctx für context, Inhalt aus Produkt
                 description : { copyFrom : 'bom.DESCRIPTION', prefix  : ''               , suffix : ''      },
-				salesBomCopy: { value: 'Yes' } // <— Literal true schreiben
+				salesBomCopy: ['SALES_BOM_COPY', 'Yes']              // Picklist auf "Yes"
             }
         },
         itemsFieldIds : {
