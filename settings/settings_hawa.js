@@ -663,7 +663,7 @@ exports.config = {
         itemsFieldIds : {
             number      : 'ARTIKEL', //NUMBER
             title       : 'BEZEICHNUNG1_ITEM', //TITLE
-            description : 'DESCRIPTION',
+            description : 'BEZEICHNUNG2_ITEM', //DESCRIPTION
             type        : 'CATEGORY_TYPE', //TYPE
 			salesBomCopy : 'SALES_BOM_COPY' // <— Feld-ID mappen
         },
