@@ -657,7 +657,7 @@ exports.config = {
                 number      : { copyFrom : 'bom.ARTIKEL'     , prefix  : ''               , suffix : 'V' }, //-SBOM
                 title       : { copyFrom : 'ctx.TITLE'      , prefix  : 'Service BOM of ', suffix : ''      }, // ctx für context, Inhalt aus Produkt
                 description : { copyFrom : 'bom.DESCRIPTION', prefix  : ''               , suffix : ''      },
-			//	salesBomCopy: { 'true' } // <— Literal true schreiben
+				salesBomCopy: ['SALES_BOM_COPY', true] // <— Literal true schreiben
             }
         },
         itemsFieldIds : {
@@ -665,7 +665,7 @@ exports.config = {
             title       : 'BEZEICHNUNG1_ITEM', //TITLE
             description : 'DESCRIPTION',
             type        : 'CATEGORY_TYPE', //TYPE
-		//	salesBomCopy : 'SALES_BOM_COPY' // <— Feld-ID mappen
+			salesBomCopy : 'SALES_BOM_COPY' // <— Feld-ID mappen
         },
         picklistIdItemType : 'CUSTOM_LOOKUP_WS_ARTICLE_CATEGORY', //CUSTOM_LOOKUP_ITEM_TYPES
         itemHighlight : {
