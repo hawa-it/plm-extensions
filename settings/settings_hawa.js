@@ -682,7 +682,7 @@ exports.config = {
             filterLabelIn : 'Show Spare Parts List Items Only',
             filterLabelEx : 'Hide Spare Parts List Items',
             basePosNumber : 101,
-            hideQuantity  : true
+            hideQuantity  : false
         },{
             mode          : '1-level-bom',
             tabLabel      : 'Vertriebs BOM', //Maintenance Kits
