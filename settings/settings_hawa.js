@@ -25,7 +25,6 @@ let enableCache     = false;
 let adminClientId     = '***********************';
 let adminClientSecret = '***********************';
 
-//test
 
 // ---------------------------------------------------------------------------------------------------------------------------
 //  OPTIONAL VAULT SETTINGS
@@ -656,16 +655,14 @@ exports.config = {
 			defaults : {
                 number      : { copyFrom : 'bom.ARTIKEL'     , prefix  : ''               , suffix : 'V' }, //-SBOM
                 title       : { copyFrom : 'ctx.TITLE'      , prefix  : 'Service BOM of ', suffix : ''      }, // ctx für context, Inhalt aus Produkt
-                description : { copyFrom : 'bom.DESCRIPTION', prefix  : ''               , suffix : ''      },
-				salesBomCopy: ['SALES_BOM_COPY', 'true' ]              // Picklist auf "Yes"
+                description : { copyFrom : 'bom.DESCRIPTION', prefix  : ''               , suffix : ''      }
             }
         },
         itemsFieldIds : {
             number      : 'ARTIKEL', //NUMBER
             title       : 'BEZEICHNUNG1_ITEM', //TITLE
             description : 'BEZEICHNUNG2_ITEM', //DESCRIPTION
-            type        : 'CATEGORY_TYPE', //TYPE
-			salesBomCopy : 'SALES_BOM_COPY' // <— Feld-ID mappen
+            type        : 'CATEGORY_TYPE' //TYPE
         },
         picklistIdItemType : 'CUSTOM_LOOKUP_WS_ARTICLE_CATEGORY', //CUSTOM_LOOKUP_ITEM_TYPES
         itemHighlight : {
@@ -679,7 +676,7 @@ exports.config = {
             mode          : 'list',
             tabLabel      : 'Spare Parts',
             buttonLabels  : ['Add all recommended'],
-            bomItemTypes  : ['Spare Parts List'],
+            bomItemTypes  : ['Spare Parts List', 'Part'],
             icon          : 'icon-details',
             color         : colors.red,
             filterLabelIn : 'Show Spare Parts List Items Only',
