@@ -396,9 +396,10 @@ function reloadPage(ret) {
 function getURLParameters() {
 
     let result = {
-        link  : '',
-        wsId  : wsId,
-        dmsId : dmsId
+        link        : '',
+        wsId        : wsId,
+        dmsId       : dmsId,
+        descriptor  : descriptor || ''
     };
 
     if(!isBlank(wsId)) {
@@ -409,8 +410,8 @@ function getURLParameters() {
 
     for(let option of options) {
 
-        let split   = option.split(':');
-        let key     = split[0].toLowerCase();
+        let split = option.split(':');
+        let key   = split[0].toLowerCase();
 
         if(key !== '') result[key] = split[1];
 
@@ -1518,6 +1519,30 @@ function genPanelToggleButtons(id, settings, callbackExpand, callbackCollapse) {
         });
 
 }
+function genPanelAutoSaveToggle(id, settings) {
+
+    if(!settings.autoSave) return;
+
+    let elemToolbar = genPanelToolbar(id, settings, 'controls');
+
+    let elemToggle =  $('<div></div>').appendTo(elemToolbar)
+        .addClass('button')
+        .addClass('with-toggle')
+        .addClass(id + '-auto-save-toggle')
+        .html('Auto Save')
+        .attr('id', id + '-auto-save')
+        .click(function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).toggleClass('toggle-off').toggleClass('toggle-on').toggleClass('filled');
+            settings.autoSave = $(this).hasClass('toggle-on');
+        });
+
+    settings.autoSave = false;
+
+    return elemToggle;
+
+}
 function genPanelFilterSelect(id, settings, property, suffix, label) {
 
     if(!settings[property]) return;
@@ -1797,6 +1822,7 @@ function genPanelCreateButton(id, settings, callback) {
             insertCreate(settings.createWorkspaceNames, settings.createWorkspaceIds, {
                 id                  : settings.createId,
                 headerLabel         : settings.createHeaderLabel,
+                hideSections        : settings.createHideSections,
                 sectionsIn          : settings.createSectionsIn,
                 sectionsEx          : settings.createSectionsEx,
                 fieldsIn            : settings.createFieldsIn,
@@ -1804,10 +1830,12 @@ function genPanelCreateButton(id, settings, callback) {
                 contextId           : id,
                 contextItem         : settings.link,
                 contextItems        : settings.createContextItems,
+                contextItemField    : settings.createContextItemField,
                 contextItemFields   : settings.createContextItemFields,
                 viewerImageFields   : settings.createViewerImageFields,
+                toggles             : settings.createToggles,
                 useCache            : settings.useCache,
-                afterCreation       : function(createId, createLink, id) { callback(createId, createLink, id); }
+                afterCreation       : function(createId, createLink, data, contextId) { callback(createId, createLink, data, contextId); }
             });
             
         });
@@ -3096,6 +3124,8 @@ function genSingleTile(params, settings) {
             $('<div></div>').appendTo(elemTileStatus)
                 .addClass('tile-status-label')
                 .html(label);
+
+            elemTile.addClass('with-status');
 
         }
 
@@ -5076,8 +5106,10 @@ function getAllImageFieldIDs(fields) {
     let imageFields = [];
 
     for(let field of fields) {
-        if(field.type.title === 'Image') {
-            imageFields.push(field.__self__.split('/').pop());
+        if(!isBlank(field.type)) {
+            if(field.type.title === 'Image') {
+                imageFields.push(field.__self__.split('/').pop());
+            }
         }
     }
 
