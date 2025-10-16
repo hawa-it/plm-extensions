@@ -390,6 +390,12 @@ exports.config = {
                 { value : 'No'  , color : colors.list[4], vector : vectors.green } // Nicht benutzt
             ]},
             { id : 'material', title : 'Material Reference', fieldId : 'MATERIAL_REFERENCE', type : 'value', style : 'bars', data : [] },
+			{ id : 'compliance-summary', title : 'Compliance Summary', fieldId : 'MC_GRAPH', type : 'non-empty', style : 'bars', data : [
+                { value : 'No' , color : colors.list[0], vector : vectors.red }, //Not Compliant
+                { value : 'Unknown'       , color : colors.list[1], vector : vectors.yellow },
+                { value : 'NA' , color : colors.list[2], vector : vectors.yellow }, //Not Validated
+                { value : 'Yes'     , color : colors.list[4], vector : vectors.green } //Compliant
+            ]}
             { id : 'total-weight', title : 'Total Weight', fieldId : 'ITEM_WEIGHT', type : 'value', style : 'bars', data : [] },
             { id : 'quality-inspection-required', title : 'Quality Inspection Required', fieldId : 'INSPECTION_REQUIRED', type : 'value', style : 'counters', data : [
                 { value : 'Yes' , color : colors.list[0], vector : vectors.red },
@@ -402,21 +408,20 @@ exports.config = {
                 { value : 'In Progress', color : colors.list[2], vector : vectors.yellow },
                 { value : 'PASS'       , color : colors.list[4], vector : vectors.green } // Nicht benutzt
             ]},
-			{ id : 'compliance-summary', title : 'Compliance Summary', fieldId : 'MC_GRAPH', type : 'non-empty', style : 'bars', data : []},
-            { id : 'reach', title : 'REACH', fieldId : 'REACH', type : 'value', style : 'bars', data : [
+			{ id : 'rohs', title : 'RoHS', fieldId : 'ROHS', type : 'value', style : 'bars', data : [
+			    { value : 'No' , color : colors.list[0], vector : vectors.red }, //Not Compliant
+                { value : 'Unknown'       , color : colors.list[1], vector : vectors.yellow }, 
+                { value : 'Not assessed' , color : colors.list[2], vector : vectors.yellow }, //Not Validated
+                { value : 'Yes'     , color : colors.list[4], vector : vectors.green } // Compliant	
+			]},
+ 			{ id : 'reach', title : 'REACH', fieldId : 'REACH', type : 'value', style : 'bars', data : [
                 { value : 'No' , color : colors.list[0], vector : vectors.red }, //Not Compliant
                 { value : 'Unknown'       , color : colors.list[1], vector : vectors.yellow }, 
                 { value : 'Not assessed' , color : colors.list[2], vector : vectors.yellow }, //Not Validated
              //   { value : 'Not Required'  , color : colors.list[3], vector : vectors.list[0] },
                 { value : 'Yes'     , color : colors.list[4], vector : vectors.green } // Compliant
-            ] },
-            { id : 'rohs', title : 'RoHS', fieldId : 'ROHS', type : 'value', style : 'bars', data : [
-                { value : 'No' , color : colors.list[0], vector : vectors.red }, //Not Compliant
-                { value : 'Unknown'       , color : colors.list[1], vector : vectors.yellow },
-                { value : 'Not assessed' , color : colors.list[2], vector : vectors.yellow }, //Not Validated
-             //   { value : 'Not Required'  , color : colors.list[3], vector : vectors.list[0] },
-                { value : 'Yes'     , color : colors.list[4], vector : vectors.green } //Compliant
-            ]}
+            ]},
+
         ],
         viewerFeatures: {
             contextMenu   : true,
