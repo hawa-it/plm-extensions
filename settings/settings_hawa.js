@@ -85,12 +85,14 @@ exports.config = {
     printViewSettings : false,     // Enables printout of view configuration settings to console for debugging purposes
     
     // Provide key workspaces information
-    items          : { wsId : 79, fieldIdNumber : 'ARTIKEL', name : 'Articles', fieldIdPDM : 'PDM_ITEM_ID' },
+ //   items          : { wsId : 79, fieldIdNumber : 'ARTIKEL', name : 'Articles', fieldIdPDM : 'PDM_ITEM_ID' },
+	items          : { wsId : 79, fieldIdNumber : 'ARTIKEL', name : 'Articles', fieldIdPDM : 'DOKUMENTNUMMER_3D' }, // Viewer optimiert
     problemReports : { wsId : 82 },
     
     // Set default settings for all viewer instances
     viewer  : {
-        numberProperties        : ['TEILENUMMER', 'Artikelnummer', 'Bauteilnummer', 'DOKUMENTNUMMER_3D', 'Name', 'label'],
+		preferredFileSuffixes   : ['.ipt.dwf', '.iam.dwf'],   // case does not matter
+        numberProperties        : ['TEILENUMMER', 'Artikelnummer', 'Bauteilnummer', 'Dokumentnummer_ERP', 'Dokumentnummer_ERP', 'V_Name'],
         splitPartNumberBy       : ' v',
         splitPartNumberIndexes  : [0],
         splitPartNumberSpacer   : '',
@@ -103,6 +105,8 @@ exports.config = {
     },
 
 	    assetEditor : {
+		workspaceId     : 312,
+        landingHeader   : 'Select From Exsiting Assets',
         bomViewName     : 'Basic',
         fieldIdBOM      : 'EBOM',
         exportFileName  : 'Serial Numbers',
@@ -192,6 +196,26 @@ exports.config = {
     },
 
     dashboard : [{
+        title       : 'Problem Reporting Dashboard',
+        wsId        : 82,
+        newHeader   : 'Create new Problem Report',
+        newMessage  : 'You encountered an issue? Help us improving our products by submitting a new problem report. This will inform our engineering team automatically.',
+        className   : 'problem-report',
+        contents    : [ 
+            { type : 'workflow-history', params : { id : 'workflow-history' } },
+            { type : 'details'         , params : { id : 'details', collapseContents : true, editable : true, toggles : true, singleToolbar : 'controls' } },
+            { type : 'markup'          , params : { id : 'markup', fieldIdViewable : 'AFFECTED_ITEM', markupsImageFieldsPrefix : 'IMAGE_' } },
+            { type : 'attachments'     , params : { id : 'attachments', editable : true, headerLabel : 'Files', singleToolbar : 'controls', layout : 'list', tileSize : 'xs' } }
+        ],
+        icon            : 'icon-problem',
+        fieldIdSubtitle : 'DESCRIPTION',
+        progress : [
+            { label : 'New',         color : colors.red,    states : ['Create'] },
+            { label : 'Analysis',    color : colors.yellow, states : ['Review', 'Technical Analysis'] },
+            { label : 'Improvement', color : colors.yellow, states : ['CAPA in progress', 'Change Request in progress'] },
+            { label : 'Completed',   color : colors.green,  states : ['Completed'] }
+        ]
+	}, {
         title       : 'Change Requests Management',
         wsId        : 83,
         className   : 'change-request',
@@ -208,6 +232,27 @@ exports.config = {
             { label : 'In Work',     color : colors.yellow, states : ['Change Order in progress']   },
             { label : 'Completed',   color : colors.green,  states : ['Completed'] }
         ]
+    },{
+        title       : 'Change Orders Dashboard',
+        wsId        : 84,
+        newHeader   : 'Create new Change Order',
+        newMessage  : 'Initiate a new Change Order involving the engineering team by providing the key information below first.',
+        className   : 'change-order',
+        contents    : [ 
+            { type : 'details'     , params : { id : 'details', collapseContents : true, editable : true, toggles : true, singleToolbar : 'controls', expandSections : ['Summary'] } },
+            { type : 'attachments' , params : { id : 'attachments', editable : true, headerLabel : 'Files', singleToolbar : 'controls', layout : 'list', tileSize : 'xs' } },
+            { type : 'viewer'      , params : { id : 'viewer', fieldIdViewable : 'AFFECTED_ITEM' } },
+            { type : 'project'     , params : { id : 'project', headerLabel : 'Change Tasks', createViewerImageFields : ['IMAGE_1'] , editable : true, openInPLM : true, openOnDblClick : true, multiSelect : false, createWorkspaceIds : ['80'], createHeaderLabel : 'New Task', createToggles : true, createHideSections : true, createContextItemField : 'CHANGE_ORDER', createFieldsIn : ['TITLE', 'DESCRIPTION', 'ASSIGNEE', 'TARGET_COMPLETION_DATE', 'IMAGE_1', 'CHANGE_ORDER'] } },
+        ],
+        icon            : 'icon-markup',
+        fieldIdSubtitle : 'DESCRIPTION',
+        progress : [
+            { label : 'Preparation'    , color : colors.blue  , states : ['Preparation'] },
+            { label : 'Change Action'  , color : colors.yellow, states : ['Perform Change', 'Results Review'] },
+            { label : 'Change Review'  , color : colors.red   , states : ['Change Control Board Review', 'External Review'] },
+            { label : 'Acknowledgement', color : colors.green , states : ['Released'] },
+            { label : 'Completed'      , color : colors.green , states : ['Implemented'] }
+        ]		
     }, {
         title       : 'Change Tasks Dashboard',
         wsId        : 80,
@@ -244,26 +289,6 @@ exports.config = {
             { label : 'Analysis',    color : colors.yellow, states : ['Under Review'] },
             { label : 'Improvement', color : colors.yellow, states : ['Disposition In Progress', 'CAPA In Progress'] },
             { label : 'Closed',      color : colors.green,  states : ['Closed'] }
-        ]
-    },{
-        title       : 'Problem Reporting Dashboard',
-        wsId        : 82,
-        newHeader   : 'Create new Problem Report',
-        newMessage  : 'You encountered an issue? Help us improving our products by submitting a new problem report. This will inform our engineering team automatically.',
-        className   : 'problem-report',
-        contents    : [ 
-            { type : 'workflow-history', params : { id : 'workflow-history' } },
-            { type : 'details'         , params : { id : 'details', collapseContents : true, editable : true, toggles : true, singleToolbar : 'controls' } },
-            { type : 'markup'          , params : { id : 'markup', fieldIdViewable : 'AFFECTED_ITEM', markupsImageFieldsPrefix : 'IMAGE_' } },
-            { type : 'attachments'     , params : { id : 'attachments', editable : true, headerLabel : 'Files', singleToolbar : 'controls', layout : 'list', tileSize : 'xs' } }
-        ],
-        icon            : 'icon-problem',
-        fieldIdSubtitle : 'DESCRIPTION',
-        progress : [
-            { label : 'New',         color : colors.red,    states : ['Create'] },
-            { label : 'Analysis',    color : colors.yellow, states : ['Review', 'Technical Analysis'] },
-            { label : 'Improvement', color : colors.yellow, states : ['CAPA in progress', 'Change Request in progress'] },
-            { label : 'Completed',   color : colors.green,  states : ['Completed'] }
         ]
     },{
         title       : 'Project Tasks Management',
@@ -332,14 +357,14 @@ exports.config = {
                 { value : 'Working'   , color : colors.list[2], vector : vectors.yellow },
                 { value : 'Latest'    , color : colors.list[4], vector : vectors.green  }
             ]},   
-            { id : 'release-date', title : 'Release Date', fieldId : 'RELEASE_DATE', type : 'days', style : 'bars', data : [], sortBy : 'value', sortDirection : 'ascending' },
+            { id : 'release-date', title : 'Release Date', fieldId : 'RELEASE_DATE', type : 'days', style : 'bars', data : [], sortBy : 'value', sortDirection : 'ascending' }, // nicht genutzt
             { id : 'type', title : 'Type', fieldId : 'TEILEART', type : 'value', style : 'bars', data : [] },
             { id : 'top-level-class-name', title : 'Top Level Class', fieldId : 'TOP_LEVEL_CLASS', type : 'value', style : 'bars', data : [] }, // nicht genutzt
             { id : 'class-name', title : 'Class', fieldId : 'CLASS_NAME', type : 'value', style : 'bars', data : [] }, // nicht genutzt
             { id : 'pdm-category', title : 'PDM Category', fieldId : 'CATEGORY', type : 'value', style : 'bars', data : [] },
             { id : 'pdm-location', title : 'PDM Location', fieldId : 'SOURCE', type : 'value', style : 'bars', data : [] },
-            { id : 'pdm-last-modification-date', title : 'PDM Last Modification', fieldId : 'VAULT_GEZEICHNET_AM', type : 'days', style : 'bars', data : [], sortBy : 'value', sortDirection : 'ascending' },
-            { id : 'responsible-designer', title : 'Responsible Designer', fieldId : 'VAULT_GEZEICHNET_VON', type : 'value', style : 'bars', data : [] },
+            { id : 'pdm-last-modification-date', title : 'PDM Last Modification', fieldId : 'VAULT_GEZEICHNET_AM', type : 'days', style : 'bars', data : [], sortBy : 'value', sortDirection : 'ascending' }, // nicht genutzt
+            { id : 'responsible-designer', title : 'Responsible Designer', fieldId : 'VAULT_GEZEICHNET_VON', type : 'value', style : 'bars', data : [] }, // nicht genutzt
             { id : 'spare-part', title : 'Spare Part', fieldId : 'SPARE_WEAR_PART', type : 'value', style : 'counters', data : [
                 { value : '-'        , color : colors.list[0], vector : vectors.red },
                 { value : 'Wear Part' , color : colors.list[2], vector : vectors.yellow },
