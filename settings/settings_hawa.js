@@ -554,6 +554,7 @@ exports.config = {
 
     portal : {
         autoClick        : true,
+		openMostRecent   : true,
 		searchInputText  : 'Enter part number',
         workspacesIn     : ['Articles'], //Items
         expandSections   : ['Basic'],
@@ -936,6 +937,11 @@ exports.menu = [
             title    : 'Change Requests Management',
             subtitle : 'Capture and resolve change requests',
             url      : '/dashboard?wsId=83'
+        },{
+            icon     : 'icon-markup',
+            title    : 'Change Orders Dashboard',
+            subtitle : 'Create and manage Change Orders & Tasks',
+            url      : '/dashboard?wsId=84'
         },{
             icon     : 'icon-released',
             title    : 'Non Conformances Dashboard',
