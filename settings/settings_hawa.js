@@ -395,7 +395,7 @@ exports.config = {
                 { value : 'Unknown'       , color : colors.list[1], vector : vectors.yellow },
                 { value : 'NA' , color : colors.list[2], vector : vectors.yellow }, //Not Validated
                 { value : 'Yes'     , color : colors.list[4], vector : vectors.green } //Compliant
-            ]}
+            ]},
             { id : 'total-weight', title : 'Total Weight', fieldId : 'ITEM_WEIGHT', type : 'value', style : 'bars', data : [] },
             { id : 'quality-inspection-required', title : 'Quality Inspection Required', fieldId : 'INSPECTION_REQUIRED', type : 'value', style : 'counters', data : [
                 { value : 'Yes' , color : colors.list[0], vector : vectors.red },
