@@ -364,7 +364,7 @@ exports.config = {
                 { value : '-'   , color : colors.list[2], vector : vectors.yellow },
                 { value : 'No'  , color : colors.list[4], vector : vectors.green } // Nicht benutzt
             ]},
-            { id : 'material reference label', title : 'MATERIAL REFERENCE', fieldId : 'MATERIAL_REFERENCE_LABEL', type : 'value', style : 'bars', data : [] },
+            { id : 'material reference label', title : 'Material Reference Label', fieldId : 'MATERIAL_REFERENCE_LABEL', type : 'value', style : 'bars', data : [] },
             { id : 'total-weight', title : 'Total Weight', fieldId : 'ITEM_WEIGHT', type : 'value', style : 'bars', data : [] },
             { id : 'quality-inspection-required', title : 'Quality Inspection Required', fieldId : 'INSPECTION_REQUIRED', type : 'value', style : 'counters', data : [
                 { value : 'Yes' , color : colors.list[0], vector : vectors.red },
