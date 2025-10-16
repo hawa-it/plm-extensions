@@ -140,7 +140,7 @@ exports.config = {
             explodedView  : true,
             modelBrowser  : true,
             properties    : true,
-            settings      : truee,
+            settings      : true,
             fullscreen    : true,
             markup        : true,
             hide          : true,
