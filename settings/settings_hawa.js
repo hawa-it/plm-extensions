@@ -377,7 +377,7 @@ exports.config = {
                 { value : 'In Progress', color : colors.list[2], vector : vectors.yellow },
                 { value : 'PASS'       , color : colors.list[4], vector : vectors.green } // Nicht benutzt
             ]},
-			{ id : 'all-compliant', title : 'Compliant', fieldId : 'ALL_COMPLIANT', type : 'value', style : 'bars', data : []},
+			{ id : 'all-compliant', title : 'Compliant', fieldId : 'ALL_COMPLIANT', type : 'non-empty', style : 'bars', data : []},
             { id : 'reach', title : 'REACH', fieldId : 'REACH', type : 'value', style : 'bars', data : [
                 { value : 'No' , color : colors.list[0], vector : vectors.red }, //Not Compliant
                 { value : 'Unknown'       , color : colors.list[1], vector : vectors.yellow }, 
