@@ -9,15 +9,31 @@ block head
 
 block body
 
-    body.surface-level-1
+    body.surface-level-1.no-details.screen-landing
 
         #header.dark
             #header-logo
             #header-title= title
+            #header-subtitle
             #header-toolbar
+                #bom-sync.button.default.with-icon.icon-refresh(title="Synchronize grid entries with the BOM tree") Sync with BOM
+                #excel-export.button.with-icon.icon-download.disabled(title="Download the grid to an Excel sheet") Download Excel
+                #toggle-layout.button(title="Toggle between horizontal and vertical layout") Toggle Layout
+                #toggle-bom.button.with-toggle.toggle-on(title="Toggle BOM display to the left on and off") Display BOM
+                #toggle-details.button.with-toggle.toggle-off(title="Toggle Item Details panel on and off") Display Details
                 #header-avatar
         
+        #landing.screen
+
+            #results.surface-level-1
+
         #main.screen
 
-            #bom.surface-level-1
+            #bom.surface-level-2
+            #details.surface-level-2
             #viewer.surface-level-1.viewer
+            #contents.surface-level-1
+                #tabs.tabs
+                #items
+
+            iframe#frame-download(name='frame-download' style="display:none")

@@ -10,6 +10,7 @@ function insertMOW(params) {
         layout      : 'table'
     }, [
         [ 'filterByDueDate'  , false ],
+        [ 'filterByStatus'   , false ],
         [ 'filterByWorkspace', false ],
         [ 'userId'           , ''    ]
     ]);
@@ -21,6 +22,7 @@ function insertMOW(params) {
     genPanelOpenSelectedInPLMButton(id, settings.mow[id]);
     genPanelSelectionControls(id, settings.mow[id]);
     genPanelFilterToggle(id, settings.mow[id], 'filterByDueDate', 'due', 'Due Tasks');
+    genPanelFilterSelect(id, settings.mow[id], 'filterByStatus', 'status', 'All States');
     genPanelFilterSelect(id, settings.mow[id], 'filterByWorkspace', 'workspace', 'All Workspaces');
     genPanelSearchInput(id, settings.mow[id]);
     genPanelResizeButton(id, settings.mow[id]);
@@ -46,6 +48,7 @@ function insertMOWData(id) {
         settings.mow[id].columns = [];
 
         let items           = [];
+        let listStates      = [];
         let listWorkspaces  = [];
         let enableDueToggle = false;
         let columns         = [
@@ -58,7 +61,7 @@ function insertMOWData(id) {
         ]
 
         for(let column of columns) {
-            if(includePanelTableColumn(column.displayName, settings.mow[id], settings.mow[id].columns.length)) {
+            if(includePanelTableColumn(column.fieldId, column.displayName, settings.mow[id], settings.mow[id].columns.length)) {
                 settings.mow[id].columns.push(column);
             }
         }
@@ -73,6 +76,7 @@ function insertMOWData(id) {
             if((settings.mow[id].workspacesIn.length === 0) || ( settings.mow[id].workspacesIn.includes(workspace))) {
                 if((settings.mow[id].workspacesEx.length === 0) || (!settings.mow[id].workspacesEx.includes(workspace))) {
 
+                    if(!listStates.includes(item.workflowStateName)) listStates.push(item.workflowStateName);
                     if(!listWorkspaces.includes(workspace)) listWorkspaces.push(workspace);
 
                     if(item.hasOwnProperty('milestoneDate')) {
@@ -96,6 +100,7 @@ function insertMOWData(id) {
                         subtitle    : workspace,
                         details     : '',
                         partNumber  : item.item.title.split(' - ')[0],
+                        status      : item.workflowStateName,
                         data        : [
                             { fieldId : 'due'        , value : date, classNames : ['mow-date', dateClass]},
                             { fieldId : 'item'       , value : item.item.title },
@@ -106,7 +111,8 @@ function insertMOWData(id) {
                         ],
                         filters : [
                             { key : 'due', value : dueFilter },
-                            { key : 'workspace', value : workspace }
+                            { key : 'status', value : item.workflowStateName },
+                            { key : 'workspace', value : workspace },
                         ],
                         quantity    : '',
                         classNames  : []
@@ -119,7 +125,9 @@ function insertMOWData(id) {
 
         if(enableDueToggle) $('#' + id + '-filter-due').show();
 
+        sortArray(listStates, 0);
         sortArray(listWorkspaces, 0);
+        setPanelFilterOptions(id, 'status', listStates);
         setPanelFilterOptions(id, 'workspace', listWorkspaces);
         finishPanelContentUpdate(id, settings.mow[id], items);
         insertMOWDataDone(id, response);
@@ -154,7 +162,7 @@ function insertRecentItems(params) {
     genPanelHeader(id, settings.recents[id]);
     genPanelOpenSelectedInPLMButton(id, settings.recents[id]);
     genPanelSelectionControls(id, settings.recents[id]);
-    genPanelFilterSelect(id, settings.recents[id].filterByWorkspace, 'workspace', 'All Workspaces');
+    genPanelFilterSelect(id, settings.recents[id], 'filterByWorkspace', 'workspace', 'All Workspaces');
     genPanelSearchInput(id, settings.recents[id]);
     genPanelResizeButton(id, settings.recents[id]);
     genPanelReloadButton(id, settings.recents[id]);
@@ -354,7 +362,6 @@ function insertWorkspaceViews(wsId, params) {
         [ 'includeMOW'          , false ],
         [ 'includeBookmarks'    , false ],
         [ 'includeRecents'      , false ],
-        [ 'columnLimit'         , 20 ],
         [ 'groupBy'             , '' ],
         [ 'tileImageFieldId'    , '' ],
         [ 'workspacesIn'        , [wsId] ]
@@ -500,11 +507,14 @@ function insertWorkspaceViewData(id) {
 
         for(let column of responses[0].data) {
             if(!isBlank(column.displayOrder)) {
-                if(includePanelTableColumn(column.field.title, settings.workspaceViews[id], settings.workspaceViews[id].columns.length)) {
-                    settings.workspaceViews[id].columns.push({
-                        displayName : column.field.title,
-                        fieldId     : column.field.__self__.split('/').pop()    
-                    });    
+                if(!isBlank(column.field.urn)) {
+                    let fieldId = column.field.urn.split('.').pop();
+                    if(includePanelTableColumn(fieldId, column.field.title, settings.workspaceViews[id], settings.workspaceViews[id].columns.length)) {
+                        settings.workspaceViews[id].columns.push({
+                            displayName : column.field.title,
+                            fieldId     : fieldId
+                        });    
+                    }
                 }
             }
         }
@@ -850,7 +860,7 @@ function insertSearchData(id) {
     if(!isBlank(settings.search[id].workspaceIds)) params.workspaces = settings.search[id].workspaceIds;
     if(settings.search[id].exactMatch            ) params.wildcard   = false;
 
-    $.get('/plm/search-descriptor', params, function(response) {
+    $.post('/plm/search-descriptor', params, function(response) {
 
         if(stopPanelContentUpdate(response, settings.search[id])) return;
             
@@ -980,7 +990,8 @@ function insertResults(wsId, filters, params) {
         [ 'autoClick'       , false ],
         [ 'editable'        , false ],
         [ 'filterEmpty'     , false ],
-        [ 'tileImageFIeldId', '' ]
+        [ 'tileImageFieldId', ''    ],
+        [ 'tileSubtitle'    , ''    ]
     ]);
 
     if(!settings.results[id].fields.includes('DESCRIPTOR')) {
@@ -993,6 +1004,14 @@ function insertResults(wsId, filters, params) {
         }
     }
 
+    if(!isBlank(settings.results[id].additionalData)) {
+        for(let additionalData of settings.results[id].additionalData) {
+            if(!settings.results[id].fields.includes(additionalData)) {
+                settings.results[id].fields.push(additionalData);
+            }
+        }
+    }
+
     if(typeof settings.results[id].tileImage == 'string') {
         settings.results[id].tileImageFieldId = settings.results[id].tileImage;
         if(!settings.results[id].fields.includes(settings.results[id].tileImage)) {
@@ -1000,15 +1019,31 @@ function insertResults(wsId, filters, params) {
         }      
     }
 
-    if(!isBlank(settings.results[id].tileTitle)) {
-        if(!settings.results[id].fields.includes(settings.results[id].tileTitle)) {
-            settings.results[id].fields.push(settings.results[id].tileTitle);
+    if(typeof settings.results[id].tileTitle == 'string') {
+        if(!isBlank(settings.results[id].tileTitle)) {
+            if(!settings.results[id].fields.includes(settings.results[id].tileTitle)) {
+                settings.results[id].fields.push(settings.results[id].tileTitle);
+            }
+        }
+    } else if(typeof settings.results[id].tileTitle == 'object') {
+        for(let tileTitle of settings.results[id].tileTitle) {
+            if(!settings.results[id].fields.includes(tileTitle)) {
+                settings.results[id].fields.push(tileTitle);
+            }
         }
     }
 
-    if(!isBlank(settings.results[id].tileSubtitle)) {
-        if(!settings.results[id].fields.includes(settings.results[id].tileSubtitle)) {
-            settings.results[id].fields.push(settings.results[id].tileSubtitle);
+    if(typeof settings.results[id].tileSubtitle == 'string') {
+        if(!isBlank(settings.results[id].tileSubtitle)) {
+            if(!settings.results[id].fields.includes(settings.results[id].tileSubtitle)) {
+                settings.results[id].fields.push(settings.results[id].tileSubtitle);
+            }
+        }
+    } else if(typeof settings.results[id].tileSubtitle == 'object') {
+        for(let tileSubtitle of settings.results[id].tileSubtitle) {
+            if(!settings.results[id].fields.includes(tileSubtitle)) {
+                settings.results[id].fields.push(tileSubtitle);
+            }
         }
     }
 
@@ -1018,6 +1053,14 @@ function insertResults(wsId, filters, params) {
                 if(!settings.results[id].fields.includes(tileDetail.fieldId)) {
                     settings.results[id].fields.push(tileDetail.fieldId);
                 }
+            }
+        }
+    }
+
+    if(!isBlank(settings.results[id].fieldsIn)) {
+        for(let fieldId of settings.results[id].fieldsIn) {
+            if(!settings.results[id].fields.includes(fieldId)) {
+                settings.results[id].fields.push(fieldId);
             }
         }
     }
@@ -1042,18 +1085,20 @@ function insertResults(wsId, filters, params) {
     genPanelContents(id, settings.results[id]);
 
     if(settings.results[id].editable) {
-        
-        $('<div></div>').prependTo($('#' + id + '-toolbar'))
-        .addClass('button')
-        .addClass('default')
-        .addClass('panel-action')
-        .attr('id', id + '-action-save')
-        .attr('title', 'Save changes')
-        .html('Save')
-        .hide()
-        .click(function() {
-            savePanelTableChanges(id, settings.results[id]);
-        });
+
+        let elemToolbar = genPanelToolbar(id, settings.results[id], 'controls');
+
+        $('<div></div>').prependTo(elemToolbar)
+            .addClass('button')
+            .addClass('default')
+            .addClass('panel-action')
+            .attr('id', id + '-action-save')
+            .attr('title', 'Save changes')
+            .html('Save')
+            .hide()
+            .click(function() {
+                savePanelTableChanges(id, settings.results[id]);
+            });
         
     }
     
@@ -1091,25 +1136,28 @@ function insertResultsData(id) {
 
         settings.results[id].columns = [];
 
-        for(let column of settings.results[id].fields) {
-            if(includePanelTableColumn(column, settings.results[id], settings.results[id].columns.length)) {
-                if(column === 'DESCRIPTOR') {
+        for(let fieldId of settings.results[id].fields) {
+            if(includePanelTableColumn(fieldId, '', settings.results[id], settings.results[id].columns.length)) {
+                if(fieldId === 'DESCRIPTOR') {
                     settings.results[id].columns.push({
                         'displayName' : 'Descriptor',
                         'fieldId'     : 'DESCRIPTOR'
                     });
-                } else if(column === 'WF_CURRENT_STATE') {
+                } else if(fieldId === 'WF_CURRENT_STATE') {
                     settings.results[id].columns.push({
                         'displayName' : 'Current Status',
                         'fieldId'     : 'WF_CURRENT_STATE'
                     });
                 } else {
-                    for(let field of responses[1].data) {
-                        let fieldId = field.__self__.split('/').pop();
-                        if(column === fieldId) {
-                            field.displayName = field.name;
-                            field.fieldId = column;
-                            settings.results[id].columns.push(field);
+                    for(let workspaceField of responses[1].data) {
+                        let workspaceFieldId = workspaceField.__self__.split('/').pop();
+                        if(fieldId === workspaceFieldId) {
+                            // field.displayName = field.name;
+                            // field.fieldId = column;
+                            settings.results[id].columns.push({
+                                displayName : workspaceField.name,
+                                fieldId : workspaceFieldId,
+                            });
                         }
                     }  
                 }  
@@ -1122,20 +1170,54 @@ function insertResultsData(id) {
                 link : '/api/v3/workspaces/' + settings.results[id].wsId + '/items/' + row.dmsId
             })
 
+            if(typeof settings.results[id].tileTitle == 'object') {
+                contentItem.tileTitles = [];
+                for(let tileTitle of settings.results[id].tileTitle) {
+                    contentItem.tileTitles[tileTitle] = '';
+                }
+            }
+            if(typeof settings.results[id].tileSubtitle == 'object') {
+                contentItem.tileSubtitles = [];
+                for(let tileSubtitle of settings.results[id].tileSubtitle) {
+                    contentItem.tileSubtitles[tileSubtitle] = '';
+                }
+            }
+
             for(let field of row.fields.entry) {
 
                 if(field.key === config.items.fieldIdNumber           ) contentItem.partNumber = field.fieldData.value;
                 if(field.key === settings.results[id].tileImageFieldId) contentItem.imageId    = field.fieldData.value;
-                if(field.key === settings.results[id].tileTitle       ) contentItem.title      = field.fieldData.value;
-                if(field.key === settings.results[id].tileSubtitle    ) contentItem.subtitle   = field.fieldData.value;
                 if(field.key === settings.results[id].groupBy         ) contentItem.group      = field.fieldData.value;
                 if(field.key === 'DESCRIPTOR'                         ) contentItem.descriptor = field.fieldData.value;
                 if(field.key === 'WF_CURRENT_STATE'                   ) contentItem.status     = field.fieldData.value;
+
+                if(typeof settings.results[id].tileTitle == 'string') {
+                    if(field.key === settings.results[id].tileTitle) contentItem.title = field.fieldData.value;
+                } else if(typeof settings.results[id].tileTitle == 'object') {
+                    for(let tileTitle of settings.results[id].tileTitle) {
+                        if(field.key === tileTitle) contentItem.tileTitles[tileTitle] = field.fieldData.value;
+                    }
+                }
+
+                if(typeof settings.results[id].tileSubtitle == 'string') {
+                    if(field.key === settings.results[id].tileSubtitle) contentItem.subtitle = field.fieldData.value;
+                } else if(typeof settings.results[id].tileSubtitle == 'object') {
+                    for(let tileSubtitle of settings.results[id].tileSubtitle) {
+                        if(field.key === tileSubtitle) contentItem.tileSubtitles[tileSubtitle] = field.fieldData.value;
+                    }
+                } 
 
                 for(let tileDetail of contentItem.details) {
                     if(field.key === tileDetail.fieldId) {
                         tileDetail.value = field.fieldData.value;
                     }
+                }
+
+                if(settings.results[id].additionalData.includes(field.key)) {
+                    contentItem.attributes.push({
+                        key   : field.key.toLowerCase(),
+                        value : field.fieldData.value
+                    });
                 }
 
                 for(let column of settings.results[id].columns) {
@@ -1167,7 +1249,23 @@ function insertResultsData(id) {
 
                 }
 
+            }
 
+            if(typeof settings.results[id].tileTitle == 'object') {
+                for(let tileTitle of settings.results[id].tileTitle) {
+                    if(contentItem.tileTitles[tileTitle] !== '') {
+                        contentItem.title = contentItem.tileTitles[tileTitle];
+                        break;
+                    }
+                }
+            }
+            if(typeof settings.results[id].tileSubtitle == 'object') {
+                for(let tileSubtitle of settings.results[id].tileSubtitle) {
+                    if(contentItem.tileSubtitles[tileSubtitle] !== '') {
+                        contentItem.subtitle = contentItem.tileSubtitles[tileSubtitle];
+                        break;
+                    }
+                }
             }
 
             items.push(contentItem);

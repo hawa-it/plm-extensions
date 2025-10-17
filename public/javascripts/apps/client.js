@@ -115,7 +115,7 @@ function setUIEvents() {
         let wsIdNew = $('#new').attr('data-wsid');
         let linkedWorkspaces = [];
 
-        submitCreateForm(wsIdNew, $('#new-sections'), null, {}, function(response) {
+        submitCreate(wsIdNew, $('#new-sections'), null, {}, function(response) {
             
             $('#overlay').hide();
 
@@ -137,7 +137,7 @@ function setUIEvents() {
 
                 if(linkedWorkspaces.indexOf(wsIdNew) > -1) {
                     console.log('adding');
-                    $.get('/plm/add-managed-items', { 'link' : link, 'items' : [ $('#item').attr('data-link') ] }, function() {
+                    $.post('/plm/add-managed-items', { 'link' : link, 'items' : [ $('#item').attr('data-link') ] }, function() {
                         openItem(link);
                     });
                 } else {
@@ -702,7 +702,7 @@ function performSearch() {
     $('#search-processing').show();
     $('#search-no-results').hide();
 
-    $.get('/plm/search-descriptor', { 'query' : $('#search-input').val(), 'limit' : 50, 'bulk' : 'false' }, function(response) {
+    $.post('/plm/search-descriptor', { 'query' : $('#search-input').val(), 'limit' : 50, 'bulk' : 'false' }, function(response) {
 
         if(!isBlank(response.data.items)) {
 

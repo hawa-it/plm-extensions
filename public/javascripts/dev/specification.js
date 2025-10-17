@@ -176,10 +176,10 @@ function setUIEvents() {
     
             let link = $('#processes-list').attr('data-source');
     
-            submitCreateForm(wsProblemReports.id, $('#processes-sections'), 'viewer-markup-image', {}, function(response ) {
+            submitCreate(wsProblemReports.id, $('#processes-sections'), 'viewer-markup-image', {}, function(response ) {
 
                 let newLink = response.data.split('.autodeskplm360.net')[1];
-                $.get('/plm/add-managed-items', { 'link' : newLink, 'items' : [ link ] }, function(response) {
+                $.post('/plm/add-managed-items', { 'link' : newLink, 'items' : [ link ] }, function(response) {
                 // $.get('/plm/add-relationship', { 'link' : newLink, 'relatedId' : link.split('/')[6] }, function(response) {
                     setProcesses($('#processes-list').attr('data-source'));
                     $('.process-dialog').hide();
@@ -345,20 +345,18 @@ function clickBOMItem(elemClicked, e) {
         
     }
 
-    updateBOMCounters(elemClicked.closest('.bom').attr('id'));
-
 }
-function clickBOMResetDone() {
+// function clickBOMResetDone() {
     
-    $('.application-data-instance').show();
+//     $('.application-data-instance').show();
 
-    let link = $('#bom').attr('data-link');
+//     let link = $('#bom').attr('data-link');
     
-    insertItemDetails(link);
-    insertAttachments(link, paramsAttachments);
-    updateViewer();
+//     insertItemDetails(link);
+//     insertAttachments(link, paramsAttachments);
+//     updateViewer();
 
-}
+// }
 function filterPartList(elemClicked) {
 
     let children = getBOMItemChhildren(elemClicked);
@@ -858,7 +856,7 @@ function saveFlatBOMChangesDone() {
 
         console.log(params);
 
-        requests.push($.get('/plm/add-grid-row', params));
+        requests.push($.post('/plm/add-grid-row', params));
 
         
 

@@ -71,6 +71,7 @@ router.get('/data'                , function(req, res, next) { launch('admin/dat
 router.get('/helpers'             , function(req, res, next) { launch('admin/helpers'             , 'Administration Helper Utilities', req, res, next); });
 router.get('/insights'            , function(req, res, next) { launch('admin/insights'            , 'Tenant Insights Dashboard'      , req, res, next); });
 router.get('/outstanding-work'    , function(req, res, next) { launch('admin/outstanding-work'    , 'Outstanding Work Report'        , req, res, next); });
+router.get('/shortcuts'           , function(req, res, next) { launch('admin/shortcuts'           , 'Admin Shortcuts Panel'          , req, res, next); });
 router.get('/users'               , function(req, res, next) { launch('admin/users'               , 'User Settings Manager'          , req, res, next); });
 router.get('/workspace-comparison', function(req, res, next) { launch('admin/workspace-comparison', 'Workspace Comparison'           , req, res, next); });
 
@@ -97,12 +98,19 @@ router.get('/template', function(req, res, next) { launch('tutorial/1-template' 
 
 
 /* ------------------------------------------------------------------------------
+    CUSTOM APPLICATIONS
+   ------------------------------------------------------------------------------ */
+router.get('/playground' , function(req, res, next) { launch('custom/playground'   , 'UX Playground', req, res, next); });
+
+
+
+/* ------------------------------------------------------------------------------
     APPLICATIONS IN DEVELOPMENT
    ------------------------------------------------------------------------------ */
 router.get('/assets'        , function(req, res, next) { launch('dev/assets'          , 'Asset Management'                  , req, res, next); });
+router.get('/asset-bom'     , function(req, res, next) { launch('dev/asset-bom'       , 'Asset BOM Editor'                  , req, res, next); });
 router.get('/asset-services', function(req, res, next) { launch('dev/asset-services'  , 'Asset Services Portal'             , req, res, next); });
 router.get('/asset-editor'  , function(req, res, next) { launch('dev/asset-editor'    , 'Asset Specification Editor'        , req, res, next); });
-router.get('/mpe'           , function(req, res, next) { launch('dev/mpe'             , 'Manufacturing Process Editor'      , req, res, next); });
 router.get('/browser'       , function(req, res, next) { launch('dev/browser'         , 'PLM Browser'                       , req, res, next); });
 router.get('/change'        , function(req, res, next) { launch('dev/change'          , 'Change Manager'                    , req, res, next); });
 router.get('/configurator'  , function(req, res, next) { launch('dev/configurator'    , 'Product Configuration Editor'      , req, res, next); });
@@ -111,6 +119,7 @@ router.get('/customer'      , function(req, res, next) { launch('dev/customer'  
 router.get('/editor'        , function(req, res, next) { launch('dev/editor'          , 'Content Editor'                    , req, res, next); });
 router.get('/matrix'        , function(req, res, next) { launch('dev/matrix'          , 'Portfolio Matrix'                  , req, res, next); });
 router.get('/mbom-upgrade'  , function(req, res, next) { launch('dev/mbom-upgrade'    , 'MBOM Upgrade Editor'               , req, res, next); });
+router.get('/pbom'          , function(req, res, next) { launch('dev/pbom'            , 'Manufacturing Process Editor'      , req, res, next); });
 router.get('/pdm'           , function(req, res, next) { launch('dev/pdm'             , 'Vault Browser'                     , req, res, next); });
 router.get('/pdm-explorer'  , function(req, res, next) { launch('dev/pdm-explorer'    , 'PDM Explorer'                      , req, res, next); });
 router.get('/pnd'           , function(req, res, next) { launch('dev/pnd'             , 'Product Data & Processes Explorer' , req, res, next); });
@@ -167,6 +176,7 @@ function launch(appURL, appTitle, req, res, next) {
         let reqTheme        = req.app.locals.defaultTheme;
         let reqWS           = ''
         let reqDMS          = '';
+        let reqDescriptor   = '';
         let reqNumber       = '';
         let reqFileId       = '';
         let reqOptions      = '';
@@ -178,6 +188,7 @@ function launch(appURL, appTitle, req, res, next) {
                 case 'theme'        :        reqTheme = req.query[key]; break;
                 case 'wsid'         :           reqWS = req.query[key]; break;
                 case 'dmsid'        :          reqDMS = req.query[key]; break;
+                case 'descriptor'   :   reqDescriptor = req.query[key]; break;
                 case 'number'       :       reqNumber = req.query[key]; break;
                 case 'fileid'       :       reqFileId = req.query[key]; break;
                 case 'options'      :      reqOptions = req.query[key]; break;
@@ -207,6 +218,7 @@ function launch(appURL, appTitle, req, res, next) {
             console.log('  host             = ' + reqHost); 
             console.log('  wsId             = ' + reqWS); 
             console.log('  dmsId            = ' + reqDMS); 
+            console.log('  descriptor       = ' + reqDescriptor); 
             console.log('  number           = ' + reqNumber); 
             console.log('  fileId           = ' + reqFileId); 
             console.log('  options          = ' + reqOptions); 
@@ -233,6 +245,7 @@ function launch(appURL, appTitle, req, res, next) {
                     host         : reqHost,
                     wsId         : reqWS,
                     dmsId        : reqDMS,
+                    descriptor   : reqDescriptor,
                     fileId       : reqFileId,
                     vaultId      : req.session.vaultId,
                     revisionBias : reqRevisionBias,

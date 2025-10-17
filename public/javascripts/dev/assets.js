@@ -233,12 +233,12 @@ function setUIEvents() {
         $('#overlay').show();
 
     
-        submitCreateForm(wsConfig.id, $('#new-sections'), '', {}, function(response ) {
+        submitCreate(wsConfig.id, $('#new-sections'), '', {}, function(response ) {
 
             let newLink = response.data.split('.autodeskplm360.net')[1];
 
             openItem(newLink);
-            clearFields('new-sections');
+            clearAllFormFields('new-sections');
 
         });
 

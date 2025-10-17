@@ -12,10 +12,13 @@ let profiles = [{
         search              : true,
         contentSizes        : ['xxs', 'xs', 's', 'm', 'l', 'xl', 'xxl'],
         reload              : true,
+        reset               : true,
         filterByDueDate     : true,
         filterByOwner       : true,
         filterByStatus      : true,
         filterByWorkspace   : true
+    },{
+        editable : true
     },{
         openInPLM       : true,
         openOnDblClick  : true,
@@ -73,11 +76,12 @@ $(document).ready(function() {
     $('<option></option>').appendTo($('#profiles')).attr('value', 1).html('Fixed label and toggles');
     $('<option></option>').appendTo($('#profiles')).attr('value', 2).html('Enable open in PLM and reload');
     $('<option></option>').appendTo($('#profiles')).attr('value', 3).html('Additional controls');
-    $('<option></option>').appendTo($('#profiles')).attr('value', 4).html('Complex Tiles');
-    $('<option></option>').appendTo($('#profiles')).attr('value', 5).html('Layout : List');
-    $('<option></option>').appendTo($('#profiles')).attr('value', 6).html('Layout : Grid');
-    $('<option></option>').appendTo($('#profiles')).attr('value', 7).html('Layout : Table');
-    $('<option></option>').appendTo($('#profiles')).attr('value', 8).html('Details Tab Adjustments');
+    $('<option></option>').appendTo($('#profiles')).attr('value', 4).html('Editable');
+    $('<option></option>').appendTo($('#profiles')).attr('value', 5).html('Complex Tiles');
+    $('<option></option>').appendTo($('#profiles')).attr('value', 6).html('Layout : List');
+    $('<option></option>').appendTo($('#profiles')).attr('value', 7).html('Layout : Grid');
+    $('<option></option>').appendTo($('#profiles')).attr('value', 8).html('Layout : Table');
+    $('<option></option>').appendTo($('#profiles')).attr('value', 9).html('Details Tab Adjustments');
     
     setUIEvents();
 
@@ -102,21 +106,24 @@ function setUIEvents() {
         div.show();
         div.siblings('.screen').hide();
 
-        if(id === 'home'     ) setHome();
-        if(id === 'views'    ) setViews();
-        if(id === 'find'     ) setSearch();
-        if(id === 'item-1'   ) setItem1();
-        if(id === 'item-2'   ) setItem2();
-        if(id === 'item-3'   ) setItem3();
-        if(id === 'item-4'   ) setItem4();
-        if(id === 'summary'  ) setSummary();
-        if(id === 'lists'    ) setLists();
-        if(id === 'grids'    ) setGrids();
-        if(id === 'galleries') setGalleries();
-        if(id === 'rows'     ) setRows();
-        if(id === 'files'    ) setFiles();
-        if(id === 'tabs'     ) setTabs();
-        if(id === 'edit'     ) setEdit();
+        if(id === 'item-colors') setItemColors();
+        if(id === 'bom-colors' ) setBOMColors();
+        if(id === 'columns'    ) setColumns();
+        if(id === 'home'       ) setHome();
+        if(id === 'views'      ) setViews();
+        if(id === 'find'       ) setSearch();
+        if(id === 'item-1'     ) setItem1();
+        if(id === 'item-2'     ) setItem2();
+        if(id === 'item-3'     ) setItem3();
+        if(id === 'item-4'     ) setItem4();
+        if(id === 'summary'    ) setSummary();
+        if(id === 'lists'      ) setLists();
+        if(id === 'grids'      ) setGrids();
+        if(id === 'galleries'  ) setGalleries();
+        if(id === 'rows'       ) setRows();
+        if(id === 'files'      ) setFiles();
+        if(id === 'tabs'       ) setTabs();
+        if(id === 'edit'       ) setEdit();
 
     });
 
@@ -146,6 +153,30 @@ function setUIEvents() {
 
 
 
+function setItemColors() {
+
+    insertDetails(linkEmberPrinter, { id : 'item-color-1', editable : true });
+    insertDetails(linkEmberPrinter, { id : 'item-color-2', editable : true });
+    insertDetails(linkEmberPrinter, { id : 'item-color-3', editable : true });
+    insertDetails(linkEmberPrinter, { id : 'item-color-4', editable : true });
+    insertDetails(linkEmberPrinter, { id : 'item-color-5', editable : true });
+}
+function setBOMColors() {
+
+    insertBOM(linkEmberPrinter, { id : 'bom-color-1'});
+    insertBOM(linkEmberPrinter, { id : 'bom-color-2'});
+    insertBOM(linkEmberPrinter, { id : 'bom-color-3'});
+    insertBOM(linkEmberPrinter, { id : 'bom-color-4'});
+    insertBOM(linkEmberPrinter, { id : 'bom-color-5'});
+
+}
+function setColumns() {
+
+    insertDetails(linkEmberPrinter, { id : 'left'  , collapseContents : true, toggles : true, headerLabel : 'Main Title pp' });
+    insertDetails(linkEmberPrinter, { id : 'center', collapseContents : true, toggles : true, headerLabel : 'Main Title pp', headerTopLabel : 'Top Label' });
+    insertDetails(linkEmberPrinter, { id : 'right' , collapseContents : true, toggles : true, headerLabel : 'Main Title pp', headerSubLabel : 'Sub Label' });
+
+}
 function setHome() {
 
     insertMOW(profiles[$('#profiles').val()]);

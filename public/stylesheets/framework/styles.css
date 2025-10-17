@@ -52,6 +52,41 @@
 
 
 
+/*  LAYOUT : ABSOLULTE POSITIONING */
+/* ----------------------------------------------------------------------------- */
+.pos-abs-max {
+    position    : absolute;
+    top         : 0px;
+    right       : 0px;
+    bottom      : 0px;
+    left        : 0px;
+}
+.pos-abs-top {
+    position    : absolute;
+    top         : 0px;
+    right       : 0px;
+    left        : 0px;
+}
+.pos-abs-right {
+    position    : absolute;
+    top         : 0px;
+    bottom      : 0px;
+    right        : 0px;
+}
+.pos-abs-bottom {
+    position    : absolute;
+    right       : 0px;
+    bottom      : 0px;
+    left        : 0px;
+}
+.pos-abs-left {
+    position    : absolute;
+    top         : 0px;
+    bottom      : 0px;
+    left        : 0px;
+}
+
+
 /*  LAYOUT : SPLIT (Landing Page) */
 /* ----------------------------------------------------------------------------- */
 .split {
@@ -94,6 +129,13 @@
 .split-right.padding-100 { border-width : 100px 100px 100px 100px; }
 
 
+
+/*  LAYOUT : FLEX DISPLAY */
+/* ----------------------------------------------------------------------------- */
+.display-flex-column {
+    display        : flex;
+    flex-direction : column;
+}
 
 /*  MENU */
 /* ----------------------------------------------------------------------------- */
@@ -297,7 +339,9 @@
     display         : flex;
     flex-direction  : column;
     justify-content : center;
-    width           : 26px;
+    max-width       : 24px;
+    min-width       : 24px;
+    width           : 24px;
 }
 .tile-status-label {
     color           : white;
@@ -331,16 +375,16 @@
 }
 
 /* ----- Themes ----- */
-             .surface-level-1 > .tile,              .surface-level-1 > .tiles > .tile { background : var(--color-surface-level-3); border-color : var(--color-surface-level-1); }
-             .surface-level-2 > .tile,              .surface-level-2 > .tiles > .tile { background : var(--color-surface-level-3); border-color : var(--color-surface-level-2); }
+             .surface-level-1 > .tile,              .surface-level-1 > .tiles > .tile { background : var(--color-surface-level-2); border-color : var(--color-surface-level-1); }
+             .surface-level-2 > .tile,              .surface-level-2 > .tiles > .tile { background : var(--color-surface-level-1); border-color : var(--color-surface-level-2); }
  .dark-theme .surface-level-3 > .tile,  .dark-theme .surface-level-3 > .tiles > .tile { background : var(--color-surface-level-1); border-color : var(--color-surface-level-3); }
 .black-theme .surface-level-3 > .tile, .black-theme .surface-level-3 > .tiles > .tile { background : var(--color-surface-level-1); border-color : var(--color-surface-level-3); }
 .light-theme .surface-level-3 > .tile, .light-theme .surface-level-3 > .tiles > .tile { background : var(--color-surface-level-4); border-color : var(--color-surface-level-3); }
              .surface-level-4 > .tile,              .surface-level-4 > .tiles > .tile { background : var(--color-surface-level-1); border-color : var(--color-surface-level-4); }
              .surface-level-5 > .tile,              .surface-level-5 > .tiles > .tile { background : var(--color-surface-level-1); border-color : var(--color-surface-level-5); }
 
-             .surface-level-1 > .tile > .tile-image, .surface-level-1 > .tiles > .tile > .tile-image { background : var(--color-surface-level-4); }
-             .surface-level-2 > .tile > .tile-image, .surface-level-2 > .tiles > .tile > .tile-image { background : var(--color-surface-level-4); }
+             .surface-level-1 > .tile > .tile-image, .surface-level-1 > .tiles > .tile > .tile-image { background : var(--color-surface-level-3); }
+             .surface-level-2 > .tile > .tile-image, .surface-level-2 > .tiles > .tile > .tile-image { background : var(--color-surface-level-3); }
  .dark-theme .surface-level-3 .tile-image,  .dark-theme .surface-level-3 > .tiles > .tile > .tile-image { background : var(--color-surface-level-2); }
 .black-theme .surface-level-3 .tile-image, .black-theme .surface-level-3 > .tiles > .tile > .tile-image { background : var(--color-surface-level-2); }
 .light-theme .surface-level-3 .tile-image, .light-theme .surface-level-3 > .tiles > .tile > .tile-image { background : var(--color-surface-level-5); }
@@ -371,6 +415,7 @@
     text-overflow   : ellipsis;
     white-space     : nowrap;
 }
+.tiles.list > .with-status .tile-details { margin-right : 0px !important; }
 
 .tiles.list.xxs { gap : 0px; }
 .tiles.list.xs  { gap : 0px; }
@@ -705,33 +750,153 @@
 }
 
 @keyframes highlight {
-    from { background  : var(--color-yellow-500); } 
-      to { background  : var(--color-yellow-200); }
+      0% { color  : var(--color-font-);      } 
+     20% { color  : var(--color-yellow-700); } 
+     50% { color  : var(--color-yellow-500); } 
+     80% { color  : var(--color-yellow-700); } 
+    100% { color  : var(--color-font-);      }
 }
 .highlight {
-   animation: highlight 1s ease;
+   animation : highlight 2s ease;
 }
 
 
 
 /*  CONTENT ITEM TABLES */
 /* ----------------------------------------------------------------------------- */
-.panel-content.xxs > table > thead > tr > th { padding :  2px  1px; }
+/* .panel-content.xxs > table > thead > tr > th { padding :  2px  1px; }
 .panel-content.xs  > table > thead > tr > th { padding :  2px  2px; }
 .panel-content.s   > table > thead > tr > th { padding :  4px  4px; }
-.panel-content.m   > table > thead > tr > th { padding :  6px  6px; }
-.panel-content.l   > table > thead > tr > th { padding :  8px  8px; }
-.panel-content.xl  > table > thead > tr > th { padding : 10px 10px; }
-.panel-content.xxl > table > thead > tr > th { padding : 12px 12px; }
+.panel-content.m   > table > thead > tr > th { padding :  6px  6px; } */
+/* .panel-content.l   > table > thead > tr > th { padding :  8px  8px; } */
+/* .panel-content.xl  > table > thead > tr > th { padding : 10px 10px; }
+.panel-content.xxl > table > thead > tr > th { padding : 12px 12px; } */
 
-.panel-content.xxs > table > tbody > tr > td { padding :  1px  1px; }
+/* .panel-content.xxs > table > thead > tr > th.field-editable { padding-left :  8px; }
+.panel-content.xs  > table > thead > tr > th.field-editable { padding-left : 10px; }
+.panel-content.s   > table > thead > tr > th.field-editable { padding-left : 10px; }
+.panel-content.m   > table > thead > tr > th.field-editable { padding-left : 12px; } */
+/* .panel-content.l   > table > thead > tr > th.field-editable { padding-left : 14px; } */
+/* .panel-content.xl  > table > thead > tr > th.field-editable { padding-left : 16px; }
+.panel-content.xxl > table > thead > tr > th.field-editable { padding-left : 18px; } */
+
+/* .panel-content.xxs > table > tbody > tr > td { padding :  1px  1px; }
 .panel-content.xs  > table > tbody > tr > td { padding :  2px  2px; }
 .panel-content.s   > table > tbody > tr > td { padding :  4px  4px; }
 .panel-content.m   > table > tbody > tr > td { padding :  6px  6px; }
 .panel-content.l   > table > tbody > tr > td { padding :  8px  8px; }
 .panel-content.xl  > table > tbody > tr > td { padding : 10px 10px; }
-.panel-content.xxl > table > tbody > tr > td { padding : 12px 12px; }
+.panel-content.xxl > table > tbody > tr > td { padding : 12px 12px; } */
 
+
+/* MULTI SELECT CHECKBOXES */
+.table-check-box {
+    max-width   : 30px;
+    min-width   : 30px;
+    width       : 30px;
+    text-align  : center;
+}
+tr.checked > td.content-item-check-box > .icon::before {
+    content : '\e834';
+}
+
+.table-group-title::before {
+    content                 : '\e5cf';
+    font-family             : 'Material Symbols Sharp';
+    line-height             : 1px;
+    margin-right            : var(--spacer-xxs);
+    position                : relative;
+    text-rendering          : optimizeLegibility;
+    font-size               : 24px;
+    top                     : 7px;
+    left                    : 4px;
+    -webkit-font-smoothing  : antialiased;
+}
+.table-group-title.collapsed::before { content : '\e5cc'; }
+
+/* .panel-content.xxs .table-group-title { line-height : 32px; padding : 0px 10px; }
+.panel-content.xs  .table-group-title { line-height : 32px; padding : 0px 10px; }
+.panel-content.s   .table-group-title { line-height : 32px; padding : 0px 10px; }
+.panel-content.m   .table-group-title { line-height : 32px; padding : 0px 10px; }
+.panel-content.l   .table-group-title { line-height : 32px; padding : 0px 10px; }
+.panel-content.xl  .table-group-title { line-height : 32px; padding : 0px 10px; }
+.panel-content.xxl .table-group-title { line-height : 32px; padding : 0px 10px; } */
+
+.panel-content.xxs .table-group-title::before { margin-right : 24px; }
+.panel-content.xs  .table-group-title::before { margin-right : 24px; }
+.panel-content.s   .table-group-title::before { margin-right : 20px; }
+.panel-content.m   .table-group-title::before { margin-right : 24px; }
+.panel-content.l   .table-group-title::before { margin-right : 24px; }
+.panel-content.xl  .table-group-title::before { margin-right : 24px; }
+.panel-content.xxl .table-group-title::before { margin-right : 24px; }
+
+.panel-content.xxs thead th {  height : 22px; line-height : 22px; padding : 0px  6px; font-size : 12px; font-weight : normal; }
+.panel-content.xs  thead th {  height : 28px; line-height : 28px; padding : 0px 10px; font-size : 12px; font-weight : normal; }
+.panel-content.s   thead th {  height : 32px; line-height : 32px; padding : 0px 14px; }
+.panel-content.m   thead th {  height : 34px; line-height : 34px; padding : 0px 14px; }
+.panel-content.l   thead th {  height : 36px; line-height : 36px; padding : 0px 16px; }
+.panel-content.xl  thead th {  height : 40px; line-height : 40px; padding : 0px 16px; }
+.panel-content.xxl thead th {  height : 44px; line-height : 44px; padding : 0px 18px; }
+
+.panel-content.xxs tr > td, .panel-content.xxs tr.content-item > td > input, .panel-content.xxs tr.content-item > td > select, .panel-content.xxs tr.content-item > td > textarea {  height : 20px; line-height : 20px; padding : 0px  6px; font-size : 12px; }
+.panel-content.xs  tr > td, .panel-content.xs  tr.content-item > td > input, .panel-content.xs  tr.content-item > td > select, .panel-content.xs  tr.content-item > td > textarea {  height : 26px; line-height : 26px; padding : 0px 10px; font-size : 12px; }
+.panel-content.s   tr > td, .panel-content.s   tr.content-item > td > input, .panel-content.s   tr.content-item > td > select, .panel-content.s   tr.content-item > td > textarea {  height : 30px; line-height : 30px; padding : 0px 14px; }
+.panel-content.m   tr > td, .panel-content.m   tr.content-item > td > input, .panel-content.m   tr.content-item > td > select, .panel-content.m   tr.content-item > td > textarea {  height : 32px; line-height : 32px; padding : 0px 14px; }
+.panel-content.l   tr > td, .panel-content.l   tr.content-item > td > input, .panel-content.l   tr.content-item > td > select, .panel-content.l   tr.content-item > td > textarea {  height : 34px; line-height : 34px; padding : 0px 16px; }
+.panel-content.xl  tr > td, .panel-content.xl  tr.content-item > td > input, .panel-content.xl  tr.content-item > td > select, .panel-content.xl  tr.content-item > td > textarea {  height : 38px; line-height : 38px; padding : 0px 16px; }
+.panel-content.xxl tr > td, .panel-content.xxl tr.content-item > td > input, .panel-content.xxl tr.content-item > td > select, .panel-content.xxl tr.content-item > td > textarea {  height : 42px; line-height : 42px; padding : 0px 18px; }
+
+.panel-content td.field-type-paragraph { line-height : 0px !important; }
+.panel-content td.field-type-date      { max-width : 128px; min-width : 128px; width : 128px; }
+.panel-content td.field-type-integer   { max-width : 100px; min-width : 100px; width : 100px; }
+.panel-content td.field-type-float     { max-width : 100px; min-width : 100px; width : 100px; }
+.panel-content td.field-type-money     { max-width : 100px; min-width : 100px; width : 100px; }
+.panel-content td.field-type-checkbox  { max-width :  40px; min-width :  40px; width :  40px; }
+.panel-content td.field-type-integer, .panel-content td.field-type-integer > input { text-align : right; }
+.panel-content td.field-type-float  , .panel-content td.field-type-float   > input { text-align : right; }
+.panel-content td.field-type-money  , .panel-content td.field-type-money   > input { text-align : right; }
+.panel-content td.field-type-checkbox > input { height : 18px !important; width : 100% !important; margin : 0px !important; padding : 0px !important; }
+
+.panel-content.xxs tr.content-item > td > input, .panel-content.xxs tr.content-item > td > textarea { max-width : calc(100% - 12px); min-width : calc(100% - 12px); width : calc(100% - 12px);}
+.panel-content.xs  tr.content-item > td > input, .panel-content.xs  tr.content-item > td > textarea { max-width : calc(100% - 20px); min-width : calc(100% - 20px); width : calc(100% - 20px); }
+.panel-content.s   tr.content-item > td > input, .panel-content.s   tr.content-item > td > textarea { max-width : calc(100% - 28px); min-width : calc(100% - 28px); width : calc(100% - 28px);  }
+.panel-content.m   tr.content-item > td > input, .panel-content.m   tr.content-item > td > textarea { max-width : calc(100% - 28px); min-width : calc(100% - 28px); width : calc(100% - 28px);}
+.panel-content.l   tr.content-item > td > input, .panel-content.l   tr.content-item > td > textarea { max-width : calc(100% - 32px); min-width : calc(100% - 32px); width : calc(100% - 32px);}
+.panel-content.xl  tr.content-item > td > input, .panel-content.xl  tr.content-item > td > textarea { max-width : calc(100% - 32px); min-width : calc(100% - 32px); width : calc(100% - 32px);}
+.panel-content.xxl tr.content-item > td > input, .panel-content.xxl tr.content-item > td > textarea { max-width : calc(100% - 36px); min-width : calc(100% - 36px); width : calc(100% - 36px);}
+
+.panel-content.xxs tr.content-item > td > textarea { padding-top : 8px; padding-bottom : 8px; height : 16px; line-height : 16px; }
+.panel-content.xs  tr.content-item > td > textarea { padding-top : 8px; padding-bottom : 8px; height : 16px; line-height : 16px; }
+.panel-content.s   tr.content-item > td > textarea { padding-top : 8px; padding-bottom : 8px; height : 16px; line-height : 16px; }
+.panel-content.m   tr.content-item > td > textarea { padding-top : 8px; padding-bottom : 8px; height : 16px; line-height : 16px; }
+.panel-content.l   tr.content-item > td > textarea { padding-top : 8px; padding-bottom : 8px; height : 16px; line-height : 16px; }
+.panel-content.xl  tr.content-item > td > textarea { padding-top : 8px; padding-bottom : 8px; height : 16px; line-height : 16px; }
+.panel-content.xxl tr.content-item > td > textarea { padding-top : 8px; padding-bottom : 8px; height : 16px; line-height : 16px; }
+
+.panel-content.xxs tr.content-item > td > select {  width : 100%; }
+.panel-content.xs  tr.content-item > td > select {  width : 100%; }
+.panel-content.s   tr.content-item > td > select {  width : 100%; }
+.panel-content.m   tr.content-item > td > select {  width : 100%; }
+.panel-content.l   tr.content-item > td > select {  width : 100%; }
+.panel-content.xl  tr.content-item > td > select {  width : 100%; }
+.panel-content.xxl tr.content-item > td > select {  width : 100%; }
+
+.panel-content.xxs th.table-check-box > .icon, .panel-content.xxs tr.content-item > td > .icon {  font-size : 15px; font-weight : 200; position : relative; top : 3px; }
+.panel-content.xs  th.table-check-box > .icon, .panel-content.xs  tr.content-item > td > .icon {  font-size : 17px; font-weight : 200; position : relative; top : 3px; }
+.panel-content.s   th.table-check-box > .icon, .panel-content.s   tr.content-item > td > .icon {  font-size : 19px; font-weight : 200; position : relative; top : 5px; }
+.panel-content.m   th.table-check-box > .icon, .panel-content.m   tr.content-item > td > .icon {  font-size : 21px; font-weight : 200; position : relative; top : 6px; }
+.panel-content.l   th.table-check-box > .icon, .panel-content.l   tr.content-item > td > .icon {  font-size : 22px; font-weight : 200; position : relative; top : 6px; }
+.panel-content.xl  th.table-check-box > .icon, .panel-content.xl  tr.content-item > td > .icon {  font-size : 24px; font-weight : 200; position : relative; top : 7px; }
+.panel-content.xxl th.table-check-box > .icon, .panel-content.xxl tr.content-item > td > .icon {  font-size : 26px; font-weight : 200; position : relative; top : 8px; }
+
+.panel-content   > table > tbody > tr > td.field-editable { padding-left : 0px !important; padding-right : 0px !important; }
+.surface-level-1 > table > tbody > tr > td.field-editable { padding-left : 0px !important; padding-right : 0px !important; }
+
+th.column-required,
+td.column-required > * { border-left : 2px solid var(--color-status-red) !important; }
+.content-item.search-match { color : var(--color-blue-500);}
+
+/* .content-item.selected > td.field-editable > * { background : var(--color-blue-600); } */
 
 
 
@@ -945,11 +1110,6 @@ and (max-device-width : 1900px)  {
     #header-toolbar .button.with-icon > span {
         display : none;
     }
-    #header-toolbar .button.with-icon > span.material-symbols-sharp {
-        display : block;
-        margin : 0px;
-    }
-
 
 }
 
@@ -995,6 +1155,7 @@ and (max-device-width : 1900px)  {
     gap             : var(--spacer-s);
     height          : 48px;
     justify-content : space-between;
+    padding         : 0px 14px;
 }
  .dark-theme .panel-header { border-color : var(--color-surface-level-4); }
 .black-theme .panel-header { border-color : var(--color-surface-level-4); }
@@ -1020,9 +1181,8 @@ and (max-device-width : 1900px)  {
     display         : flex;
     flex-direction  : column;
     flex-grow       : 1;
+    height          : 38px;
     overflow        : hidden;
-    gap             : 8px;
-    padding         : 10px 0px 20px 14px;
 }
 .panel-title  > div {
     overflow        : hidden;
@@ -1032,24 +1192,32 @@ and (max-device-width : 1900px)  {
 .panel-title-main {
     font-size       : 18px;
     font-weight     : 700;
-    height          : 18px;
-    line-height     : 16px;
+    height          : 38px;
+    line-height     : 38px;
     min-width       : 120px;
 }
 .panel-title-top, 
 .panel-title-sub {
     font-size   : 14px;
-    line-height : 20px;
+    line-height : 14px;
+    height      : 16px;
     min-width   : 80px;
 }
-.multi-line  > .panel-title    { padding :  0px 14px 10px; }
-.multi-line  > .panel-controls { margin-top : 2px; }
-
+.multi-line > .panel-title {
+    gap : 4px;
+}
+.multi-line > .panel-title > .panel-title-main {
+    height      : 20px;
+    line-height : 18px;
+}
 .panel-title-sub { 
     display : flex;
-    gap     : var(--spacer-s);
-    height  : 20px; 
-    padding : 0px;
+    gap     : 16px;
+}
+.panel-title-sub > * {
+    font-size   : 14px;
+    line-height : 14px;
+    height      : 16px;
 }
 .panel-title-sub > span {
     border-left : 2px solid var(--color-font);
@@ -1059,12 +1227,12 @@ and (max-device-width : 1900px)  {
     border-left  : none;
     padding-left : 0px;
 }
-.panel-title-sub > .panel-status {
-    border-radius   : 3px;
+/* .panel-title-sub > .panel-status {
+    border-radius   : 4px;
     padding         : 0px 10px;
     min-width       : 60px;
     text-align      : center;
-}
+} */
 
 .panel-top.no-header-title > .panel-header > .panel-title > div {
     display : none;
@@ -1092,25 +1260,17 @@ and (max-device-width : 1900px)  {
 
 .panel-controls {
     display         : flex;
-    gap             : var(--spacer-xs);
+    gap             : 4px;
+    height          : 38px;
     justify-content : end;
-    padding-right   : 14px;
 }
+
 .panel-top.surface-level-1 > .panel-header > .panel-controls { background : var(--color-surface-level-1); }
 .panel-top.surface-level-2 > .panel-header > .panel-controls { background : var(--color-surface-level-2); }
 .panel-top.surface-level-3 > .panel-header > .panel-controls { background : var(--color-surface-level-3); }
 .panel-top.surface-level-4 > .panel-header > .panel-controls { background : var(--color-surface-level-4); }
 .panel-top.surface-level-5 > .panel-header > .panel-controls { background : var(--color-surface-level-5); }
 
-.panel-controls > .button.material-symbols-sharp {
-    line-height: 36px;
-    width: 36px;
-    height: 36px;
-    min-width : auto;
-    padding: 0px;
-    margin: 0px 0px 0px 8px;
-    text-align : center;
-}
 .panel-controls > select,
 .panel-actions  > select {
     font-size   : 14px;
@@ -1140,11 +1300,10 @@ and (max-device-width : 1900px)  {
 .panel-search.button {
     gap     : 2px;
     height  : 24px;
-    padding : 6px 12px 6px 6px;
+    padding : 6px;
 }
 .panel-search-input {
-    margin-left : 4px;
-    width       : 96px;
+    width : 92px;
 }
 .panel-controls > .panel-search > .button {
     font-size   : 22px;
@@ -1201,7 +1360,7 @@ and (max-device-width : 1900px)  {
 
 .panel-actions {
     display         : flex;
-    gap             : var(--spacer-xs);
+    gap             : 4px;
     height          : 36px;
     line-height     : 36px;
     padding         : 14px 14px;
@@ -1353,13 +1512,6 @@ and (max-device-width : 1900px)  {
 .panel-images.xxl > div { line-height : 320px; max-height : 320px; min-height : 320px; height : 320px; max-width : 320px; min-width : 320px; width : 320px; }
 
 
-.content-item.search-match {
-    color : var(--color-blue-500);
-}
-.content-item.changed > td > * { 
-    background : var(--color-status-red) !important;
- }
-
 .panel-footer {
     display         : flex;
     gap             : 14px;
@@ -1376,7 +1528,7 @@ and (max-device-width : 1900px)  {
     display         : flex;
     font-size       : 12px;
     gap             : var(--spacer-xs);
-    padding         : 6px 16px;
+    padding         : 2px 16px;
     justify-content : space-between;
     position        : absolute;
     right           : 0px;
@@ -1393,7 +1545,7 @@ and (max-device-width : 1900px)  {
     text-align      : center;
     text-overflow   : ellipsis;
     white-space     : nowrap;
-    /* width           : 25%; */
+    width           : 25%;  /* enabled on 10. July 2025 for Asset-Editor */
 }
 .panel-counter-filtered.not-empty {
     border-color : var(--color-status-yellow) !important;
@@ -1404,6 +1556,11 @@ and (max-device-width : 1900px)  {
 .panel-counter-changed.not-empty {
     border-color : var(--color-status-red) !important;
 }
+.surface-level-1 > .panel-counters { background : var(--color-surface-level-3); }
+.surface-level-2 > .panel-counters { background : var(--color-surface-level-3); }
+.surface-level-3 > .panel-counters { background : var(--color-surface-level-5); }
+.surface-level-4 > .panel-counters { background : var(--color-surface-level-3); }
+.surface-level-5 > .panel-counters { background : var(--color-surface-level-3); }
 
 
 /* ENABLE PANEL TOGGLES */
@@ -1474,17 +1631,13 @@ and (max-device-width : 1900px)  {
     width           : 38px;
 }
 
-.surface-level-1 td.content-column-number { background : var(--color-surface-level-4); }
+.surface-level-1 td.content-column-number { background : var(--color-surface-level-3); }
 .surface-level-2 td.content-column-number { background : var(--color-surface-level-5); }
 .surface-level-3 td.content-column-number { background : var(--color-surface-level-3); }
 .surface-level-4 td.content-column-number { background : var(--color-surface-level-1); }
 .surface-level-5 td.content-column-number { background : var(--color-surface-level-1); }
 
 
-/* MULTI SELECT CHECKBOXES */
-tr.selected > td.content-item-check-box > .icon::before {
-    content : '\e834';
-}
 
 /* COMPACT DISPLAY */
 .panel-top.compact > .panel-header {
@@ -1555,9 +1708,8 @@ tr.selected > td.content-item-check-box > .icon::before {
 .panel-top.compact .panel-content table tbody td {
     padding : 3px 6px;   
 }
-.panel-content table thead th .content-select-all.icon.xxs,
-.panel-content table tbody td.content-item-check-box .icon.xxs {
-    font-size : 12px;
+.panel-action-remove::before { 
+    color : var(--color-red-500);
 }
 
 
@@ -1568,11 +1720,23 @@ tr.selected > td.content-item-check-box > .icon::before {
     display : none;
     z-index : 8;
 }
-.item-summary > span {
-    font-weight : bold;
+.item-title {
+    gap     : 4px;
+    height  : 52px;
+}
+.item-descriptor {
+    font-size   : 22px;
+    line-height : 22px;
+    height      : 28px;
+}
+.item-subtitle,
+.item-subtitle  > * {
+    font-size   : 16px;
+    line-height : 18px;
+    height      : 20px;
 }
 .item-status {
-    border-radius   : 3px;
+    border-radius   : 4px;
     color           : white;
     font-size       : 12px;
     min-width       : 80px;
@@ -1582,6 +1746,9 @@ tr.selected > td.content-item-check-box > .icon::before {
 .item-summary {
     min-width       : 420px;
 }
+.item-summary > span {
+    font-weight : bold;
+}
 .item-workflow-actions {
     height      : 38px !important;
     max-width   : 136px;
@@ -1590,13 +1757,12 @@ tr.selected > td.content-item-check-box > .icon::before {
 .item-content {
     position : absolute;
 }
-.item-content .section-fields {
+/* .item-content .section-fields {
     padding : 10px 0px;
-}
+} */
 .item-content .section-fields .field.readonly {
     padding : 0px;
 }
-
 .item-workflow-history {
     left  : 0px;
     width : 300px;
@@ -1676,29 +1842,9 @@ tr.selected > td.content-item-check-box > .icon::before {
     gap     : 48px; 
     height  : 64px;
     top     : 0px;
-    right   : 14px;
-    left    : 28px;
+    right   : 0px;
+    left    : 0px;
 }
-.item.with-panels > .item-header > .item-title {
-    display         : flex;
-    flex-direction  : column;
-    flex-grow       : 1;
-    gap             : 8px;
-    padding         : 0px;
-}
-.item.with-panels > .item-header > .item-title > .panel-title-main {
-    font-size   : 22px;
-    height      : 22px;
-    line-height : 22px;
-    min-width   : 400px;
-}
-.item.with-panels > .item-header > .item-title > .panel-title-sub {
-    display     : flex;
-    font-size   : 14px;
-    gap         : 16px;
-    height      : 22px;
-    line-height : 22px;
-} 
 .item.with-panels > .item-content {
     top    : 76px;
     right  : 0px;
@@ -1741,7 +1887,7 @@ tr.selected > td.content-item-check-box > .icon::before {
 .panel-sections {
     display         : flex;
     flex-direction  : column;
-    gap             : 32px;
+    gap             : 20px;
     top             : 86px;
 }
 .item.no-sub-title > .panel-sections {
@@ -1750,15 +1896,12 @@ tr.selected > td.content-item-check-box > .icon::before {
 .panel-sections > .panel-top {
     height : unset;
 }
-.panel-sections > div > .panel-header {
+.panel-sections > .panel-top > .panel-header {
     border      : none !important;
     gap         : 10px;
-}
-.panel-sections > div > .panel-header > .panel-header-toggle {
-    padding-top : 12px;
-}
-.panel-sections > div > .panel-header > .panel-title {
-    padding : 16px 12px 0px 0px;
+    max-height  : 38px;
+    min-height  : 38px;
+    height      : 38px;
 }
 .panel-sections > div > .panel-header .panel-title-main {
     font-size : 16px;
@@ -1771,12 +1914,17 @@ tr.selected > td.content-item-check-box > .icon::before {
     position    : unset;
     text-align  : center;
 }
-.surface-level-1 > .panel-sections > .panel-top > .panel-header { background  : var(--color-surface-level-3); }
-.surface-level-2 > .panel-sections > .panel-top > .panel-header { background  : var(--color-surface-level-4); }
-.surface-level-3 > .panel-sections > .panel-top > .panel-header { background  : var(--color-surface-level-4); }
-.surface-level-4 > .panel-sections > .panel-top > .panel-header { background  : var(--color-surface-level-5); }
-.surface-level-5 > .panel-sections > .panel-top > .panel-header { background  : var(--color-surface-level-3); }
+.panel-sections > .surface-level-1 > .panel-header { background  : var(--color-surface-level-4); }
+.panel-sections > .surface-level-2 > .panel-header { background  : var(--color-surface-level-3); }
+.panel-sections > .surface-level-3 > .panel-header { background  : var(--color-surface-level-5); }
+.panel-sections > .surface-level-4 > .panel-header { background  : var(--color-surface-level-3); }
+.panel-sections > .surface-level-5 > .panel-header { background  : var(--color-surface-level-3); }
 
+.panel-sections > .surface-level-1 > .panel-header:hover { background  : var(--color-surface-level-4); }
+.panel-sections > .surface-level-2 > .panel-header:hover { background  : var(--color-surface-level-4); }
+.panel-sections > .surface-level-3 > .panel-header:hover { background  : var(--color-surface-level-4); }
+.panel-sections > .surface-level-4 > .panel-header:hover { background  : var(--color-surface-level-5); }
+.panel-sections > .surface-level-5 > .panel-header:hover { background  : var(--color-surface-level-4); }
 
 
 .item .panel-content .field.editable input,
@@ -1972,8 +2120,8 @@ tr.selected > td.content-item-check-box > .icon::before {
 } 
 
 .button.default {
-    background   : var(--color-blue-500); 
-    border-color : var(--color-blue-500); 
+    background   : var(--color-blue-500) !important; 
+    border-color : var(--color-blue-500) !important; 
     color        : white; 
 }
 .button.default:hover {
@@ -2002,6 +2150,11 @@ select.button.main:hover {
     color        : white; 
 }
 
+ .dark-theme .surface-level-4 .button { background : var(--color-surface-level-1); border-color : var(--color-surface-level-1); }
+.black-theme .surface-level-4 .button { background : var(--color-surface-level-1); border-color : var(--color-surface-level-1); }
+ .dark-theme .surface-level-4 .button:hover { background : var(--color-surface-level-2); border-color : var(--color-surface-level-2); }
+.black-theme .surface-level-4 .button:hover { background : var(--color-surface-level-2); border-color : var(--color-surface-level-2); }
+
  .dark-theme .surface-level-5 .button { background : var(--color-surface-level-1); border-color : var(--color-surface-level-1); }
 .black-theme .surface-level-5 .button { background : var(--color-surface-level-1); border-color : var(--color-surface-level-1); }
  .dark-theme .surface-level-5 .button:hover { background : var(--color-surface-level-2); border-color : var(--color-surface-level-2); }
@@ -2010,14 +2163,15 @@ select.button.main:hover {
 
  .dark-theme .button.disabled,
 .black-theme .button.disabled {
-    background  : var(--color-surface-level-3) !important;
-    color       : var(--color-surface-level-1) !important;
+    background   : var(--color-surface-level-3) !important;
+    color        : var(--color-surface-level-1) !important;
+    border-color : var(--color-surface-level-3) !important;
 }
 
 .button.icon {
     font-family : 'Material Symbols Sharp';
     font-size   : 24px;
-    font-weight : 300;
+    font-weight : 200;
     height      : 36px;
     line-height : 36px;
     min-width   : 36px;

@@ -1,7 +1,6 @@
 $(document).ready(function() {
 
     setUIEvents();
-
     appendProcessing('create');
 
     if(number === '') { 
@@ -12,25 +11,13 @@ $(document).ready(function() {
     } else {
 
         let params = {
-            'wsId'      : config.items.wsId,
-            'limit'     : 1,
-            'query'     : number,
-            'wildcard'  : false
+            wsId     : config.items.wsId,
+            limit    : 1,
+            query    : number,
+            wildcard : false
         }
 
-//   http://localhost:8080/addins/item?number=002771&options=autoCreate
-/*
-
-
-
-http://localhost:8080/addins/item?number=12345678&options=autoCreate
-
-http://localhost:8080/addins/item?number=01-1918&options=autoCreate
-
-
-*/
-
-        $.get('/plm/search-descriptor', params, function(response) {
+        $.post('/plm/search-descriptor', params, function(response) {
 
             if(response.data.items.length > 0) {
 
@@ -40,8 +27,12 @@ http://localhost:8080/addins/item?number=01-1918&options=autoCreate
                 let link = response.data.items[0].__self__;
 
                 let url  = window.location.href.split('?')[0];
-                    url += '?dmsId=' + link.split('/')[6];
-                    url += '&wsId='  + link.split('/')[4];
+                    url += '?dmsId='      + link.split('/')[6];
+                    url += '&wsId='       + link.split('/')[4];
+                    url += '&descriptor=' + response.data.items[0].descriptor;
+                    
+                if(!isBlank(options)) url += '&options=' + options;
+                if(!isBlank(host))    url += '&host='    + host;
 
                 if(theme !== '') url += '&theme=' + theme;
 
@@ -57,7 +48,6 @@ http://localhost:8080/addins/item?number=01-1918&options=autoCreate
                     extended    : true,
                     limit       : 1
                 }, function(response) {
-                    console.log(response);
 
                     if(response.data.results.length === 0) {
 
@@ -69,7 +59,6 @@ http://localhost:8080/addins/item?number=01-1918&options=autoCreate
                     } else {
                         console.log('Copying item from Vault');
                     }
-
 
                 });
             } else {

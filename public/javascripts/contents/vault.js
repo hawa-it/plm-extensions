@@ -147,6 +147,7 @@ function genPDMTile(record, params) {
                 .attr('data-id', record.id)
                 .attr('data-name', record.name)
                 .attr('data-folder', record.parentFolderId)
+                .attr('data-file-id', record.file.id)
                 .attr('data-type', 'vault-file');
             break;
 
@@ -206,7 +207,7 @@ function genPDMTileFileVersion(file, params) {
     params.link         = file.url;
     params.title        = file.name + ' [' + file.revision + ']',
     params.subtitle     = subtitle
-    params.tileIcon     = 'icon-file';   
+    params.tileIcon     = 'icon-folder';   
     params.imageFile    = file.file.id + '-' + file.version;
     params.details      = 'data';
 
@@ -229,7 +230,7 @@ function genPDMTileItemVersion(item, params) {
         image       : item.url,
         number      : params.number,
         tileNumber  : params.tileNumber,
-        tileIcon    : 'icon-item',
+        tileIcon    : 'icon-vault-item',
         title       : item.number + ' ' + item.title + ' [' + item.revision + ']',
         subtitle    : subtitle,
         imageFile   : item.item.id + '-' + item.version,
@@ -466,7 +467,7 @@ function insertFileBOMData(id) {
         setFileBOMHeaders(id);
         insertNextFileBOMLevel(id, elemBOMTableBody, responses[0].data.results, settings.pdmFileBOM[id].link.split('/').pop(), 1, 1, selectedItems);
         enableBOMToggles(id);
-        updateBOMCounters(id);
+        // updateBOMCounters(id);
 
         if(settings.pdmFileBOM[id].collapsed) clickBOMCollapseAll($('#' + id + '-toolbar'));
 
@@ -729,7 +730,7 @@ function searchInFileBOM(id, elemInput) {
 
     }
 
-    updateBOMCounters(id);
+    // updateBOMCounters(id);
 
 }
 function toggleFileBOMItemActions(elemClicked) {

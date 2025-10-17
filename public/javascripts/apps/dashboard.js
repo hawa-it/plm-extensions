@@ -1,4 +1,5 @@
 let chart;
+let urlParameters   = getURLParameters();
 let title           = 'Activity Dashboard';
 let enableMarkup    = false;
 let fieldIdsMarkup  = [];
@@ -17,11 +18,6 @@ let wsConfig        = {
     tableauLink           : '',
     markupsImageFieldsPrefix     : 'MARKUP_'
 }
-let wsConfigBrowser = {
-    id       : '95',
-    viewName : 'Product Browser',
-    tableau  : ''
-}
 
 
 $(document).ready(function() {
@@ -31,6 +27,8 @@ $(document).ready(function() {
         if(wsId === profile.wsId.toString()) {
 
             wsConfig.id              = profile.wsId.toString();
+            wsConfig.newHeader       = profile.newHeader || 'Initiate New Process';
+            wsConfig.newMessage      = profile.newMessage || 'You encountered an issue? Please provide a few details below and let us fix the problem. You can provide more details and also upload files in the next step.';
             wsConfig.className       = profile.className;
             wsConfig.contents        = profile.contents;
             wsConfig.progress        = profile.progress;
@@ -94,17 +92,20 @@ $(document).ready(function() {
     } else {
 
         $('#header-title').html(title);
+        $('#new-header').html(wsConfig.newHeader);
+        $('#new-message').html(wsConfig.newMessage);
 
         document.title = title;
 
         appendNoDataFound('list');
-
         appendOverlay(false);
 
         setUIEvents();
         setStatusColumns();
         setCalendars();
         setChart();
+
+        if(!isBlank(urlParameters.link)) openItem(urlParameters.link);
 
         getInitialData();
 
@@ -230,10 +231,10 @@ function setSelectedView() {
 function getInitialData() {
 
     let requests = [
-        $.get('/plm/sections'   , { wsId : wsConfig.id, useCache : true }),
-        $.get('/plm/fields'     , { wsId : wsConfig.id, useCache : true }),
-        $.get('/plm/tableaus'   , { wsId : wsConfig.id, useCache : true }),
-        $.get('/plm/permissions', { wsId : wsConfig.id, useCache : true }),
+        $.get('/plm/sections'   , { wsId : wsConfig.id, useCache : true  }),
+        $.get('/plm/fields'     , { wsId : wsConfig.id, useCache : true  }),
+        $.get('/plm/tableaus'   , { wsId : wsConfig.id, useCache : false }),
+        $.get('/plm/permissions', { wsId : wsConfig.id, useCache : true  }),
     ];
 
     Promise.all(requests).then(function(responses) {
@@ -245,6 +246,7 @@ function getInitialData() {
         for(let tableau of responses[2].data) {
             if(tableau.title === wsConfig.tableauName) {
                 wsConfig.tableauLink = tableau.link;
+                break;
             }
         }
         
@@ -290,9 +292,9 @@ function getInitialData() {
             }
 
             if(!isBlank(wsConfig.fieldIdSubtitle)) params.columns.push(wsConfig.fieldIdSubtitle);
-
+            
             $.post('/plm/tableau-add', params, function() {
-                $.get('/plm/tableaus', { 'wsId' : wsConfig.id }, function(response) {
+                $.get('/plm/tableaus', { wsId : wsConfig.id }, function(response) {
                     for(let tableau of response.data) {
                         if(tableau.title === wsConfig.tableauName) {
                             wsConfig.tableauLink = tableau.link;
@@ -421,7 +423,7 @@ function getProcesses() {
 
         setSelectedView();
 
-        $('.tile').click(function() { openItem($(this).attr('data-link')); });
+        $('#main').find('.tile').click(function() { openItem($(this).attr('data-link')); });
         $('.calendar-day-current').click();
 
         chart.update();
@@ -498,6 +500,15 @@ function selectCalendarWeek(elemClicked) {
 // Show selected process in main window
 function openItem(link) {
 
+    $('#overlay').show(); 
+
+    $.get('/plm/descriptor', { link : link }, function(response) {
+        document.title = response.data;
+        let split = link.split('/')
+        window.history.replaceState(null, null, '/dashboard?wsid=' + split[4] + '&dmsid=' + split[6] + '&theme=' + theme);    
+        $('#overlay').hide();        
+    });
+
     insertItemSummary(link, {
         bookmark        : true,
         className       : wsConfig.className,
@@ -506,8 +517,13 @@ function openItem(link) {
         reload          : true,
         layout          : 'dashboard',
         statesColors    : wsConfig.progress,
-        surfaceLevel    : '3',
-        workflowActions : true
+        surfaceLevel    : '1',
+        workflowActions : true,
+        onClickClose    : function(id, link) { 
+            document.title = title;
+            let split = link.split('/')
+            window.history.replaceState(null, null, '/dashboard?wsid=' + split[4] + '&theme=' + theme);   
+        }
     });
 
 

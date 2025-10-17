@@ -23,6 +23,7 @@ let settings = {
     grid              : {},
     managedItems      : {},
     processes         : {},
+    project           : {},
     relationships     : {},
     sourcing          : {},
     changeLog         : {},
@@ -52,7 +53,7 @@ $(document).ready(function() {
     insertAvatar();  
     enableTabs();
     enablePanelToggles();
-    // enableOpenInNew();
+    setFormEvents();
 
     $('#header-logo'    ).click(function() { reloadPage(true); });
     $('#header-title'   ).click(function() { reloadPage(false); });
@@ -288,7 +289,12 @@ function insertMenu() {
             $('#menu').fadeOut(150);
         });
 
-    let elemColumns = $('<div></div>').appendTo(elemMenu).attr('id', 'menu-columns');
+    insertMenuContents(elemMenu, 'menu-columns');
+
+}
+function insertMenuContents(elemParent, id) {
+
+    let elemColumns = $('<div></div>').appendTo(elemParent).attr('id', id);
 
     for(let column of menu) {
 
@@ -337,6 +343,18 @@ function insertMenu() {
 
         }
     }
+
+    let elemLastColumn = elemColumns.children().last();
+
+    $('<div></div>').appendTo(elemLastColumn)
+        .addClass('button')
+        .css('margin', '62px 10px 0px 10px')
+        .css('gap', '6px')
+        .css('padding', '12px')
+        .html('Fusion Manage Home')
+        .click(function() {
+            document.location.href = 'https://' + tenant + '.autodeskplm360.net';
+        });
 
 }
 function clickMenuCommand(elemCommand) {
@@ -395,16 +413,24 @@ function reloadPage(ret) {
 function getURLParameters() {
 
     let result = {
-        link  : '/api/v3/workspaces/' + wsId + '/items/' + dmsId,
-        wsId  : wsId,
-        dmsId : dmsId
+        link        : '',
+        wsId        : wsId,
+        dmsId       : dmsId,
+        descriptor  : descriptor || ''
     };
+
+    if(!isBlank(wsId)) {
+        if(!isBlank(dmsId)) {
+            result.link = '/api/v3/workspaces/' + wsId + '/items/' + dmsId
+        }
+    }
 
     for(let option of options) {
 
-        let split   = option.split(':');
-        let key     = split[0].toLowerCase();
-        result[key] = split[1];
+        let split = option.split(':');
+        let key   = split[0].toLowerCase();
+
+        if(key !== '') result[key] = split[1];
 
     }
 
@@ -655,6 +681,11 @@ function showMessage(type, title, message) {
     $('#overlay').hide();
 
 }
+function hideMessage() {
+
+    $('#message').remove();
+
+}
 
 
 // Get CSS class defining the element's surface level
@@ -846,6 +877,44 @@ function clickPanelToggle(elemSelected) {
 }
 
 
+// Add event listeners for form controls
+function setFormEvents() {
+
+    // Handle picklist controls
+    $(document).on('keydown', function(e) {
+        if(e.key == 'Escape') {
+           $('.picklist').addClass('hidden');
+        } else  if(e.key == 'Tab') {
+           $('.picklist').addClass('hidden');
+       }
+    });
+    $(document).click(function(e) { 
+
+        let elemClicked        = $(e.target);
+        let clickedInPicklist  = (elemClicked.closest('.picklist').length > 0);
+        let elemPicklist       = elemClicked.next('.picklist');
+
+        if(elemPicklist.length === 0) {
+            if(elemClicked.hasClass('pickklist-open-shortcuts')) {
+                elemPicklist = elemClicked.parent().next('.picklist');
+            }
+        }
+        
+        if(clickedInPicklist) return;
+        else if(elemClicked.is('input')) {
+            elemClicked.select();
+        }
+
+        $('.picklist').addClass('hidden');
+
+        if(elemPicklist.length > 0) elemPicklist.removeClass('hidden');
+
+    });
+
+}
+
+
+
 // Insert Calendar Controls
 function insertCalendarMonth(id, currentDate) {
     
@@ -950,102 +1019,112 @@ function insertCalendarMonth(id, currentDate) {
 // Generate default settings object for item based and navigation views using genPanel*
 function getPanelSettings(link, params, defaults, additional) {
 
-    if(isBlank(defaults.counters)         ) defaults.counters          = false;
-    if(isBlank(defaults.hidePanel)        ) defaults.hidePanel         = false;
-    if(isBlank(defaults.hideHeader)       ) defaults.hideHeader        = false;
-    if(isBlank(defaults.hideHeaderLabel)  ) defaults.hideHeaderLabel   = false;
-    if(isBlank(defaults.headerTopLabel)   ) defaults.headerTopLabel    = '';
-    if(isBlank(defaults.headerLabel)      ) defaults.headerLabel       = '';
-    if(isBlank(defaults.headerSubLabel)   ) defaults.headerSubLabel    = '';
-    if(isBlank(defaults.openInPLM)        ) defaults.openInPLM         = false;
-    if(isBlank(defaults.openOnDblClick)   ) defaults.openOnDblClick    = false;
-    if(isBlank(defaults.search)           ) defaults.search            = false;
-    if(isBlank(defaults.placeholder)      ) defaults.placeholder       = 'Type to search';
-    if(isBlank(defaults.editable)         ) defaults.editable          = false;
-    if(isBlank(defaults.reload  )         ) defaults.reload            = false;
-    if(isBlank(defaults.multiSelect)      ) defaults.multiSelect       = false;
-    if(isBlank(defaults.filterBySelection)) defaults.filterBySelection = false;
-    if(isBlank(defaults.layout)           ) defaults.layout            = 'list';
-    if(isBlank(defaults.number)           ) defaults.number            = true;
-    if(isBlank(defaults.collapsePanel)    ) defaults.collapsePanel     = false;
-    if(isBlank(defaults.collapseContents) ) defaults.collapseContents  = false;
-    if(isBlank(defaults.groupBy)          ) defaults.groupBy           = '';
-    if(isBlank(defaults.groupLayout)      ) defaults.groupLayout       = 'column';
-    if(isBlank(defaults.additionalData)   ) defaults.additionalData    = [];
-    if(isBlank(defaults.contentSize)      ) defaults.contentSize       = 'm';
-    if(isBlank(defaults.contentSizes)     ) defaults.contentSizes      = [];
-    if(isBlank(defaults.tileIcon)         ) defaults.tileIcon          = 'icon-product';
-    if(isBlank(defaults.tileImage)        ) defaults.tileImage         = true;
-    if(isBlank(defaults.tileTitle)        ) defaults.tileTitle         = 'DESCRIPTOR';
-    if(isBlank(defaults.tileSubtitle)     ) defaults.tileSubtitle      = 'WF_CURRENT_STATE';
-    if(isBlank(defaults.tileDetails)      ) defaults.tileDetails       = [];
-    if(isBlank(defaults.tableColumnsLimit)) defaults.tableColumnsLimit = 100;
-    if(isBlank(defaults.tableTotals)      ) defaults.tableTotals       = false;
-    if(isBlank(defaults.tableRanges)      ) defaults.tableRanges       = false;
-    if(isBlank(defaults.textNoData)       ) defaults.textNoData        = 'No Entries';
-    if(isBlank(defaults.stateColors)      ) defaults.stateColors       = [];
-    if(isBlank(defaults.useCache)         ) defaults.useCache          = false;
-    if(isBlank(defaults.singleToolbar)    ) defaults.singleToolbar     = '';
-    if(isBlank(defaults.disconnectLabel)  ) defaults.disconnectLabel   = 'Remove';
-    if(isBlank(defaults.disconnectIcon)   ) defaults.disconnectIcon    = 'icon-disconnect';
-    if(isBlank(defaults.afterCompletion)  ) defaults.afterCompletion   = function (id) {};
+    if(isBlank(defaults.additionalData)         ) defaults.additionalData           = [];
+    if(isBlank(defaults.counters)               ) defaults.counters                 = false;
+    if(isBlank(defaults.createButtonIcon)       ) defaults.createButtonIcon         = 'icon-create';
+    if(isBlank(defaults.createButtonLabel)      ) defaults.createButtonLabel        = 'Create';
+    if(isBlank(defaults.disconnectButtonIcon)   ) defaults.disconnectButtonIcon     = 'icon-list-remove';
+    if(isBlank(defaults.disconnectButtonLabel)  ) defaults.disconnectButtonLabel    = 'Remove Selected';
+    if(isBlank(defaults.editable)               ) defaults.editable                 = false;
+    if(isBlank(defaults.hidePanel)              ) defaults.hidePanel                = false;
+    if(isBlank(defaults.hideHeader)             ) defaults.hideHeader               = false;
+    if(isBlank(defaults.hideHeaderControls)     ) defaults.hideHeaderControls       = false;
+    if(isBlank(defaults.hideHeaderLabel)        ) defaults.hideHeaderLabel          = false;
+    if(isBlank(defaults.headerTopLabel)         ) defaults.headerTopLabel           = '';
+    if(isBlank(defaults.headerLabel)            ) defaults.headerLabel              = '';
+    if(isBlank(defaults.headerSubLabel)         ) defaults.headerSubLabel           = '';
+    if(isBlank(defaults.openInPLM)              ) defaults.openInPLM                = false;
+    if(isBlank(defaults.openOnDblClick)         ) defaults.openOnDblClick           = false;
+    if(isBlank(defaults.placeholder)            ) defaults.placeholder              = 'Type to search';
+    if(isBlank(defaults.reload)                 ) defaults.reload                   = false;
+    if(isBlank(defaults.reset)                  ) defaults.reset                    = false;
+    if(isBlank(defaults.search)                 ) defaults.search                   = false;
+    if(isBlank(defaults.showInDialog)           ) defaults.showInDialog             = false;
+    if(isBlank(defaults.multiSelect)            ) defaults.multiSelect              = false;
+    if(isBlank(defaults.filterBySelection)      ) defaults.filterBySelection        = false;
+    if(isBlank(defaults.layout)                 ) defaults.layout                   = 'list';
+    if(isBlank(defaults.number)                 ) defaults.number                   = true;
+    if(isBlank(defaults.collapsePanel)          ) defaults.collapsePanel            = false;
+    if(isBlank(defaults.collapseContents)       ) defaults.collapseContents         = false;
+    if(isBlank(defaults.groupBy)                ) defaults.groupBy                  = '';
+    if(isBlank(defaults.groupLayout)            ) defaults.groupLayout              = 'column';
+    if(isBlank(defaults.contentSize)            ) defaults.contentSize              = 'm';
+    if(isBlank(defaults.contentSizes)           ) defaults.contentSizes             = [];
+    if(isBlank(defaults.tileIcon)               ) defaults.tileIcon                 = 'icon-product';
+    if(isBlank(defaults.tileImage)              ) defaults.tileImage                = true;
+    if(isBlank(defaults.tileTitle)              ) defaults.tileTitle                = 'DESCRIPTOR';
+    if(isBlank(defaults.tileSubtitle)           ) defaults.tileSubtitle             = 'WF_CURRENT_STATE';
+    if(isBlank(defaults.tileDetails)            ) defaults.tileDetails              = [];
+    if(isBlank(defaults.tableColumnsLimit)      ) defaults.tableColumnsLimit        = 100;
+    if(isBlank(defaults.tableTotals)            ) defaults.tableTotals              = false;
+    if(isBlank(defaults.tableRanges)            ) defaults.tableRanges              = false;
+    if(isBlank(defaults.textNoData)             ) defaults.textNoData               = 'No Entries';
+    if(isBlank(defaults.stateColors)            ) defaults.stateColors              = [];
+    if(isBlank(defaults.useCache)               ) defaults.useCache                 = false;
+    if(isBlank(defaults.singleToolbar)          ) defaults.singleToolbar            = '';
+    if(isBlank(defaults.afterCompletion)        ) defaults.afterCompletion          = function (id) {};
 
     if(!isBlank(params.contentSizes)) params.contentSize = params.contentSizes[0];
 
     let settings = {
-        link              : link,
-        hidePanel         : isBlank(params.hidePanel)         ? defaults.hidePanel : params.hidePanel,
-        hideHeader        : isBlank(params.hideHeader)        ? defaults.hideHeader : params.hideHeader,
-        hideHeaderLabel   : isBlank(params.hideHeaderLabel)   ? defaults.hideHeaderLabel : params.hideHeaderLabel,
-        headerTopLabel    : isBlank(params.headerTopLabel)    ? defaults.headerTopLabel : params.headerTopLabel,
-        headerLabel       : isBlank(params.headerLabel)       ? defaults.headerLabel : params.headerLabel,
-        headerSubLabel    : isBlank(params.headerSubLabel)    ? defaults.headerSubLabel : params.headerSubLabel,
-        headerToggle      : isBlank(params.headerToggle)      ? false : params.headerToggle,
-        compactDisplay    : isBlank(params.compactDisplay)    ? false : params.compactDisplay,
-        openInPLM         : isBlank(params.openInPLM)         ? defaults.openInPLM : params.openInPLM,
-        openOnDblClick    : isBlank(params.openOnDblClick)    ? defaults.openOnDblClick : params.openOnDblClick,
-        search            : isBlank(params.search)            ? defaults.search : params.search,
-        placeholder       : isBlank(params.placeholder)       ? defaults.placeholder : params.placeholder,
-        reload            : isBlank(params.reload)            ? defaults.reload : params.reload,
-        editable          : isBlank(params.editable)          ? defaults.editable : params.editable,
-        multiSelect       : isBlank(params.multiSelect)       ? defaults.multiSelect : params.multiSelect,
-        filterBySelection : isBlank(params.filterBySelection) ? defaults.filterBySelection : params.filterBySelection,
-        actions           : isBlank(params.actions)           ? [] : params.actions,
-        layout            : isBlank(params.layout)            ? defaults.layout : params.layout,
-        collapsePanel     : isBlank(params.collapsePanel)     ? defaults.collapsePanel : params.collapsePanel,
-        collapseContents  : isBlank(params.collapseContents)  ? defaults.collapseContents : params.collapseContents,
-        groupBy           : isBlank(params.groupBy)           ? defaults.groupBy : params.groupBy,
-        groupLayout       : isBlank(params.groupLayout)       ? defaults.groupLayout : params.groupLayout,
-        additionalData    : isBlank(params.additionalData)    ? defaults.additionalData : params.additionalData,
-        number            : isBlank(params.number)            ? defaults.number : params.number,
-        contentSize       : isBlank(params.contentSize)       ? defaults.contentSize  : params.contentSize,
-        contentSizes      : isBlank(params.contentSizes)      ? defaults.contentSizes  : params.contentSizes,
-        tileIcon          : isBlank(params.tileIcon)          ? defaults.tileIcon  : params.tileIcon,
-        tileImage         : isBlank(params.tileImage)         ? defaults.tileImage : params.tileImage,
-        tileImageFieldId  : '',
-        tileTitle         : isBlank(params.tileTitle)         ? defaults.tileTitle : params.tileTitle,
-        tileSubtitle      : isBlank(params.tileSubtitle)      ? defaults.tileSubtitle : params.tileSubtitle,
-        tileDetails       : isBlank(params.tileDetails)       ? defaults.tileDetails : params.tileDetails,
-        tableHeaders      : isBlank(params.tableHeaders)      ? true : params.tableHeaders,
-        tableColumnsLimit : isBlank(params.tableColumnsLimit) ? defaults.tableColumnsLimit : params.tableColumnsLimit,
-        tableTotals       : isBlank(params.tableTotals)       ? defaults.tableTotals : params.tableTotals,
-        tableRanges       : isBlank(params.tableRanges)       ? defaults.tableRanges : params.tableRanges,
-        stateColors       : isBlank(params.stateColors)       ? defaults.stateColors : params.stateColors,
-        counters          : isBlank(params.counters)          ? defaults.counters : params.counters,
-        useCache          : isBlank(params.useCache)          ? defaults.useCache : params.useCache,
-        textNoData        : isBlank(params.textNoData)        ? defaults.textNoData : params.textNoData,
-        disconnectLabel   : isBlank(params.disconnectLabel)   ? defaults.disconnectLabel : params.disconnectLabel,
-        disconnectIcon    : isBlank(params.disconnectIcon)    ? defaults.disconnectIcon : params.disconnectIcon,
-        columnsIn         : isBlank(params.columnsIn)         ? [] : params.columnsIn,
-        columnsEx         : isBlank(params.columnsEx)         ? [] : params.columnsEx,
-        workspacesIn      : isBlank(params.workspacesIn)      ? [] : params.workspacesIn,
-        workspacesEx      : isBlank(params.workspacesEx)      ? [] : params.workspacesEx,
-        singleToolbar     : isBlank(params.singleToolbar)     ? defaults.singleToolbar : params.singleToolbar,
-        onClickItem       : isBlank(params.onClickItem)       ? null : params.onClickItem,
-        onDblClickItem    : isBlank(params.onDblClickItem)    ? null : params.onDblClickItem,
-        afterCompletion   : isBlank(params.afterCompletion)   ? defaults.afterCompletion : params.afterCompletion,
-        createWorkspaces  : [],
-        columns           : [],
+        link                    : link,
+        additionalData          : isBlank(params.additionalData)        ? defaults.additionalData : params.additionalData,
+        createButtonIcon        : isBlank(params.createButtonIcon)      ? defaults.createButtonIcon : params.createButtonIcon,
+        createButtonLabel       : isBlank(params.createButtonLabel)     ? defaults.createButtonLabel : params.createButtonLabel,
+        disconnectButtonIcon    : isBlank(params.disconnectButtonIcon)  ? defaults.disconnectButtonIcon : params.disconnectButtonIcon,
+        disconnectButtonLabel   : isBlank(params.disconnectButtonLabel) ? defaults.disconnectButtonLabel : params.disconnectButtonLabel,
+        editable                : isBlank(params.editable)              ? defaults.editable : params.editable,
+        hidePanel               : isBlank(params.hidePanel)             ? defaults.hidePanel : params.hidePanel,
+        hideHeader              : isBlank(params.hideHeader)            ? defaults.hideHeader : params.hideHeader,
+        hideHeaderControls      : isBlank(params.hideHeaderControls)    ? defaults.hideHeaderControls : params.hideHeaderControls,
+        hideHeaderLabel         : isBlank(params.hideHeaderLabel)       ? defaults.hideHeaderLabel : params.hideHeaderLabel,
+        headerTopLabel          : isBlank(params.headerTopLabel)        ? defaults.headerTopLabel : params.headerTopLabel,
+        headerLabel             : isBlank(params.headerLabel)           ? defaults.headerLabel : params.headerLabel,
+        headerSubLabel          : isBlank(params.headerSubLabel)        ? defaults.headerSubLabel : params.headerSubLabel,
+        headerToggle            : isBlank(params.headerToggle)          ? false : params.headerToggle,
+        compactDisplay          : isBlank(params.compactDisplay)        ? false : params.compactDisplay,
+        openInPLM               : isBlank(params.openInPLM)             ? defaults.openInPLM : params.openInPLM,
+        openOnDblClick          : isBlank(params.openOnDblClick)        ? defaults.openOnDblClick : params.openOnDblClick,
+        placeholder             : isBlank(params.placeholder)           ? defaults.placeholder : params.placeholder,
+        reload                  : isBlank(params.reload)                ? defaults.reload : params.reload,
+        reset                   : isBlank(params.reset)                 ? defaults.reset : params.reset,
+        search                  : isBlank(params.search)                ? defaults.search : params.search,
+        showInDialog            : isBlank(params.showInDialog)          ? defaults.showInDialog : params.showInDialog,
+        multiSelect             : isBlank(params.multiSelect)           ? defaults.multiSelect : params.multiSelect,
+        filterBySelection       : isBlank(params.filterBySelection)     ? defaults.filterBySelection : params.filterBySelection,
+        actions                 : isBlank(params.actions)               ? [] : params.actions,
+        layout                  : isBlank(params.layout)                ? defaults.layout : params.layout,
+        collapsePanel           : isBlank(params.collapsePanel)         ? defaults.collapsePanel : params.collapsePanel,
+        collapseContents        : isBlank(params.collapseContents)      ? defaults.collapseContents : params.collapseContents,
+        groupBy                 : isBlank(params.groupBy)               ? defaults.groupBy : params.groupBy,
+        groupLayout             : isBlank(params.groupLayout)           ? defaults.groupLayout : params.groupLayout,
+        number                  : isBlank(params.number)                ? defaults.number : params.number,
+        contentSize             : isBlank(params.contentSize)           ? defaults.contentSize  : params.contentSize,
+        contentSizes            : isBlank(params.contentSizes)          ? defaults.contentSizes  : params.contentSizes,
+        tileIcon                : isBlank(params.tileIcon)              ? defaults.tileIcon  : params.tileIcon,
+        tileImage               : isBlank(params.tileImage)             ? defaults.tileImage : params.tileImage,
+        tileImageFieldId        : '',
+        tileTitle               : isBlank(params.tileTitle)             ? defaults.tileTitle : params.tileTitle,
+        tileSubtitle            : isBlank(params.tileSubtitle)          ? defaults.tileSubtitle : params.tileSubtitle,
+        tileDetails             : isBlank(params.tileDetails)           ? defaults.tileDetails : params.tileDetails,
+        tableHeaders            : isBlank(params.tableHeaders)          ? true : params.tableHeaders,
+        tableColumnsLimit       : isBlank(params.tableColumnsLimit)     ? defaults.tableColumnsLimit : params.tableColumnsLimit,
+        tableTotals             : isBlank(params.tableTotals)           ? defaults.tableTotals : params.tableTotals,
+        tableRanges             : isBlank(params.tableRanges)           ? defaults.tableRanges : params.tableRanges,
+        stateColors             : isBlank(params.stateColors)           ? defaults.stateColors : params.stateColors,
+        counters                : isBlank(params.counters)              ? defaults.counters : params.counters,
+        useCache                : isBlank(params.useCache)              ? defaults.useCache : params.useCache,
+        textNoData              : isBlank(params.textNoData)            ? defaults.textNoData : params.textNoData,
+        fieldsIn                : isBlank(params.fieldsIn)              ? [] : params.fieldsIn,
+        fieldsEx                : isBlank(params.fieldsEx)              ? [] : params.fieldsEx,
+        workspacesIn            : isBlank(params.workspacesIn)          ? [] : params.workspacesIn,
+        workspacesEx            : isBlank(params.workspacesEx)          ? [] : params.workspacesEx,
+        singleToolbar           : isBlank(params.singleToolbar)         ? defaults.singleToolbar : params.singleToolbar,
+        onClickItem             : isBlank(params.onClickItem)           ? null : params.onClickItem,
+        onDblClickItem          : isBlank(params.onDblClickItem)        ? null : params.onDblClickItem,
+        afterCompletion         : isBlank(params.afterCompletion)       ? defaults.afterCompletion : params.afterCompletion,
+        createWorkspaceIds      : [],
+        columns                 : [],
     }
 
     if(isBlank(settings.contentSize)) settings.contentSize = 'xs';
@@ -1090,9 +1169,9 @@ function genPanelTop(id, settings, className) {
 
     }
 
-    settings.dialog = elemTop.hasClass('dialog');
+    if(elemTop.hasClass('dialog')) settings.showInDialog = true;
 
-    if(settings.dialog        ) { elemTop.addClass('surface-level-1'); appendOverlay(false); }
+    if(settings.showInDialog  ) { elemTop.addClass('surface-level-1').addClass('dialog'); appendOverlay(false); }
     if(settings.compactDisplay) { elemTop.addClass('compact'); }
     if(settings.counters      ) { elemTop.addClass('with-panel-counters'); }
     if(settings.multiSelect   ) { elemTop.addClass('multi-select'); }
@@ -1100,6 +1179,8 @@ function genPanelTop(id, settings, className) {
     if(settings.hideHeader    ) { elemTop.addClass('no-header'); }
 
     if(!isBlank(settings.link)) elemTop.attr('data-link', settings.link);
+
+    settings.elemTop = elemTop;
 
     return elemTop;
 
@@ -1119,6 +1200,7 @@ function genPanelToolbar(id, settings, name) {
 
         case 'controls': 
             elemToolbar.appendTo($('#' + id + '-header')).addClass('panel-controls'); 
+            if(settings.hideHeaderControls) elemToolbar.addClass('hidden');
             break;
 
         case 'actions': 
@@ -1198,7 +1280,7 @@ function genPanelHeader(id, settings) {
 }
 function genPanelHeaderCloseButton(id, settings) {
 
-    if(!settings.dialog) return;
+    if(!settings.showInDialog) return;
 
     if(isBlank(settings.onClickCancel)) settings.onClickCancel = function() {};
 
@@ -1376,20 +1458,6 @@ function genPanelSelectionControls(id, settings) {
         $('<div></div>').appendTo(elemToolbar)
             .addClass('button')
             .addClass('icon')
-            .addClass('icon-select-all')
-            .addClass('xs')
-            .attr('id', id + '-select-all')
-            .attr('title', 'Select all')
-            .click(function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                panelSelectAll(id, $(this));
-            });
-
-
-        $('<div></div>').appendTo(elemToolbar)
-            .addClass('button')
-            .addClass('icon')
             .addClass('icon-deselect-all')
             .addClass('xs')
             .addClass('multi-select-action')
@@ -1400,6 +1468,19 @@ function genPanelSelectionControls(id, settings) {
                 e.stopPropagation();
                 panelDeselectAll(id, $(this));
             });
+
+        $('<div></div>').appendTo(elemToolbar)
+            .addClass('button')
+            .addClass('icon')
+            .addClass('icon-select-all')
+            .addClass('xs')
+            .attr('id', id + '-select-all')
+            .attr('title', 'Select all')
+            .click(function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                panelSelectAll(id, $(this));
+            });            
 
         if(settings.filterBySelection) {
 
@@ -1453,6 +1534,30 @@ function genPanelToggleButtons(id, settings, callbackExpand, callbackCollapse) {
             e.stopPropagation();
             callbackCollapse($(this));
         });
+
+}
+function genPanelAutoSaveToggle(id, settings) {
+
+    if(!settings.autoSave) return;
+
+    let elemToolbar = genPanelToolbar(id, settings, 'controls');
+
+    let elemToggle =  $('<div></div>').appendTo(elemToolbar)
+        .addClass('button')
+        .addClass('with-toggle')
+        .addClass(id + '-auto-save-toggle')
+        .html('Auto Save')
+        .attr('id', id + '-auto-save')
+        .click(function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).toggleClass('toggle-off').toggleClass('toggle-on').toggleClass('filled');
+            settings.autoSave = $(this).hasClass('toggle-on');
+        });
+
+    settings.autoSave = false;
+
+    return elemToggle;
 
 }
 function genPanelFilterSelect(id, settings, property, suffix, label) {
@@ -1658,6 +1763,31 @@ function genPanelReloadButton(id, settings) {
     return elemButtonReload;
 
 }
+function genPanelResetButton(id, settings) {
+
+    if(!settings.reset) return;
+
+    let elemButtonReset = $('#' + id + '-reset');
+
+    if(elemButtonReset.length > 0) return elemButtonReset;
+
+    let elemToolbar = genPanelToolbar(id, settings, 'controls');
+
+    elemButtonReset = $('<div></div>').appendTo(elemToolbar)
+        .addClass('button')
+        .addClass('icon')
+        .addClass('icon-starts-with')
+        .attr('id', id + '-reload')
+        .attr('title', 'Reset selection and filters of view')
+        .click(function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            panelReset(id, $(this));
+        });
+
+    return elemButtonReset;
+
+}
 function genPanelActionButton(id, settings, suffix, label, title, callback) {
 
     let elemToolbar      = genPanelToolbar(id, settings, 'actions');
@@ -1681,26 +1811,83 @@ function genPanelActionButton(id, settings, suffix, label, title, callback) {
     return elemActionButton;
 
 }
-function genPanelRemoveSelectedButton(id, settings, callback) {
+function genPanelCreateButton(id, settings, callback) {
 
     if(!settings.editable) return;
 
+    if(isBlank(settings.hideButtonCreate)) settings.hideButtonCreate = false;
+    if(isBlank(settings.createId)        ) settings.createId         = 'create';
+
+    if(settings.hideButtonCreate) return;
+
     let elemToolbar = genPanelToolbar(id, settings, 'actions');
 
-    let elemButtonRemoveSelected = $('<div></div>').appendTo(elemToolbar)
-        .addClass('red')
+    let elemButtonCreate = $('<div></div>').appendTo(elemToolbar)
+        .addClass('button')
+        .addClass('default')
+        .addClass('with-icon')
+        .addClass('panel-action-create')
+        .addClass(settings.createButtonIcon)
+        .attr('id', id + '-action-create')
+        .attr('title', 'Create new record and add it to this view')
+        .html(settings.createButtonLabel)
+        .click(function(e) {
+            
+            e.preventDefault();
+            e.stopPropagation();
+
+            insertCreate(settings.createWorkspaceNames, settings.createWorkspaceIds, {
+                id                  : settings.createId,
+                headerLabel         : settings.createHeaderLabel,
+                hideSections        : settings.createHideSections,
+                sectionsIn          : settings.createSectionsIn,
+                sectionsEx          : settings.createSectionsEx,
+                fieldsIn            : settings.createFieldsIn,
+                fieldsEx            : settings.createFieldsEx,
+                contextId           : id,
+                contextItem         : settings.link,
+                contextItems        : settings.createContextItems,
+                contextItemField    : settings.createContextItemField,
+                contextItemFields   : settings.createContextItemFields,
+                viewerImageFields   : settings.createViewerImageFields,
+                toggles             : settings.createToggles,
+                useCache            : settings.useCache,
+                afterCreation       : function(createId, createLink, data, contextId) { callback(createId, createLink, data, contextId); }
+            });
+            
+        });
+
+    return elemButtonCreate;
+
+}
+function genPanelDisconnectButton(id, settings, callback) {
+
+    if(!settings.editable) return;
+
+    if(isBlank(settings.hideButtonDisconnect)) settings.hideButtonDisconnect = false;
+
+    if(settings.hideButtonDisconnect) return;
+
+    let elemToolbar = genPanelToolbar(id, settings, 'actions');
+
+    let elemButtonDisconnect = $('<div></div>').appendTo(elemToolbar)
         .addClass('button')
         .addClass('with-icon')
-        .addClass(settings.disconnectIcon)
+        .addClass('panel-action-remove')
+        .addClass(settings.disconnectButtonIcon)
         .addClass('xs')
         .addClass('single-select-action')
         .addClass('multi-select-action')
-        .html(settings.disconnectLabel)
-        .click(function() {
-            callback();
+        .attr('id', id + '-action-disconnect')
+        .attr('title', 'Removes the selected elements from the view. The given items will remain in the database.')
+        .html(settings.disconnectButtonLabel)
+        .click(function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            callback($(this));
         });
 
-    return elemButtonRemoveSelected;
+    return elemButtonDisconnect;
 
 }
 function genPanelContents(id, settings) {
@@ -1717,6 +1904,13 @@ function genPanelContents(id, settings) {
         .addClass('panel-content')
         .addClass('no-scrollbar')
         .addClass(settings.contentSize);
+
+         if(elemTop.hasClass('surface-level-1')) elemContent.addClass('surface-level-1');
+    else if(elemTop.hasClass('surface-level-2')) elemContent.addClass('surface-level-2');
+    else if(elemTop.hasClass('surface-level-3')) elemContent.addClass('surface-level-3');
+    else if(elemTop.hasClass('surface-level-4')) elemContent.addClass('surface-level-4');
+    else if(elemTop.hasClass('surface-level-5')) elemContent.addClass('surface-level-5');
+
 
          if(settings.layout === 'table'  ) elemContent.addClass('table');
     else if(settings.layout === 'gallery') elemContent.addClass('tiles').addClass('gallery');
@@ -1770,12 +1964,14 @@ function genPanelContentItem(settings, params) {
     if(isBlank(params)) params = {};
 
     if(isBlank(params.link)    ) params.link     = '';
+    if(isBlank(params.edge)    ) params.edge     = '';
     if(isBlank(params.title)   ) params.title    = ''; else if (isBlank(params.partNumber)) params.partNumber = params.title.split(' - ')[0];
     if(isBlank(params.group)   ) params.group    = '';
     if(isBlank(params.subtitle)) params.subtitle = '';
 
     let item = {
         link        : params.link,
+        edge        : params.edge,
         partNumber  : params.partNumber,
         imageId     : '',
         imageLink   : '',
@@ -1863,10 +2059,12 @@ function genPanelFooterActionButton(id, settings, suffix, params, callback) {
 // Start & finish update of panel contents to display right contents
 function startPanelContentUpdate(id) {
 
-    let elemSearch   = $('#' + id + '-search-input');
-    let elemSelects  = $('.' + id + '-filter');
-    let elemToggles  = $('.' + id + '-filter-toggle');
-    let elemCounters = $('#' + id + '-counters');
+    let elemSearch         = $('#' + id + '-search-input');
+    let elemSelects        = $('.' + id + '-filter');
+    let elemToggles        = $('.' + id + '-filter-toggle');
+    let elemFilterSelected = $('#' + id + '-filter-selected-only');
+    let elemFilterEmpty    = $('#' + id + '-filter-empty-only');
+    let elemCounters       = $('#' + id + '-counters');
 
     if(elemSelects.length > 0) {
 
@@ -1898,6 +2096,10 @@ function startPanelContentUpdate(id) {
         })
     }
 
+    if(elemFilterSelected.length > 0) elemFilterSelected.removeClass('icon-toggle-on').addClass('icon-toggle-off').removeClass('filled');
+
+    if(elemFilterEmpty.length > 0) elemFilterEmpty.removeClass('icon-toggle-on').addClass('icon-toggle-off').removeClass('filled');
+
     if(elemCounters.length > 0) elemCounters.children().each(function() {
         $(this).html('').removeClass('not-empty');
     })
@@ -1921,12 +2123,34 @@ function stopPanelContentUpdate(response, settings) {
     // if(response.params.link      !== settings.link     ) return true;
 
     if(response.status === 403) {
-        showErrorMessage('No Permission', 'Current user does not have access to the given tab of this workspace');
+
+        let tabName   = 'given';
+        let endpoint  = response.url.split('?')[0];
+        let workspace = response.params.link.split('/')[4];
+
+        switch(endpoint) {
+
+            case '/quotes': tabName = 'Sourcing'; break;
+
+        }
+    
+        showErrorMessage('No Permission', 'Current user does not have access to the ' + tabName + ' tab in workspace ' + workspace);
         return true;
+
     } else if((response.status !== 200) && (response.status !== 204)) {
+
         showErrorMessage('Error ' + response.status, 'Failed to retrieve data from PLM for panel ' + settings.headerLabel + '. Please contact your administrator.');
         return true;
-    }    
+        
+    }
+
+    if(!isBlank(response.data)) {
+        if(!isBlank(response.data.currentState)) {
+            settings.elemTop.addClass('status-' + response.data.currentState.title.toUpperCase());
+        } else if(!isBlank(response.data.lifecycle)) {
+            settings.elemTop.addClass('status-' + response.data.lifecycle.title.toUpperCase());
+        }
+    }
 
     return false;
 
@@ -1963,11 +2187,11 @@ function setPanelCloneStatus(id, settings, responses) {
     }
 
 }
-function includePanelTableColumn (name, settings, counter) {
+function includePanelTableColumn (fieldId, fieldName, settings, counter) {
 
     if(settings.tableColumnsLimit > counter) {
-        if((settings.columnsIn.length === 0) || ( settings.columnsIn.includes(name))) {
-            if((settings.columnsEx.length === 0) || (!settings.columnsEx.includes(name))) {
+        if((settings.fieldsIn.length === 0) || ( settings.fieldsIn.includes(fieldId)) || ( settings.fieldsIn.includes(fieldName))) {
+            if((settings.fieldsEx.length === 0) || ((!settings.fieldsEx.includes(fieldId)) && (!settings.fieldsEx.includes(fieldName)))) {
                 return true;
             }
         }
@@ -1979,7 +2203,7 @@ function includePanelTableColumn (name, settings, counter) {
 function includePanelWorkspace (settings, name, id) {
 
     let included = false;
-    let excluded = true;
+    let excluded = false;
 
     if(settings.workspacesIn.length === 0) {
         included = true;
@@ -2034,8 +2258,9 @@ function setPanelContentActions(id, settings, responses) {
     let showActions         = false;
 
     for(let response of responses) {
-             if(response.url.indexOf('/permissions')       === 0) dataPermissions = response.data;
-        else if(response.url.indexOf('/linked-workspaces') === 0) dataWorkspaces  = response.data;
+             if(response.url.indexOf('/permissions')        === 0) dataPermissions = response.data;
+        else if(response.url.indexOf('/linked-workspaces')  === 0) dataWorkspaces  = response.data;
+        else if(response.url.indexOf('/related-workspaces') === 0) dataWorkspaces  = response.data;
     }
 
     if(!hasPermission(dataPermissions, 'edit_items')) {
@@ -2054,11 +2279,32 @@ function setPanelContentActions(id, settings, responses) {
     }
 
     Promise.all(requestsPermissions).then(function(responses) {
-        for(let response of responses) {
-            if(hasPermission(response.data, 'add_items')) {
-                $('#' + id + '-action-create').removeClass('disabled');
-                // showActions = true;
-                settings.createWorkspaceIds.push(response.params.link.split('/')[4]);
+        if(settings.createWorkspaceIds.length === 0) {
+            for(let response of responses) {
+                if(hasPermission(response.data, 'add_items')) {
+                    $('#' + id + '-action-create').removeClass('disabled');
+                    // showActions = true;
+                    settings.createWorkspaceIds.push(response.params.link.split('/')[4]);
+                }
+            }
+        } else {
+            let index = 0;
+            for(let workspaceId of settings.createWorkspaceIds) {
+                workspaceId = workspaceId.toString();
+                let keep = false;
+                for(let response of responses) {
+                    if(hasPermission(response.data, 'add_items')) {
+                        let permitted = response.params.link.split('/')[4];
+                        if(permitted == workspaceId) {
+                            keep = true;
+                            break;
+                        }
+                    }
+                }
+                if(!keep) {
+                    settings.createWorkspaceIds.splice(index, 1);
+                } else $('#' + id + '-action-create').removeClass('disabled');
+                index++;
             }
         }
         // if(showActions) $('#' + id).addClass('with-panel-actions'); else $('#' + id).removeClass('with-panel-actions');
@@ -2191,7 +2437,6 @@ function filterPanelContent(id) {
         }
     }
 
-
     elemContent.find('.content-item').each(function() {
 
         let elemContentItem = $(this);
@@ -2251,13 +2496,17 @@ function filterPanelContent(id) {
                         });
                     }
                 } else {
-                    elemContentItem.children().each(function() {
+                    elemContentItem.children('.column-editable').each(function() {
                         let elemCell = $(this);
                         if(elemCell.children().length === 0) {
                             hasEmptyContent = (elemCell.html() === '');
                         } else if(elemCell.children('.icon').length < 0) {
                             let fieldData = getFieldValue(elemCell);
                             hasEmptyContent = (isBlank(fieldData.value));
+                        } else {
+                            let elemControl = elemCell.children().first();
+                            let value = elemControl.val();
+                            if(isBlank(value)) hasEmptyContent = true;
                         }
                     
                     });
@@ -2267,7 +2516,6 @@ function filterPanelContent(id) {
 
             }
         }
-
 
         if(!showContentItem) {
             elemContentItem.hide(); 
@@ -2458,26 +2706,75 @@ function updatePanelCalculations(id) {
 // Panel Selection Controls
 function panelSelectAll(id, elemClicked) {
 
-    $('#' + id + '-content').find('.content-item').addClass('selected');
-    $('#' + id + '-content').find('.content-select-all').addClass('icon-check-box-checked').removeClass('icon-check-box');
+    let elemTop            = $('#' + id );
+    let elemContent        = $('#' + id + '-content');
 
-    togglePanelToolbarActions(elemClicked);
+    elemContent.find('.content-item').addClass('selected').addClass('checked');
+    elemContent.find('.content-select-all').addClass('icon-check-box-checked').removeClass('icon-check-box');
+
     updatePanelCalculations(id);
-    panelSelectAllDone(elemClicked);
+    togglePanelToolbarActions(elemClicked);
+
+    if(elemTop.hasClass('bom')) {
+        updateBOMPath(elemClicked);
+        if(settings.bom[id].viewerSelection) selectInViewer(id);
+    }
+
+    panelSelectAllDone(id, elemClicked);
 
 }
-function panelSelectAllDone(elemClicked) {}
+function panelSelectAllDone(id, elemClicked) {}
 function panelDeselectAll(id, elemClicked) {
 
-    $('#' + id + '-content').find('.content-item').removeClass('selected');
-    $('#' + id + '-content').find('.content-select-all').removeClass('icon-check-box-checked').addClass('icon-check-box');
+    let elemTop            = $('#' + id );
+    let elemContent        = $('#' + id + '-content');
+    let elemFilterSelected = $('#' + id + '-filter-selected-only');
 
-    togglePanelToolbarActions(elemClicked);
+    elemContent.find('.content-item').removeClass('selected').removeClass('checked');
+    elemContent.find('.content-select-all').removeClass('icon-check-box-checked').addClass('icon-check-box');
+
+    if(elemFilterSelected.length > 0) elemFilterSelected.removeClass('icon-toggle-on').addClass('icon-toggle-off').removeClass('filled');
+
+    filterPanelContent(id);
     updatePanelCalculations(id);
-    panelDeselectAllDone(elemClicked);
+    togglePanelToolbarActions(elemClicked);
+
+    if(elemTop.hasClass('bom')) {
+        updateBOMPath(elemClicked);
+        if(settings.bom[id].viewerSelection) selectInViewer(id);
+    }
+
+    panelDeselectAllDone(id, elemClicked);
 
 }
-function panelDeselectAllDone(elemClicked) {}
+function panelDeselectAllDone(id, elemClicked) {}
+
+
+
+// Panel reset (selection & filters)
+function panelReset(id, elemClicked) {
+
+    let elemTop     = $('#' + id );
+    let elemContent = $('#' + id + '-content');
+    let elemSearch  = $('#' + id + '-search-input');
+
+    elemContent.find('.content-item').removeClass('result').removeClass('selected').removeClass('hidden');
+    
+    if(elemSearch.length > 0) elemSearch.val('');
+
+    filterPanelContent(id);
+    updatePanelCalculations(id);
+    togglePanelToolbarActions(elemClicked);
+
+    if(elemTop.hasClass('bom')) {
+        updateBOMPath(elemClicked);
+        if(settings.bom[id].viewerSelection) selectInViewer(id);
+    }
+
+    panelResetDone(id, elemClicked);
+
+}
+function panelResetDone(id, elemClicked) {}
 
 
 
@@ -2701,6 +2998,7 @@ function genTilesList(id, items, settings) {
 
         let elemTile = genSingleTile({
             link        : item.link, 
+            edge        : item.edge, 
             descriptor  : item.descriptor, 
             tileIcon    : settings.tileIcon, 
             tileNumber  : number++, 
@@ -2772,6 +3070,7 @@ function genSingleTile(params, settings) {
     let elemTitle       = $('<div></div>').appendTo(elemTileDetails).addClass('tile-title');
 
     if(!isBlank(params.link)) elemTile.attr('data-link', params.link);
+    if(!isBlank(params.edge)) elemTile.attr('data-edge', params.edge);
     if(!isBlank(params.partNumber)) elemTile.attr('data-part-number', params.partNumber);
     
     if(!isBlank(params.descriptor)) { 
@@ -2843,6 +3142,8 @@ function genSingleTile(params, settings) {
                 .addClass('tile-status-label')
                 .html(label);
 
+            elemTile.addClass('with-status');
+
         }
 
     }
@@ -2863,22 +3164,36 @@ function genSingleTile(params, settings) {
 
     // }
 
-    if(isBlank(params.imageId) && isBlank(params.imageLink)) elemTile.addClass('no-image');
-    
+
+    if(isBlank(params.imageId)) {
+        if(isBlank(params.imageLink)) {
+            if(!isBlank(params.link)) {
+                if(params.link.indexOf('@') < 0) {
+                    elemTile.addClass('no-image');
+                }
+            }
+        }
+    } 
+
     if(params.imageLink.indexOf('https://images.profile.autodesk.com') === 0) {
-        $('<img>').appendTo(elemTileImage)
-            .attr('src', params.imageLink);
-    } else if(params.number) {
-        $('<div></div>').appendTo(elemTileImage)
-            .addClass('tile-counter')
-            .html(params.tileNumber);
+
+        $('<img>').appendTo(elemTileImage).attr('src', params.imageLink);
+        
     } else {
-        $('<span></span>').appendTo(elemTileImage)
-        .addClass('icon')
-        .addClass(params.tileIcon);
-    }
+
+        if(params.number) {
+            $('<div></div>').appendTo(elemTileImage)
+                .addClass('tile-counter')
+                .html(params.tileNumber);
+        } else {
+            $('<span></span>').appendTo(elemTileImage)
+                .addClass('icon')
+                .addClass(params.tileIcon);
+        }
     
-    appendImageFromCache(elemTileImage, settings, params, function() {});
+        appendImageFromCache(elemTileImage, settings, params, function() {});
+
+    }
 
     return elemTile;
 
@@ -3013,7 +3328,6 @@ function genTableHeaders(id, elemTHead, params) {
             .addClass('content-select-all')
             .addClass('icon')
             .addClass('icon-check-box')
-            .addClass('xxs')
             .click(function(e) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -3021,7 +3335,7 @@ function genTableHeaders(id, elemTHead, params) {
             });
 
 
-        $('<th></th>').appendTo(elemTHeadRow).append(elemToggleAll);
+        $('<th></th>').addClass('table-check-box').appendTo(elemTHeadRow).append(elemToggleAll);
 
     }
 
@@ -3052,9 +3366,9 @@ function clickTableToggleAll(elemClicked) {
     elemClicked.toggleClass('icon-check-box').toggleClass('icon-check-box-checked');
 
     if(elemClicked.hasClass('icon-check-box-checked')) {
-        elemTop.find('.content-item').addClass('selected');
+        elemTop.find('.content-item').addClass('checked').addClass('selected');
     } else {
-        elemTop.find('.content-item').removeClass('selected');
+        elemTop.find('.content-item').removeClass('checked').removeClass('selected');
     }
 
     togglePanelToolbarActions(elemClicked);
@@ -3134,7 +3448,7 @@ function genTableRows(id, elemTBody, settings, items, editableFields) {
             .click(function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                clickContentItem($(this), e);
+                clickContentItemSelect($(this), e);
                 togglePanelToolbarActions($(this));
                 updatePanelCalculations(id);
                 if(!isBlank(settings.onClickItem)) settings.onClickItem($(this));
@@ -3148,16 +3462,26 @@ function genTableRows(id, elemTBody, settings, items, editableFields) {
                 else if(settings.openOnDblClick) openItemByLink($(this).attr('data-link'));
             });
 
+        if(!isBlank(item.edge)) elemRow.attr('data-edge', item.edge);
+
         if(settings.editable && settings.multiSelect) {
 
             $('<td></td>').appendTo(elemRow)
                 .html('<div class="icon icon-check-box xxs"></div>')
                 .addClass('content-item-check-box')
+                .addClass('table-check-box')
                 .click(function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    clickContentItemSelect($(this));
+                    let elemContentItem = $(this).closest('.content-item');
+                        elemContentItem.toggleClass('checked');
+                    clickContentItemSelect(elemContentItem);
+                    resetTableSelectAllCheckBox(elemContentItem);
                 })
+                .dblclick(function(e){
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
     
         }
 
@@ -3260,14 +3584,12 @@ function panelTableCellValueChanged(elemControl) {
     let index   = elemControl.parent().index();
     let value   = elemControl.val();
 
-    console.log(id);
-
     elemControl.parent().addClass('changed');
     elemControl.closest('tr').addClass('changed');
 
     $('#' + id + '-save').show();
 
-    elemTop.find('.content-item.selected').each(function() {
+    elemTop.find('.content-item.checked').each(function() {
         $(this).addClass('changed');
         $(this).children().eq(index).addClass('changed');
         $(this).children().eq(index).children().first().val(value);
@@ -3327,35 +3649,57 @@ function togglePanelToolbarActions(elemClicked) {
 // }
 
 function clickListToggleAllDone(elemClicked) {}
-function clickContentItemSelect(elemCheckbox, e) {
+function clickContentItemSelect(elemClicked, e) {
 
-    let elemTop     = elemCheckbox.closest('.panel-top');
-    let elemClicked = elemCheckbox.closest('.content-item');
+    if(elemClicked.hasClass('checked')) elemClicked.addClass('selected'); else elemClicked.toggleClass('selected');
     
-    elemClicked.toggleClass('selected');
+    let elemTop    = elemClicked.closest('.panel-top');
+    let isSelected = elemClicked.hasClass('selected');;
+    // let elemClicked = elemCheckbox.closest('.content-item');
 
-    if(!elemTop.hasClass('multi-select')) elemClicked.siblings().removeClass('selected');
+    if(!elemClicked.hasClass('selected')) resetTableSelectAllCheckBox(elemClicked);
+
+    elemTop.find('.content-item').each(function() {
+        if(!$(this).hasClass('checked')) {
+            $(this).removeClass('selected');
+        }
+    });
+
+    if(isSelected) elemClicked.addClass('selected');
+
+    // if(!elemTop.hasClass('multi-select')) elemClicked.siblings().removeClass('selected');
     updateListCalculations(elemTop.attr('id'));
     togglePanelToolbarActions(elemClicked);
     clickContentItemSelectDone(elemClicked, e);
 
 }
-function clickContentItemDone(elemClicked, e) {}
+function clickContentItemSelectDone(elemClicked, e) {}
 function clickContentItem(elemClicked, e) {
-
-    let elemTop  = elemClicked.closest('.panel-top');
-
+    
     elemClicked.toggleClass('selected');
     elemClicked.siblings().removeClass('last');
+    
+    let elemTop    = elemClicked.closest('.panel-top');
+    let isSelected = elemClicked.hasClass('selected');
 
-    if(elemClicked.hasClass('selected')) elemClicked.addClass('last'); else elemClicked.removeClass('last');
+    if(!elemTop.hasClass('multi-select')) elemTop.find('.content-item').removeClass('selected').removeClass('last');
 
-    if(!elemTop.hasClass('multi-select')) elemClicked.siblings().removeClass('selected').removeClass('last');
+    if(isSelected) elemClicked.addClass('selected').addClass('last');
+
     // updateListCalculations(elemTop.attr('id'));
     clickContentItemDone(elemClicked, e);
 
 }
 function clickContentItemDone(elemClicked, e) {}
+function resetTableSelectAllCheckBox(elemRef) {
+
+    let elemPanel = elemRef.closest('.panel-top');
+    let elemCheck = elemPanel.find('th.table-check-box');
+    let elemChild = elemCheck.children('.icon-check-box-checked');
+
+    if(elemChild.length > 0) elemChild.removeClass('icon-check-box-checked').addClass('icon-check-box');
+
+}
 function updateListCalculations(id) {
 
     let elemTop         = $('#' + id);
@@ -3532,8 +3876,6 @@ function resetSaveActions() {
 
 }
 function showSaveDialog(id) {
-
-
 
     if(isBlank(id)) id = 'dialog-save';
 
@@ -4262,6 +4604,21 @@ function getSectionFieldValue(sections, fieldId, defaultValue, property) {
 
 
 
+// Functions to handle BOM configuration data
+function getBOMViewDefinition(data, bomViewName, wsConfig) {
+
+    for(let bomView of data) {
+        if(bomView.name == bomViewName) {
+            wsConfig.bomViewId     = bomView.id;
+            wsConfig.bomViewFields = bomView.fields;
+            break;
+        }
+    }
+
+}
+
+
+
 // Functions to handle BOM requests data
 function getBOMCellValue(urn, key, nodes, property) {
 
@@ -4409,12 +4766,14 @@ function getBOMPartsList(settings, data) {
         }
     }
 
-    getBOMParts(settings, parts, data.root, data.edges, data.nodes, 1.0, 1, '', []);
+    let rootPartNumber = getBOMCellValue(data.root, settings.urns.partNumber, data.nodes);
+
+    getBOMParts(settings, parts, data.root, data.edges, data.nodes, 1.0, 1, '', [rootPartNumber]);
 
     return parts;
 
 }
-function getBOMParts(settings, parts, parent, edges, nodes, quantity, level, numberPath, path) {
+function getBOMParts(settings, parts, parent, edges, nodes, quantity, level, numberPath, parents) {
 
     let result = { hasChildren : false };
     let fields = settings.viewFields || settings.columns;
@@ -4431,9 +4790,9 @@ function getBOMParts(settings, parts, parent, edges, nodes, quantity, level, num
                 quantity    : getBOMEdgeValue(edge, settings.urns.quantity, null, 0),
                 partNumber  : getBOMCellValue(edge.child, settings.urns.partNumber, nodes),
                 linkParent  : edge.edgeLink.split('/bom-items')[0],
-                parent      : path[path.length - 1],
                 level       : level,
-                path        : path.slice(),
+                parent      : parents[parents.length - 1],
+                parents     : parents.slice(),
                 fields      : [],
                 edgeId      : edge.edgeId,
                 number      : edge.itemNumber,
@@ -4441,8 +4800,11 @@ function getBOMParts(settings, parts, parent, edges, nodes, quantity, level, num
                 details     : {}
             }
 
-            node.path.push(node.partNumber);
             node.totalQuantity = node.quantity * quantity;
+
+            node.path = node.parents.map(function(parent) {
+                return parent;
+            }).join('|') + '|' + node.partNumber;
 
             result.hasChildren = true;
 
@@ -4491,7 +4853,10 @@ function getBOMParts(settings, parts, parent, edges, nodes, quantity, level, num
                 parts.push(node);
             }
 
-            let nodeBOM = getBOMParts(settings, parts, edge.child, edges, nodes, node.totalQuantity, level + 1, numberPath + edge.itemNumber + '.', node.path);
+            let nextParents = parents.slice();
+                nextParents.push(node.partNumber);
+
+            let nodeBOM = getBOMParts(settings, parts, edge.child, edges, nodes, node.totalQuantity, level + 1, numberPath + edge.itemNumber + '.', nextParents);
 
             node.hasChildren = nodeBOM.hasChildren;
 
@@ -4546,6 +4911,42 @@ function getBOMRollUpValues(bom, rollUps, nodeId, edge) {
 
 
 
+// Process bomPartsList structure
+function getBOMPartsListChildren(bomPartsList, partNumber, edgeId, levels, includeParent) {
+
+    if(isBlank(bomPartsList )) return;
+    if(isBlank(partNumber   )) partNumber    = '';
+    if(isBlank(edgeId       )) edgeId        = '';
+    if(isBlank(levels       )) levels        = 1;
+    if(isBlank(includeParent)) includeParent = true;
+
+    let result = [];
+    let level  = -1;
+
+    for(let bomPart of bomPartsList) {
+
+        if(bomPart.edgeId == edgeId) {
+
+            if(includeParent) result.push(bomPart);
+            level = bomPart.level;
+
+        } else if(level > -1) {
+
+            if(bomPart.level <= level) {
+                return result;
+            } else if(bomPart.level = (level + levels)) {
+                result.push(bomPart);
+            }
+
+        }
+
+    }
+
+    return result;
+
+}
+
+
 
 function onSerialNumberClick(elemClicked) {
 
@@ -4586,6 +4987,8 @@ function hasBOMRestrictedFields(urn, nodes) {
 
 // Retrieve field value from item's grid row data
 function getGridRowValue(row, fieldId, defaultValue, property) {
+
+    if(isBlank(row)) return defaultValue;
 
     for(let iField = 1; iField < row.rowData.length; iField++) {
 
@@ -4720,8 +5123,10 @@ function getAllImageFieldIDs(fields) {
     let imageFields = [];
 
     for(let field of fields) {
-        if(field.type.title === 'Image') {
-            imageFields.push(field.__self__.split('/').pop());
+        if(!isBlank(field.type)) {
+            if(field.type.title === 'Image') {
+                imageFields.push(field.__self__.split('/').pop());
+            }
         }
     }
 
@@ -4755,7 +5160,7 @@ function appendImageFromCache(elemParent, settings, params, onclick) {
     
     if(isBlank(params)) return;
     if(isBlank(params.replace)) params.replace = true;
-    if(isBlank(params.link   )) params.link    = '/plm';
+    if(isBlank(params.link   )) params.link    = '/plm'; else if(params.link.indexOf('@') > -1) return;
 
     if(elemParent.children().length === 0) {
     
@@ -4778,7 +5183,7 @@ function appendImageFromCache(elemParent, settings, params, onclick) {
     }
 
     let urlBase = (params.link.indexOf('/vault/') > -1) ? '/vault' : '/plm';
-
+    
     $.get(urlBase + '/image-cache', {
         link        : params.link,
         imageId     : params.imageId,
@@ -4809,7 +5214,7 @@ function appendImageFromCache(elemParent, settings, params, onclick) {
 
 
 // Add new field to sections payload, adds given section if new
-function addFieldToPayload(payload, sections, elemField, fieldId, value, skipEmpty) {
+function addFieldToPayload(payloadSections, workspaceSections, elemField, fieldId, value, skipEmpty, type) {
 
     if(isBlank(skipEmpty)) skipEmpty = true;
 
@@ -4821,36 +5226,36 @@ function addFieldToPayload(payload, sections, elemField, fieldId, value, skipEmp
         }
     }
 
-    let sectionId   = null;
-    let isNew       = true;
-    let fieldData   = {};
+    let sectionId    = null;
+    let isNewSection = true;
+    let fieldData    = {};
 
     if(!isBlank(elemField)) {
         fieldData  = getFieldValue(elemField);
-        console.log(fieldData);
-        sectionId  = getFieldSectionId(sections, fieldData.fieldId);
+        sectionId  = getFieldSectionId(workspaceSections, fieldData.fieldId);
     } else {
-        sectionId  = getFieldSectionId(sections, fieldId);
+        sectionId  = getFieldSectionId(workspaceSections, fieldId);
         fieldData  = {
-            'fieldId' : fieldId,
-            'value'   : value
+            fieldId : fieldId,
+            value   : value
         };
+        if(!isBlank(type)) fieldData.type = type;
     }
 
     if(sectionId === -1) return;
 
-    for(section of payload) {
+    for(let section of payloadSections) {
         if(section.id === sectionId) {
-            isNew = false;
+            isNewSection = false;
             section.fields.push(fieldData);
         }
     }
 
-    if(isNew) {
-        payload.push({
-            'id'    : sectionId,
-            'fields': [fieldData]
-        })
+    if(isNewSection) {
+        payloadSections.push({
+            id     : sectionId,
+            fields : [fieldData]
+        });
     }
 
 }
@@ -4920,7 +5325,7 @@ function updateGridData(link, key, data, deleteEmpty, callback) {
 
                         }
 
-                        if(row.update) requests.push($.get('/plm/update-grid-row', { link : link, rowId : row.id, data : item}))
+                        if(row.update) requests.push($.post('/plm/update-grid-row', { link : link, rowId : row.id, data : item}))
 
                     }
 
@@ -4928,7 +5333,7 @@ function updateGridData(link, key, data, deleteEmpty, callback) {
 
             } else if(!deleteEmpty) row.hasMatch = true;
 
-            if(!row.hasMatch) requests.push($.get('/plm/remove-grid-row', { link : row.link}))
+            if(!row.hasMatch) requests.push($.post('/plm/remove-grid-row', { link : row.link}))
 
         }
 

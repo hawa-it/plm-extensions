@@ -1,0 +1,71 @@
+extends ../framework/layout
+
+block head
+
+    link(rel='stylesheet', href='/stylesheets/admin/shortcuts.css')
+    script(src='/javascripts/admin/shortcuts.js') 
+    script.
+        menu = !{JSON.stringify(menu)};
+
+block body
+
+    body.surface-level-1
+        
+        #header.dark
+            #header-logo
+            #header-title=title
+            #header-subtitle Save time when configuring your PLM tenant
+            #header-toolbar
+                input#search.button.input(placeholder='Type to filter')
+                #wsm.button.with-icon.icon-list-edit(title='Launch the Workspace Manager') Workspace Manager
+                #mmd.button.with-icon.icon-bom-tree(title='Launch the Main Menu Designer') Main Menu Designer
+                #lce.button.with-icon.icon-workflow(title='Launch the Lifecycle Editor') Lifecycle Editor
+                #settings.button.with-icon.icon-summary(title='Launch the General Settings') General Settings
+                select#mod.button.main
+                    option(value='nt') Open New Tabs
+                    option(value='sp') Use Single Panel
+                    option(value='dp') Use Dedicated Panels
+                #clc.button.icon.icon-clear-cache(title='Clear the cache of PLM requests')
+                #clw.button.icon.icon-close-window(title='Cloes all popup windows')
+                #header-avatar
+        .screen.surface-level-1
+
+            #workspaces.panel-top.surface-level-2
+                .panel-header 
+                    .panel-title 
+                        .panel-title-main Workspaces 
+                    .panel-controls
+                        select#workspace-categories.button
+                            option(value='---') All Categories
+                .panel-content.tiles.list.no-scrollbar#workspaces-list
+
+            #scripts.surface-level-1
+                .panel-header 
+                    .panel-title 
+                        .panel-title-main Scripts
+                    .panel-controls
+                        select#script-types.button
+                            option(value='---') All Script Types
+                            option(value='act') Action Scripts
+                            option(value='con') Condition Scripts
+                            option(value='val') Validation Scripts
+                            option(value='lib') Library Scripts
+                .panel-content.tiles.list.no-scrollbar#scripts-list
+
+            #picklists.surface-level-1
+                .panel-header 
+                    .panel-title 
+                        .panel-title-main Picklists
+                    .panel-controls
+                        select#picklist-types.button
+                            option(value='---') All Types
+                            option(value='dyn') Dynamic
+                            option(value='fix') Fixed
+                .panel-content.tiles.list.no-scrollbar#picklists-list
+
+            #roles.surface-level-1
+                .panel-header 
+                    .panel-title 
+                        .panel-title-main Roles 
+                    .panel-controls
+                .panel-content.tiles.list.no-scrollbar#roles-list

@@ -173,10 +173,10 @@ function setUIEvents() {
     
             let link = $('#processes-list').attr('data-source');
     
-            submitCreateForm(wsProblemReports.id, $('#processes-sections'), 'viewer-markup-image', {}, function(response ) {
+            submitCreate(wsProblemReports.id, $('#processes-sections'), 'viewer-markup-image', {}, function(response ) {
 
                 let newLink = response.data.split('.autodeskplm360.net')[1];
-                $.get('/plm/add-managed-items', { 'link' : newLink, 'items' : [ link ] }, function(response) {
+                $.post('/plm/add-managed-items', { 'link' : newLink, 'items' : [ link ] }, function(response) {
                 // $.get('/plm/add-relationship', { 'link' : newLink, 'relatedId' : link.split('/')[6] }, function(response) {
                     setProcesses($('#processes-list').attr('data-source'));
                     $('.process-dialog').hide();
@@ -663,8 +663,6 @@ function clickBOMItem(e, elemClicked) {
         updateViewer(elemClicked.attr('data-part-number'));
     }
 
-    updateBOMCounters(elemClicked.closest('.bom').attr('id'));
-
     // if(maintenanceMode) {
     //     viewerSetColors(listRed     , new THREE.Vector4(1,   0, 0, 0.5));
     //     viewerSetColors(listYellow  , new THREE.Vector4(1, 0.5, 0, 0.5));
@@ -674,18 +672,18 @@ function clickBOMItem(e, elemClicked) {
     // }
 
 }
-function clickBOMResetDone() {
+// function clickBOMResetDone() {
     
-    let link = $('#bom').attr('data-link');
+//     let link = $('#bom').attr('data-link');
     
-    $('.spare-part').removeClass('zoom');
+//     $('.spare-part').removeClass('zoom');
 
-    insertItemDetails(link);
-    insertAttachments(link, paramsAttachments);
-    resetSparePartsList();
-    updateViewer();
+//     insertItemDetails(link);
+//     insertAttachments(link, paramsAttachments);
+//     resetSparePartsList();
+//     updateViewer();
 
-}
+// }
 
 
 // Manage Spare Parts List Panel
@@ -817,8 +815,8 @@ function initViewerDone() {
 function viewerClickReset() {
     viewer.showAll();
     viewer.setViewFromFile();
-    clickBOMDeselectAll($('#bom-action-reset'));
-    clickBOMResetDone();
+    // clickBOMDeselectAll($('#bom-action-reset'));
+    // clickBOMResetDone();
 }
 function onViewerSelectionChanged(event) {
 
@@ -1027,7 +1025,7 @@ function submitRequest() {
                     ]
                 }
                 
-                $.get('/plm/add-grid-row', params, function(response) {});
+                $.post('/plm/add-grid-row', params, function(response) {});
 
             });
 

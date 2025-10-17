@@ -149,8 +149,8 @@ function getProductCatgories() {
         layout           : 'grid',
         contentSize      : 'xxl',
         tileImage        : 'IMAGE',
-        tileTitle        : 'MARKETING_NAME_' + languageId,
-        tileSubtitle     : 'MARKETING_TEXT_' + languageId,
+        tileTitle        : ['MARKETING_NAME_' + languageId, 'MARKETING_NAME_1'],
+        tileSubtitle     : ['MARKETING_TEXT_' + languageId, 'MARKETING_TEXT_1'],
         useCache         : true,
         onClickItem      : function(elemClicked) { selectProductCategory(elemClicked); }
     });
@@ -192,8 +192,8 @@ function selectProductCategory(elemClicked) {
         layout           : 'list',
         contentSize      : 'xxl',
         tileImage        : 'IMAGE',
-        tileTitle        : 'MARKETING_NAME_' + languageId,
-        tileSubtitle     : 'MARKETING_TEXT_' + languageId,
+        tileTitle        : ['MARKETING_NAME_' + languageId, 'MARKETING_NAME_1'],
+        tileSubtitle     : ['MARKETING_TEXT_' + languageId, 'MARKETING_TEXT_1'],
         useCache         : true,
         onClickItem      : function(elemClicked) { selectProductLine(elemClicked); }
     });    
@@ -270,13 +270,13 @@ function getBookmarkProducts() {
 
     $.get('/plm/bookmarks', {}, function(response) {
 
-        for(item of response.data.bookmarks) {
+        for(let item of response.data.bookmarks) {
             let workspace = item.workspace.link.split('/')[4];
             if(workspace === workspaces[2].wsId) links.push(item.item.link);
         }
 
-        for(link of links) {
-            $.get('/plm/details', { 'link' : link }, function(response) {
+        for(let link of links) {
+            $.get('/plm/details', { link : link }, function(response) {
                 addProductTile(response.data, $('#landing-tiles-pinned'));
             });
         }
@@ -292,10 +292,10 @@ function searchProducts() {
     $('#product').hide();
 
     let params = {
-        'wsId'      : workspaces[2].wsId,
-        'offset'    : 0,
-        'limit'     : 20,
-        'query'     : $('#header-search').val()
+        wsId      : workspaces[2].wsId,
+        offset    : 0,
+        limit     : 20,
+        query     : $('#header-search').val()
     }
 
     let elemParent = $('#search-results');
@@ -374,8 +374,8 @@ function selectProductLine(elemClicked) {
         layout           : 'grid',
         contentSize      : 'xxl',
         tileImage        : 'IMAGE',
-        tileTitle        : 'MARKETING_NAME_' + languageId,
-        tileSubtitle     : 'MARKETING_TEXT_' + languageId,
+        tileTitle        : ['MARKETING_NAME_' + languageId, 'MARKETING_NAME_1'],
+        tileSubtitle     : ['MARKETING_TEXT_' + languageId, 'MARKETING_TEXT_1'],
         useCache         : false,
         onClickItem      : function(elemClicked) { selectProduct(elemClicked); }
     });
@@ -417,16 +417,20 @@ function selectProduct(elemClicked) {
             id          : 'summary',
             bookmark    : true,
             contents    : [
-                { type : 'details'     , className : 'surface-level-1', params : { id : 'item-section-details', hideSections : true, sectionsIn: ['Specification'], headerLabel : 'Technical Specification' } },
-                { type : 'grid'        , className : 'surface-level-1', params : { id : 'item-section-grid'   , headerLabel : 'Variants', columnsIn : ['Title', 'Region', 'SKU', 'Target Launch'] } },
-                { type : 'images'      , className : 'surface-level-1', params : { id : 'item-section-images' , layout : 'grid', contentSize : 'm'} },
-                { type : 'attachments' , className : 'surface-level-1', params : { id : 'item-section-attachments', editable : false, contentSize : 's' , singleToolbar : 'controls'} },
-                { type : 'bom'         , className : 'surface-level-1', params : { 
+                { type : 'details'     , className : 'surface-level-2', params : { id : 'item-section-details', hideSections : true, sectionsIn: ['Specification'], headerLabel : 'Technical Specification' } },
+                { type : 'grid'        , className : 'surface-level-2', params : { id : 'item-section-grid'   , headerLabel : 'Variants', fieldsIn : ['Title', 'Region', 'SKU', 'Target Launch'] } },
+                { type : 'images'      , className : 'surface-level-2', params : { id : 'item-section-images' , layout : 'grid', contentSize : 'm'} },
+                { type : 'attachments' , className : 'surface-level-2', params : { id : 'item-section-attachments', editable : false, contentSize : 's' , singleToolbar : 'controls'} },
+                { type : 'bom'         , className : 'surface-level-2', params : { 
                     id                  : 'item-section-bom', 
                     bomViewName         : config.portfolio.bomViewName,
                     collapseContents    : true, 
                     hideDetails         : true,
+                    openInPLM           : true,
+                    search              : true,
+                    singleToolbar       : 'actions',
                     tableHeaders        : false,
+                    toggles             : true,
                     onClickItem  : function(elemClicked) { onClickBOMItem(elemClicked); }
                 }, link : product.ebom }
             ],

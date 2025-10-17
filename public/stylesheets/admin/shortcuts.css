@@ -1,0 +1,308 @@
+/*  MASTER LAYOUT */
+/* ----------------------------------------------------------------------------- */
+:root {
+
+    --border-top       : 24px;
+    --border-bottom    : 24px;
+    --border-h         : 24px;
+    --border-h-wide    : 46px;
+    --height-tile      : 32px;
+    --height-action    : 32px;
+    --width-workspaces : 690px;
+    --width-scripts    : 440px;
+    --width-picklists  : 440px;
+    --width-roles      : 380px;
+    --width-total      : calc(var(--width-workspaces) + var(--width-picklists) + var(--width-picklists) + var(--width-roles));
+    --width-half       : calc(var(--width-total) / 2);
+    --width-offset     : calc((var(--width-workspaces) + var(--width-picklists)) - var(--width-half));
+}
+
+.screen > div {
+    border-top-width    : var(--border-top);
+    border-bottom-width : var(--border-bottom);
+    top                 : 0px;
+    bottom              : 0px;
+}
+#workspaces {
+    border-left-width  : 2560px;
+    border-right-width : var(--border-h-wide);
+    right     : calc(50% + (1.0 * var(--border-h-wide)) - (0.5 * var(--border-h)) + var(--width-scripts) - var(--width-offset)); 
+    max-width : var(--width-workspaces);
+    min-width : var(--width-workspaces);
+    width     : var(--width-workspaces);
+}
+#scripts {
+    right  : calc(50% - (0.5 * var(--border-h)) - var(--width-offset)); 
+    width  : var(--width-scripts);
+}
+#picklists {
+    left   : calc(50% + (1.5 * var(--border-h)) + var(--width-offset));
+    width  : var(--width-picklists);
+}
+#roles {
+    left      : calc(50% + (2.5 * var(--border-h)) + var(--width-offset) + var(--width-picklists));
+    max-width : var(--width-roles);
+    min-width : var(--width-roles);
+    width     : var(--width-roles);
+}
+
+
+/* Search in Header */
+#search {
+    border-bottom   : 1px solid var(--color-blue-500) !important;
+    margin-right    : 48px;
+    width           : 200px !important
+}
+
+
+/* Tiles */
+.tile-title {
+    font-size   : 14px; 
+    font-weight : normal !important;
+    line-height : var(--height-tile);
+    padding     : 0px 10px;
+    flex-grow   : 1;
+    flex-shrink : inherit;
+}
+.tile-icon {
+    font-size   : 22px;
+    font-weight : 200;
+    line-height : var(--height-tile);
+    height      : var(--height-tile);
+    max-width   : var(--height-tile);
+    min-width   : var(--height-tile);
+    width       : var(--height-tile);
+    text-align  : center;
+}
+.tile-icon:first-of-type {
+    background  : var(--color-surface-level-3);
+}
+.tile.selected {
+    background : var(--color-selected-background);
+}
+.tile.selected .tile-icon:first-of-type {
+    background  : var(--color-selected-image) !important;
+}
+
+
+/* Workspaces */
+.tile-workspace-title {
+    flex-grow : unset;
+    max-width : calc(var(--width-workspaces) - 430px);
+    min-width : calc(var(--width-workspaces) - 430px);
+    width     : calc(var(--width-workspaces) - 430px);
+}
+.tile-workspace-category {
+    display : none;
+}
+.tile-workspace-details {
+    color       : #999;
+    display     : flex;
+    gap         : 8px;
+    line-height : var(--height-tile);
+}
+.tile:hover .tile-workspace-details { 
+    display : none; 
+}
+.tile-workspace {
+    max-width : 340px;
+    min-width : 340px;
+    width     : 340px;
+}
+.tile-workspace-name {
+    max-width   : 240px;
+}
+.tile-workspace-id {
+    font-weight  : 800 !important;
+    text-align   : right;
+    max-width    : 38px;
+    min-width    : 38px;
+    width        : 38px;
+}
+
+
+/* Actions */
+.tile-actions {
+    display : none;
+    gap     : 2px;
+}
+.tile-actions > div {
+    background  : var(--color-surface-level-4);
+    cursor      : pointer;
+    font-weight : 200;
+    line-height : var(--height-action);
+    max-height  : var(--height-action);
+    min-height  : var(--height-action);
+    height      : var(--height-action);
+    text-align  : center;
+    max-width   : var(--height-action);
+    min-width   : var(--height-action);
+    width       : var(--height-action);
+}
+.tile-actions > div:hover {
+    background : var(--color-surface-level-5);
+}
+.tile:hover .tile-actions { 
+    display : flex; 
+}
+
+
+/* Pinning */
+.icon-pin {
+    background : none;
+    color      : transparent;
+}
+.icon-pin-on {
+    color : var(--color-yellow-500);
+}
+.tile:hover .icon-pin {
+    color : var(--color-font);
+}
+
+
+@media (max-width: 1920px) {
+    
+    :root {
+        --border-bottom    : 24px;
+        --border-h         : 24px;
+        --border-h-wide    : 32px;
+        --width-workspaces : 700px;
+        --width-scripts    : 380px;
+        --width-picklists  : 360px;
+        --width-roles      : 280px;
+    }
+
+    #header-toolbar > .button.with-icon {
+        max-width : 22px;
+        overflow  : hidden;
+        padding   : 8px;
+    }
+    #header-toolbar > .button.with-icon::before {
+        margin-right : 30px;
+    }
+
+}
+@media (max-width: 1780px) {
+    
+    :root {
+        --border-bottom    : 24px;
+        --border-h         : 12px;
+        --border-h-wide    : 24px;
+        --width-workspaces : 640px;
+        --width-scripts    : 320px;
+        --width-picklists  : 280px;
+        --width-roles      : 260px;
+    } 
+
+} 
+@media (max-width: 1280px) {
+    
+    :root {
+        --border-bottom     : 18px;
+        --border-h          : 18px;
+        --border-h-wide     : 24px;
+        --width-workspaces  : 140px;
+        --width-scripts     : 320px;
+        --width-picklists   : 280px;
+        --width-roles       : 260px;
+        --height-workspaces : 300px;
+    } 
+
+    
+    #header-subtitle {
+        display : none;
+    }
+
+    #search {
+        margin  : unset;
+        padding : 8px;
+        width   : 90px !important;
+    }
+
+    #mod {
+        min-width : unset;
+        width     : 38px;
+    }
+
+    #workspaces {
+        border-width : var(--border-bottom) var(--border-h);
+        left      : 0px;
+        right     : 0px;
+        height    : var(--height-workspaces);
+        max-width : unset;
+        min-width : unset;
+        width     : unset;
+    }
+
+    .tile-workspace-title {
+        flex-grow : unset;
+        max-width : calc(100% - 430px);
+        min-width : calc(100% - 430px);
+        width     : calc(100% - 430px);
+    }
+
+    #scripts,
+    #picklists,
+    #roles {
+        border-width : var(--border-bottom) var(--border-h);
+        top :  calc(var(--height-workspaces) + (2 * var(--border-bottom)));
+        max-width : unset;
+        min-width : unset;
+        width :    unset;
+    }
+    #scripts {
+        left  : 0px;
+        right : calc(67% - var(--border-h));
+    }
+    #picklists {
+        left  : 33%;
+        right : calc(33% - var(--border-h));
+    }
+    #roles {
+        left : 67%;
+        right : 0px;
+    }
+
+} 
+
+@media (max-width: 920px) {
+
+    #header-title {
+        overflow : hidden;
+        text-overflow : ellipsis;
+    }
+
+    #header-toolbar > .button.with-icon { display : none; }
+
+}
+
+@media (max-width: 600px) {
+
+    .screen {
+        display        : flex;
+        flex-direction : column;
+        overflow       : auto;
+    }
+
+    .screen > div {
+        position : unset;
+    }
+
+    #workspaces {
+        height : unset;
+    }
+
+    .tile-workspace-id,
+    .tile-workspace-title {
+        display : none;
+    }
+
+    .tile-workspace-name {
+        color : var(--color-font);
+    }
+
+    .panel-content {
+        position : unset;
+    }
+
+}

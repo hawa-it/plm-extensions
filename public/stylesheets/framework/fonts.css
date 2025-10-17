@@ -4,7 +4,7 @@
     font-family: 'Material Symbols Sharp';
     font-style: normal;
     font-weight: 100 700;
-    src: url(../../fonts/MaterialSymbolsSharp.ttf) format('truetype');
+    src: url(../../fonts/Material_Symbols_Sharp/MaterialSymbolsSharp-VariableFont_FILL,GRAD,opsz,wght.ttf) format('truetype');
 }
 @font-face {
     font-family: ArtifaktElement;
@@ -214,7 +214,9 @@
 .icon-bookmark-off::before      { content : '\e838'; }
 .icon-bom::before               { content : '\e242'; }
 .icon-bom-tree::before          { content : '\e94b'; }
+.icon-bottom::before            { content : '\e258'; }
 .icon-calendar::before          { content : '\ebcc'; }
+.icon-cancel::before            { content : '\e5c9'; }
 .icon-cart-add::before          { content : '\e854'; }
 .icon-cart-remove::before       { content : '\e928'; }
 .icon-cart-clear::before        { content : '\f4f7'; }
@@ -225,14 +227,19 @@
 .icon-check-box-checked::before { content : '\e834'; }
 .icon-check-circle-add::before  { content : '\f23a'; }
 .icon-clear::before             { content : '\e14b'; }
+.icon-clear-cache::before       { content : '\f414'; }
+.icon-clipboard-add::before     { content : '\f848'; }
 .icon-clone::before             { content : '\e14d'; }
 .icon-close::before             { content : '\e5cd'; }
+.icon-close-window::before      { content : '\f745'; }
 .icon-collapse::before          { content : '\e5cf'; }
 .icon-columns::before           { content : '\e8f3'; }
+.icon-compare::before           { content : '\f459'; }
 .icon-contains::before          { content : '\f525'; }
 .icon-counter-1::before         { content : '\f784'; }
 .icon-counter-2::before         { content : '\f783'; }
 .icon-create::before            { content : '\e147'; }
+.icon-create-multiple::before   { content : '\e7e5'; }
 .icon-dark::before              { content : '\f03d'; }
 .icon-dashboard::before         { content : '\e871'; }
 .icon-delete::before            { content : '\e872'; }
@@ -241,6 +248,7 @@
 .icon-details::before           { content : '\e0ee'; }
 .icon-disconnect::before        { content : '\e16f'; }
 .icon-donut-chart::before       { content : '\e917'; }
+.icon-download::before          { content : '\e8d7'; }
 .icon-ends-with::before         { content : '\e31c'; }
 .icon-equals::before            { content : '\f77b'; }
 .icon-expand::before            { content : '\e5cc'; }
@@ -254,7 +262,9 @@
 .icon-folder::before            { content : '\e2c7'; }
 .icon-folder-open::before       { content : '\e2c8'; }
 .icon-go-there::before          { content : '\e5da'; }
+.icon-goto-folder::before       { content : '\e675'; }
 .icon-group::before             { content : '\e7ef'; }
+.icon-group-add::before         { content : '\e7f0'; }
 .icon-help::before              { content : '\f1c0'; }
 .icon-hide::before              { content : '\e8f5'; }
 .icon-highlight::before         { content : '\e518'; }
@@ -288,9 +298,11 @@
 .icon-order-in-work::before     { content : '\f811'; }
 .icon-package::before           { content : '\f569'; }
 .icon-panel::before             { content : '\f114'; }
+.icon-paste-below::before       { content : '\e861'; }
 .icon-pdf::before               { content : '\e415'; }
 .icon-picklist::before          { content : '\e9bd'; }
 .icon-pie-chart::before         { content : '\e79b'; }
+.icon-pin::before               { content : '\e6aa'; }
 .icon-prev::before              { content : '\eaa7'; }
 .icon-printer::before           { content : '\e8ad'; }
 .icon-problem::before           { content : '\e122'; }
@@ -303,6 +315,7 @@
 .icon-remove::before            { content : '\e644'; }
 .icon-reset::before             { content : '\f053'; }
 .icon-resize::before            { content : '\ea10'; }
+.icon-role::before              { content : '\ea67'; }
 .icon-rules::before             { content : '\f1c2'; }
 .icon-save::before              { content : '\e2c3'; }
 .icon-screenshot::before        { content : '\e412'; }
@@ -323,6 +336,7 @@
 .icon-status::before            { content : '\ea50'; }
 .icon-stock::before             { content : '\ebb8'; }
 .icon-stop:before               { content : '\ef71'; }
+.icon-stopwatch:before          { content : '\e425'; }
 .icon-summary:before            { content : '\f071'; }
 .icon-table::before             { content : '\e3ec'; }
 .icon-tabs::before              { content : '\e265'; }
@@ -336,6 +350,7 @@
 .icon-toggle-off::before        { content : '\e9f5'; }
 .icon-toggle-on::before         { content : '\e9f6'; }
 .icon-toggle-layout::before     { content : '\e42a'; }
+.icon-top::before               { content : '\e25a'; }
 .icon-trend-chart::before       { content : '\f190'; }
 .icon-type::before              { content : '\e574'; }
 .icon-undelete::before          { content : '\e938'; }
@@ -343,6 +358,8 @@
 .icon-unfold::before            { content : '\e5d7'; }
 .icon-upload::before            { content : '\e2c3'; }
 .icon-user::before              { content : '\e7fd'; }
+.icon-user-info::before         { content : '\f567'; }
+.icon-vault-item::before        { content : '\e991'; }
 .icon-viewer::before            { content : '\e9fe'; }
 .icon-width::before             { content : '\f730'; }
 .icon-workflow::before          { content : '\e4fd'; }

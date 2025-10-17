@@ -34,9 +34,9 @@ block body
             #new.panel.surface-level-2
                 .panel-header
                     .panel-title
-                        .panel-title-main Initiate New Process
-                .panel-message You encountered an issue? Please provide a few details below and let us fix the problem. You can provide more details and also upload files in the next step.
-                .panel-content#new-sections
+                        .panel-title-main#new-header
+                .panel-message#new-message
+                .panel-content#new-sections.surface-level-2
 
             #list.surface-level-1
                 .panel-header
@@ -53,10 +53,10 @@ block body
                             option(value='timeline') View Process Timeline Chart
                 .panel-content#views.surface-level-1
 
-                    #recents.list.tiles.m
-                    #bookmarks.list.tiles.m
-                    #mow.list.tiles.m
-                    #all.list.tiles.m
+                    #recents.list.tiles.l
+                    #bookmarks.list.tiles.l
+                    #mow.list.tiles.l
+                    #all.list.tiles.l
 
                     #progress
 
@@ -77,5 +77,7 @@ block body
                                         th Last Modification Date 
                                         th Status
                                 tbody#calendar-table-body
+
+            #create.dialog
 
         #item.screen

@@ -45,7 +45,30 @@ function setUIEvents() {
     $('#target-tenant').keydown(function (e) {
         if (e.keyCode == 13) {
             getWorkspaces('target');
+            $('.result-summary').html('');
+            $('.result-actions').html('');
+            $('.result-compare').hide();
+            $('#comparison-results').children().each(function() {
+                $(this).removeClass('match').removeClass('info').removeClass('diff').removeClass('varies').removeClass('disabled');
+            });
         }
+    });
+
+    $('.icon-compare').click(function() {
+        
+        let category  = $(this).parent().parent();
+        let urlSource = getUtilityURL(category.attr('id'), environments.source);
+        let urlTarget = getUtilityURL(category.attr('id'), environments.target);
+
+        let height  = screen.height * 0.6;
+        let width   = screen.width / 2 * 0.6;
+        let options = 'height=' + height
+            + ',width=' + width 
+            + ',top=0,toolbar=1,Location=0,Directxories=0,Status=0,menubar=1,Scrollbars=1,Resizable=1';
+
+        const handle = window.open(urlSource, 'comparisonLeft' , options + ',left=0'       );
+            if(handle) window.open(urlTarget, 'comparisonRight', options + ',left=' + width);
+
     });
 
     $('#source-workspaces').on('change', function() {
@@ -80,6 +103,33 @@ function setUIEvents() {
         $('#dialog-report').hide();
         $('#overlay').hide();
     }); 
+
+}
+function getUtilityURL(id, environment) {
+
+    let url = 'https://' + environment.tenantName + '.autodeskplm360.net' ;
+
+    switch(id) {
+
+        case 'result-settings'      : url += '/admin#section=setuphome&tab=workspaces&item=workspaceedit&params={%22workspaceID%22:%22' + environment.workspace.wsId + '%22}'; break;
+        case 'result-tabs'          : url += '/admin#section=setuphome&tab=workspaces&item=tabsedit&params={%22workspaceID%22:%22' + environment.workspace.wsId + '%22}'; break;
+        case 'result-details'       : url += '/admin#section=setuphome&tab=workspaces&item=itemdetails&params={%22workspaceID%22:%22' + environment.workspace.wsId + '%22,%22metaType%22:%22D%22}'; break;
+        case 'result-grid'          : url += '/admin#section=setuphome&tab=workspaces&item=grid&params={%22workspaceID%22:%22' + environment.workspace.wsId + '%22,%22metaType%22:%22G%22}'; break;
+        case 'result-managed'       : url += '/admin#section=setuphome&tab=workspaces&item=workflowitems&params={%22workspaceID%22:%22' + environment.workspace.wsId + '%22,%22metaType%22:%22L%22}'; break;
+        case 'result-bom'           : url += '/admin#section=setuphome&tab=workspaces&item=bom&params={%22workspaceID%22:%22' + environment.workspace.wsId + '%22,%22metaType%22:%22B%22}'; break;
+        case 'result-relationships' : url += '/admin#section=setuphome&tab=workspaces&item=relationship&params={%22workspaceID%22:%22' + environment.workspace.wsId + '%22}'; break;
+        case 'result-print'         : url += '/admin#section=setuphome&tab=workspaces&item=advancedPrintViewList&params={%22workspaceID%22:%22' + environment.workspace.wsId + '%22}'; break;
+        case 'result-behaviors'     : url += '/admin#section=setuphome&tab=workspaces&item=behavior&params={%22workspaceID%22:%22' + environment.workspace.wsId + '%22}'; break;
+        case 'result-states'        : 
+        case 'result-transitions'   : url += '/workflowEditor.form?workspaceId=' + environment.workspace.wsId; break;
+        case 'result-picklists'     : url += '/admin#section=setuphome&tab=general&item=picklistsview'; break;
+        case 'result-roles'         : url += '/admin#section=adminusers&tab=roles'; break;
+        case 'result-scripts'       :
+        case 'result-libraries'     : url += '/admin#section=setuphome&tab=scripts'; break;
+
+    }
+
+    return url;
 
 }
 
@@ -167,6 +217,34 @@ function addActionEntry(params) {
             window.open(url, '_blank');
         });       
 
+    if(!isBlank(params.comp)) {
+
+        elemNew.addClass('with-comparison-button');
+
+        $('<div></div>').appendTo(elemNew)
+            .addClass('action-icon')
+            .addClass('button')
+            .addClass('icon')
+            .addClass('icon-compare')
+            .attr('link-source', params.comp.source)
+            .attr('link-target', params.comp.target)
+            .click(function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                let height  = screen.height * 0.6;
+                let width   = screen.width / 2 * 0.6;
+                let options = 'height=' + height
+                    + ',width=' + width 
+                    + ',top=0,toolbar=1,Location=0,Directxories=0,Status=0,menubar=1,Scrollbars=1,Resizable=1';
+
+                window.open('https://' + environments.source.tenantName + '.autodeskplm360.net' + params.comp.source, 'comparisonLeft' , options + ',left=0'       );
+                window.open('https://' + environments.target.tenantName + '.autodeskplm360.net' + params.comp.target, 'comparisonRight', options + ',left=' + width);
+
+            });
+
+    }
+    
     $('<div></div>').appendTo(elemText)
         .addClass('action-instructions')
         .html(params.text);
@@ -192,6 +270,7 @@ function startComparison() {
     $('#console-content').html('');
     $('.result-summary').html('');
     $('.result-actions').html('');
+    $('.result-compare').hide();
     $('#report-content').html('');
     $('#comparison-start').addClass('disabled');
     $('#comparison-report').addClass('disabled');
@@ -315,6 +394,8 @@ function compareWorkspacesSettings() {
             addLogEntry('Workspace settings do not match', 'diff');
             $('#result-settings').addClass('diff');
         }
+
+        $('#result-settings').find('.result-compare').show();
 
         compareWorkspaceTabs();
 
@@ -449,6 +530,8 @@ function compareWorkspaceTabs() {
             addLogEntry('Workspace tabs do not match', 'diff');
             $('#result-tabs').addClass('diff');
         }
+
+        $('#result-tabs').find('.result-compare').show();
 
         compareItemDetailsTab();
 
@@ -1007,6 +1090,8 @@ function compareItemDetailsTab() {
             $('#result-details').addClass('diff');
         }
 
+        $('#result-details').find('.result-compare').show();
+
         compareGridTab();
 
     });
@@ -1352,6 +1437,8 @@ function compareGridTab() {
             $('#result-grid').addClass('diff');
         }
 
+        $('#result-grid').find('.result-compare').show();
+
         compareManagedItemsTab();
 
     });
@@ -1605,6 +1692,8 @@ function compareManagedItemsTab() {
             $('#result-managed').addClass('diff');
         }
         
+        $('#result-managed').find('.result-compare').show();   
+
         compareBOMTab();
 
     });
@@ -1978,6 +2067,8 @@ function compareBOMTab() {
             $('#result-bom').addClass('diff');
         }
 
+        $('#result-bom').find('.result-compare').show();
+
         compareWorkspaceRelationships();
 
     });
@@ -2037,6 +2128,8 @@ function compareWorkspaceRelationships() {
             $('#result-relationships').addClass('diff');
         }
 
+        $('#result-relationships').find('.result-compare').show();
+
         comparePrintViews();
 
     });
@@ -2051,7 +2144,7 @@ function compareWorkspaceRelationship(relSource, relTarget, url, step, label) {
         let hasMatch = false;
         
         for(let target of relTarget) {
-            if(source.link === target.link) hasMatch = true;
+            if(source.title === target.title) hasMatch = true;
         }
 
         if(!hasMatch) {
@@ -2068,7 +2161,7 @@ function compareWorkspaceRelationship(relSource, relTarget, url, step, label) {
         let hasMatch = false;
     
         for(let source of relSource) {
-            if(source.link === target.link) hasMatch = true;
+            if(source.title === target.title) hasMatch = true;
         }
 
         if(!hasMatch) {
@@ -2178,6 +2271,8 @@ function comparePrintViews() {
             addLogEntry('Advanced Print Views do not match', 'diff');
             $('#result-print').addClass('diff');
         }
+
+        $('#result-print').find('.result-compare').show();
         
         compareBehaviors();
 
@@ -2326,6 +2421,8 @@ function compareBehaviors() {
             $('#result-behaviors').addClass('diff');
         }
 
+        $('#result-behaviors').find('.result-compare').show();
+
         compareWorkflowStates();
 
     });
@@ -2468,6 +2565,8 @@ function compareWorkflowStates() {
             addLogEntry('Workspace Workflow States do not match', 'diff');
             $('#result-states').addClass('diff');
         }
+
+        $('#result-states').find('.result-compare').show();
 
         compareWorkflowTransistions();
 
@@ -2712,6 +2811,8 @@ function compareWorkflowTransistions() {
             $('#result-transitions').addClass('diff');
         }
 
+        $('#result-transitions').find('.result-compare').show();
+
         comparePicklists();
 
     });
@@ -2859,6 +2960,8 @@ function comparePicklists() {
                 $('#result-picklists').addClass('diff');
             }
 
+            $('#result-picklists').find('.result-compare').show();
+
             comparePermissions();
 
         });
@@ -2896,7 +2999,12 @@ function comparePicklistValues(sourcePicklist, targetPicklist, step, urlPicklist
     for(let target of targetPicklist.values) {
         if(!target.hasMatch) {
             match = false;
-            addActionEntry({ text : 'Remove value <b>' + target.label + '</b> from list <b>' + targetPicklist.label + '</b>', step : step, url  : urlPicklist });
+            addActionEntry({ text : 'Remove value <b>' + target.label + '</b> from list <b>' + targetPicklist.label + '</b>', step : step, url  : urlPicklist,
+                comp : {
+                    source : '/admin#section=setuphome&tab=general&item=picklistedit&params={"name":"' + targetPicklist.id + '"}',
+                    target : '/admin#section=setuphome&tab=general&item=picklistedit&params={"name":"' + targetPicklist.id + '"}'
+                }
+            });
         }
     }
 
@@ -2963,6 +3071,7 @@ function comparePermissions() {
                     hasMatch        = true;
                     reportMatch     = true;
                     target.hasMatch = true;
+                    target.sourceId = source.id;
 
                     if(source.description !== target.description) {
                         matches.description = false;
@@ -3032,6 +3141,10 @@ function comparePermissions() {
                             text : 'Remove permission <b>' + getPermissionLabel(definitions, permission.id) + '</b> from role <b>' + target.name + '</b>', 
                             step : step,
                             url  : url
+                            // comp : {
+                            //     source : '/adminRolePermissionsManage.do?roleId=' + target.sourceId,
+                            //     target : '/adminRolePermissionsManage.do?roleId=' + target.id
+                            // }
                         });
                     }
                 }
@@ -3054,6 +3167,8 @@ function comparePermissions() {
             addLogEntry('Workspace Roles do not match', 'diff');
             $('#result-roles').addClass('diff');
         }
+
+        $('#result-roles').find('.result-compare').show();
 
         compareScriptSources();
 
@@ -3157,7 +3272,11 @@ function compareScriptSources() {
                 addActionEntry({ 
                     text : 'Update source code of <b>' + source.data.uniqueName + '</b>', 
                     step : step,
-                    url  : '/script.form?ID=' + source.params.link.split('/').pop()
+                    url  : '/script.form?ID=' + source.params.link.split('/').pop(),
+                    comp : {
+                        source : '/script.form?ID=' + source.params.link.split('/').pop(),
+                        target : '/script.form?ID=' + target.params.link.split('/').pop()
+                    }
                 });
             }
 
@@ -3168,7 +3287,11 @@ function compareScriptSources() {
                 addActionEntry({ 
                     text : text, 
                     step : step,
-                    url  : '/script.form?ID=' + source.params.link.split('/').pop()
+                    url  : '/script.form?ID=' + source.params.link.split('/').pop(),
+                    comp : {
+                        source : '/script.form?ID=' + source.params.link.split('/').pop(),
+                        target : '/script.form?ID=' + target.params.link.split('/').pop()
+                    }
                 });
             }
 
@@ -3198,6 +3321,8 @@ function compareScriptSources() {
             addLogEntry('Script sources / descriptions do not match', 'diff');
             $('#result-scripts').addClass('diff');
         }
+
+        $('#result-scripts').find('.result-compare').show();
 
         compareLibraryScripts();
 
@@ -3281,7 +3406,11 @@ function compareLibraryScripts() {
                         addActionEntry({ 
                             text : 'Update source code of <b>' + source.data.uniqueName + '</b>', 
                             step : step,
-                            url  : '/script.form?ID=' + source.params.link.split('/').pop()
+                            url  : '/script.form?ID=' + source.params.link.split('/').pop(),
+                            comp : {
+                                source : '/script.form?ID=' + source.params.link.split('/').pop(),
+                                target : '/script.form?ID=' + target.params.link.split('/').pop()
+                            }
                         });
                     } 
 
@@ -3302,6 +3431,8 @@ function compareLibraryScripts() {
                     addLogEntry('Library scripts do not match', 'diff');
                     $('#result-libraries').addClass('diff');
                 }
+
+                $('#result-libraries').find('.result-compare').show();
 
                 endComparison();
 

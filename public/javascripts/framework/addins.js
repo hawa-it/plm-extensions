@@ -1,4 +1,5 @@
-let isolate = false;
+let isolate  = false;
+let messages = [];
 
 
 // Confirm successful login
@@ -25,8 +26,6 @@ function genAddinTileActions(elemTile) {
 
     let elemActions = $('<div></div>').appendTo(elemTile).addClass('tile-actions');
 
-    console.log(host);
-    
     switch(elemTile.attr('data-type')) {
 
         case 'vault-folder': 
@@ -40,15 +39,15 @@ function genAddinTileActions(elemTile) {
         case 'vault-file': 
         case 'vault-item': 
             if(host === 'inventor') {
-                genAddinTileAction(elemActions, 'gotoVaultFile', 'icon-folder-open', 'Go To Folder'); 
-                genAddinTileAction(elemActions, 'gotoVaultItem', 'icon-open'       , 'Go To Item'); 
-                genAddinTileAction(elemActions, 'addComponent' , 'icon-select'     , 'Place Component'); 
-                genAddinTileAction(elemActions, 'openComponent', 'icon-product'    , 'Open Component'); 
+                // genAddinTileAction(elemActions, 'gotoVaultFile', 'icon-goto-folder', 'Go To Folder'); 
+                // genAddinTileAction(elemActions, 'gotoVaultItem', 'icon-vault-item' , 'Go To Item'); 
+                genAddinTileAction(elemActions, 'openComponent', 'icon-folder-open', 'Open Component'); 
+                genAddinTileAction(elemActions, 'addComponent' , 'icon-product'    , 'Place Component'); 
             } else {
-                genAddinTileAction(elemActions, 'gotoVaultFile', 'icon-folder-open', 'Go To Folder'); 
-                genAddinTileAction(elemActions, 'gotoVaultItem', 'icon-open'       , 'Go To Item'); 
-                genAddinTileAction(elemActions, 'addComponent' , 'icon-select'     , 'Insert into CAD'); 
-                genAddinTileAction(elemActions, 'openComponent', 'icon-product'    , 'Open in CAD'); 
+                genAddinTileAction(elemActions, 'gotoVaultFile', 'icon-goto-folder', 'Go To Folder'); 
+                genAddinTileAction(elemActions, 'gotoVaultItem', 'icon-vault-item' , 'Go To Item'); 
+                genAddinTileAction(elemActions, 'openComponent', 'icon-folder-open', 'Open in CAD'); 
+                genAddinTileAction(elemActions, 'addComponent' , 'icon-product'    , 'Insert into CAD'); 
             }
             break;
 
@@ -68,22 +67,16 @@ function genAddinTileActions(elemTile) {
 }
 function genAddinPLMItemTileActions(elemActions) {
 
-    console.log(host);
-
     if(host === 'inventor') {   
-        genAddinTileAction(elemActions, 'selectComponent' , 'icon-select-circle', 'Select in Window'); 
-        genAddinTileAction(elemActions, 'isolateComponent', 'icon-3d'           , 'Isolate in Window'); 
-        genAddinTileAction(elemActions, 'addComponent'    , 'icon-select'       , 'Place Component'); 
-        genAddinTileAction(elemActions, 'openComponent'   , 'icon-product'      , 'Open Component');  
+        // genAddinTileAction(elemActions, 'gotoVaultFile', 'icon-goto-folder', 'Go To Folder'); 
+        // genAddinTileAction(elemActions, 'gotoVaultItem', 'icon-vault-item' , 'Go To Item'); 
+        genAddinTileAction(elemActions, 'openComponent', 'icon-folder-open', 'Open Component');  
+        genAddinTileAction(elemActions, 'addComponent' , 'icon-product'    , 'Place Component'); 
     } else {
-        // genAddinTileAction(elemActions, 'gotoVaultFile', 'icon-product', 'Navigate to file in Vault');
-        // genAddinTileAction(elemActions, 'gotoVaultItem', 'icon-item'   , 'Navigate to item in Vault');
-        // genAddinTileAction(elemActions, 'addComponent' , 'icon-create' , 'Add to active window');
-        // genAddinTileAction(elemActions, 'openComponent', 'icon-clone'  , 'Open in new window');
-        genAddinTileAction(elemActions, 'gotoVaultFile', 'icon-folder-open', 'Go To Folder'); 
-        genAddinTileAction(elemActions, 'gotoVaultItem', 'icon-open'       , 'Go To Item'); 
-        genAddinTileAction(elemActions, 'addComponent' , 'icon-select'     , 'Insert into CAD'); 
-        genAddinTileAction(elemActions, 'openComponent', 'icon-product'    , 'Open in CAD'); 
+        genAddinTileAction(elemActions, 'gotoVaultFile', 'icon-goto-folder', 'Go To Folder'); 
+        genAddinTileAction(elemActions, 'gotoVaultItem', 'icon-vault-item' , 'Go To Item'); 
+        genAddinTileAction(elemActions, 'openComponent', 'icon-folder-open', 'Open in CAD'); 
+        genAddinTileAction(elemActions, 'addComponent' , 'icon-product'    , 'Insert into CAD'); 
     }
 
 }
@@ -94,7 +87,6 @@ function genAddinTileAction(elemActions, action, icon, tooltip) {
     let elemAction = $('<div></div>').appendTo(elemActions)
         .addClass('button')
         .addClass('icon')
-        .addClass('filled')
         .addClass(icon)
         .attr('title', tooltip)
         .click(function(e) {
@@ -117,14 +109,14 @@ async function invokeAddinAction(elements, action) {
     
     switch(action) {
 
-        case 'addComponent'     : chrome.webview.postMessage("addComponent:"     + selection.toString()); break;
-        case 'openComponent'    : chrome.webview.postMessage("openComponent:"    + selection.toString()); break;
-        case 'gotoVaultFolder'  : chrome.webview.postMessage("gotoVaultFolder:"  + selection.toString()); break;
-        case 'gotoVaultFile'    : chrome.webview.postMessage("gotoVaultFile:"    + selection.toString()); break;
-        case 'gotoVaultItem'    : chrome.webview.postMessage("gotoVaultItem:"    + selection.toString()); break;
-        case 'gotoVaultECO'     : chrome.webview.postMessage("gotoVaultECO:"     + selection.toString()); break;
-        case 'selectComponent'  : chrome.webview.postMessage("selectComponent:"  + selection.toString()); break;
-        case 'isolateComponent' : chrome.webview.postMessage("isolateComponent:" + selection.toString()); break;
+        case 'addComponent'     : chrome.webview.postMessage("addComponent:"     + getNewMessageID(null) + selection.toString()); break;
+        case 'openComponent'    : chrome.webview.postMessage("openComponent:"    + getNewMessageID(null) + selection.toString()); break;
+        case 'gotoVaultFolder'  : chrome.webview.postMessage("gotoVaultFolder:"  + getNewMessageID(null) + selection.toString()); break;
+        case 'gotoVaultFile'    : chrome.webview.postMessage("gotoVaultFile:"    + getNewMessageID(null) + selection.toString()); break;
+        case 'gotoVaultItem'    : chrome.webview.postMessage("gotoVaultItem:"    + getNewMessageID(null) + selection.toString()); break;
+        case 'gotoVaultECO'     : chrome.webview.postMessage("gotoVaultECO:"     + getNewMessageID(null) + selection.toString()); break;
+        case 'selectComponent'  : chrome.webview.postMessage("selectComponent:"  + getNewMessageID(null) + selection.toString()); break;
+        case 'isolateComponent' : chrome.webview.postMessage("isolateComponent:" + getNewMessageID(null) + selection.toString()); break;
 
     }
 
@@ -144,7 +136,7 @@ function getSelectionData(elements) {
 
         } else if(elemSelected.hasClass('vault-file')) {
 
-            selected = 'file;' + elemSelected.attr('data-id') + ';' + elemSelected.attr('data-name') + ';' + elemSelected.attr('data-folder');
+            selected = 'file;' + elemSelected.attr('data-id') + ';' + elemSelected.attr('data-name') + ';' + elemSelected.attr('data-file-id');
 
         } else if(elemSelected.hasClass('vault-item')) {
 
@@ -163,6 +155,16 @@ function getSelectionData(elements) {
     }
 
     return selection;
+
+}
+function getNewMessageID(elements) {
+
+    let now = new Date();
+    let id  = now.getTime();
+    
+    messages.push({ id : id, elements : elements });
+
+    return id + ';';
 
 }
 

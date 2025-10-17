@@ -232,11 +232,11 @@ function setUIEvents() {
     
             let link = $('#processes').attr('data-link');
     
-            submitCreateForm(wsProblemReports.id, $('#processes-sections'), 'viewer-markup-image', {}, function(response ) {
+            submitCreate(wsProblemReports.id, $('#processes-sections'), 'viewer-markup-image', {}, function(response ) {
 
                 let newLink = response.data.split('.autodeskplm360.net')[1];
 
-                $.get('/plm/add-managed-items', { 'link' : newLink, 'items' : [ link ] }, function(response) {
+                $.post('/plm/add-managed-items', { 'link' : newLink, 'items' : [ link ] }, function(response) {
 
                     insertChangeProcesses(link, paramsProcesses);
                     $('.process-dialog').hide();
@@ -262,7 +262,7 @@ function setUIEvents() {
 
         $('#create-connect').hide();
 
-        submitCreateForm(wsSupplierPackages.id, $('#create-connect-sections'), null, {}, function(response ) {
+        submitCreate(wsSupplierPackages.id, $('#create-connect-sections'), null, {}, function(response ) {
             $('#overlay').hide();
         });
         
