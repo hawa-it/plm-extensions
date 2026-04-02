@@ -483,7 +483,7 @@ function insertBOMItemFilter() {
     }
 
 }
-/*
+/* inaktiv
 function createListParents(callback) {
 
     let requests = [];
