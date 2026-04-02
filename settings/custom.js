@@ -89,9 +89,9 @@ exports.applications = {
     configurator   : {},
     dashboard      : {},
     explorer       : {
-        bomViewName          : 'Details', // Details Basic
-        fieldIdPRImage       : 'IMAGE_1',
-        fieldIdPRContext     : 'AFFECTED_ITEM',
+    //    bomViewName          : 'Details', // Details Basic
+    //    fieldIdPRImage       : 'IMAGE_1',
+    //    fieldIdPRContext     : 'AFFECTED_ITEM',
         kpis : [
             // ------------------------------------------------------------------------------------------------------------------
             // Use the following parameters to define the KPIs:
