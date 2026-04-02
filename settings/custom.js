@@ -147,19 +147,25 @@ exports.applications = {
             ]},
             { id : 'weight', title : 'Weight', fieldId : 'ITEM_WEIGHT', fieldType : 'Float', type : 'value', style : 'bars', data : [], sortBy : 'value', sortDirection : 'descending', digits : 3 },
             { id : 'material', title : 'Material', fieldId : 'MATERIAL', type : 'value', style : 'bars', data : [] },
-            { id : 'reach', title : 'REACH', fieldId : 'REACH', type : 'value', style : 'bars', data : [
-                { value : 'Not Compliant' , color : 0, vector : 'red'    },
+            { id : 'compliance-summary', title : 'Compliance Summary', fieldId : 'MC_GRAPH', type : 'non-empty', style : 'bars', data : [
+                { value : 'No' , color : 0, vector : 'red' }, //Not Compliant
                 { value : 'Unknown'       , color : 1, vector : 'yellow' },
-                { value : 'Not Validated' , color : 2, vector : 'yellow' },
-                { value : 'Not Required'  , color : 3, vector : 0        },
-                { value : 'Compliant'     , color : 4, vector : 'green'  }
+                { value : 'NA' , color : 1, vector : 'yellow' }, //Not Validated
+                { value : 'Yes'     , color : 4, vector : 'green' } //Compliant    
+            ] },
+            { id : 'reach', title : 'REACH', fieldId : 'REACH', type : 'value', style : 'bars', data : [
+                { value : 'No' , color : 0, vector : 'red'    }, //Not Compliant
+                { value : 'Unknown'       , color : 1, vector : 'yellow' },
+                { value : 'Not assessed' , color : 2, vector : 'yellow' }, //Not Validated
+             //   { value : 'Not Required'  , color : 3, vector : 0        },
+                { value : 'Yes'     , color : 4, vector : 'green'  } //Compliant
             ] },
             { id : 'rohs', title : 'RoHS', fieldId : 'ROHS', type : 'value', style : 'bars', data : [
-                { value : 'Not Compliant' , color : 0, vector : 'red'    },
+                { value : 'No' , color : 0, vector : 'red'    }, //Not Compliant
                 { value : 'Unknown'       , color : 1, vector : 'yellow' },
-                { value : 'Not Validated' , color : 2, vector : 'yellow' },
+                { value : 'Not assessed' , color : 2, vector : 'yellow' }, //Not Validated
                 { value : 'Not Required'  , color : 3, vector : 0        },
-                { value : 'Compliant'     , color : 4, vector : 'green'  }
+                { value : 'Yes'     , color : 4, vector : 'green'  } //Compliant
             ]},
             { id : 'carbon-emissions', title : 'Carbon Emissions', fieldId : 'CARBON_EMISSIONS', type : 'value', style : 'bars', data : [], sortBy : 'value', sortDirection : 'descending' },
             { id : 'quality-inspection-required', title : 'Quality Inspection Required', fieldId : 'INSPECTION_REQUIRED', type : 'value', style : 'counters', data : [
