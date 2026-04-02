@@ -11,7 +11,7 @@ let redirectUri     = 'http://localhost:8080/callback';
 let tenant          = '';
 let defaultTheme    = 'dark';   // Set the standard theme to dark or light
 let enableCache     = false;    
-
+// Test
 
 // ---------------------------------------------------------------------------------------------------------------------------
 //  OPTIONAL ADDITIONAL CLIENT ID FOR 2-LEGGED AUTHENTICATION
