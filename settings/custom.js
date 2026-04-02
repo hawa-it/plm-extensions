@@ -31,7 +31,7 @@ exports.common = {
         designReviewTasks            : 77,
         engineeringProjects          : 213,
         engineeringProjectActivities : 211,
-        items                        : 57,
+        items                        : 79, //57
         nonConformances              : 98,
         problemReports               : 82,
 
@@ -62,7 +62,7 @@ exports.common = {
     },
 
     viewer : {
-        numberProperties   : ['Part Number', 'Name', 'label', 'Artikelnummer', 'Bauteilnummer'],
+        numberProperties   : ['TEILENUMMER', 'Artikelnummer', 'Bauteilnummer', 'Dokumentnummer_ERP', 'Dokumentnummer_ERP', 'V_Name'], //'Part Number', 'Name', 'label', 'Artikelnummer', 'Bauteilnummer'
         suffixPrimaryFile  : ['.iam.dwf', '.iam.dwfx', '.ipt.dwf', '.ipt.dwfx'],
         extensionsIncluded : ['dwf', 'dwfx', 'nwd', 'ipt', 'stp', 'step', 'sldprt', 'pdf'],
     }
@@ -97,12 +97,12 @@ exports.applications = {
         // }]
     },
     mbom           : {
-        // workspaceEBOM : {
-        //     workspaceId : null, // uses common.workspaceIds.items per default
-        // }, 
-        // workspaceMBOM : {
-        //     workspaceId : null, // uses common.workspaceIds.items per default
-        // }
+         workspaceEBOM : {
+             workspaceId : 79, // null uses common.workspaceIds.items per default
+         }, 
+         workspaceMBOM : {
+             workspaceId : 79, // null uses common.workspaceIds.items per default
+         }
     },
     portal         : {
         // downloadPatterns : [{
