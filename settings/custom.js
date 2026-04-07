@@ -145,7 +145,6 @@ exports.applications = {
                 { value : '-'   , color : 2, vector : 'yellow' },
                 { value : 'No'  , color : 4, vector : 'green'  }
             ]},
-            { id : 'weight', title : 'Weight', fieldId : 'ITEM_WEIGHT', fieldType : 'Float', type : 'value', style : 'bars', data : [], sortBy : 'value', sortDirection : 'descending', digits : 3 },
             { id : 'material', title : 'Material', fieldId : 'MATERIAL', type : 'value', style : 'bars', data : [] },
             { id : 'compliance-summary', title : 'Compliance Summary', fieldId : 'MC_GRAPH', type : 'non-empty', style : 'bars', data : [
                 { value : 'No' , color : 0, vector : 'red' }, //Not Compliant
@@ -155,14 +154,14 @@ exports.applications = {
             ] },
             { id : 'reach', title : 'REACH', fieldId : 'REACH', type : 'value', style : 'bars', data : [
                 { value : 'No' , color : 0, vector : 'red'    }, //Not Compliant
-                { value : 'Unknown'       , color : 1, vector : 'yellow' },
+             //   { value : 'Unknown'       , color : 1, vector : 'yellow' },
                 { value : 'Not assessed' , color : 2, vector : 'yellow' }, //Not Validated
              //   { value : 'Not Required'  , color : 3, vector : 0        },
                 { value : 'Yes'     , color : 4, vector : 'green'  } //Compliant
             ] },
             { id : 'rohs', title : 'RoHS', fieldId : 'ROHS', type : 'value', style : 'bars', data : [
                 { value : 'No' , color : 0, vector : 'red'    }, //Not Compliant
-                { value : 'Unknown'       , color : 1, vector : 'yellow' },
+            //    { value : 'Unknown'       , color : 1, vector : 'yellow' },
                 { value : 'Not assessed' , color : 2, vector : 'yellow' }, //Not Validated
                 { value : 'Not Required'  , color : 3, vector : 0        },
                 { value : 'Yes'     , color : 4, vector : 'green'  } //Compliant
@@ -179,6 +178,7 @@ exports.applications = {
                 { value : 'In Progress', color : 2, vector : 'yellow' },
                 { value : 'PASS'       , color : 4, vector : 'green'  }
             ]},
+            { id : 'weight', title : 'Weight', fieldId : 'ITEM_WEIGHT', fieldType : 'Float', type : 'value', style : 'bars', data : [], sortBy : 'value', sortDirection : 'descending', digits : 3 },    
         ],    
     },
     impactanalysis : {},
