@@ -133,6 +133,7 @@ exports.applications = {
                 { value : '-'   , color : 2, vector : 'yellow' },
                 { value : 'Make', color : 4, vector : 'green'  }
             ]},
+            { id : 'type', title : 'Type', fieldId : 'TEILEART', type : 'value', style : 'bars', data : [] },    
             { id : 'vendor', title : 'Vendor', fieldId : 'VENDOR', type : 'value', style : 'bars', data : [] },
             { id : 'country', title : 'Country', fieldId : 'COUNTRY', type : 'value', style : 'bars', data : [] },
             { id : 'long-lead-time', title : 'Long Lead Time', fieldId : 'LONG_LEAD_TIME', type : 'value', style : 'counters', data : [
@@ -167,6 +168,8 @@ exports.applications = {
                 { value : 'Yes'     , color : 4, vector : 'green'  } //Compliant
             ]},
             { id : 'carbon-emissions', title : 'Carbon Emissions', fieldId : 'CARBON_EMISSIONS', type : 'value', style : 'bars', data : [], sortBy : 'value', sortDirection : 'descending' },
+            { id : 'pdm-category', title : 'PDM Category', fieldId : 'CATEGORY', type : 'value', style : 'bars', data : [] },
+            { id : 'pdm-location', title : 'PDM Location', fieldId : 'SOURCE', type : 'value', style : 'bars', data : [] },    
             { id : 'quality-inspection-required', title : 'Quality Inspection Required', fieldId : 'INSPECTION_REQUIRED', type : 'value', style : 'counters', data : [
                 { value : 'Yes' , color : 0, vector : 'red'   },
                 { value : '-'   , color : 2, vector : 'yellow' },
@@ -189,12 +192,45 @@ exports.applications = {
         // }]
     },
     mbom           : {
-         workspaceEBOM : {
-             workspaceId : 79, // null uses common.workspaceIds.items per default
-         }, 
-         workspaceMBOM : {
-             workspaceId : 79, // null uses common.workspaceIds.items per default
-         }
+    workspaceEBOM : {
+        workspaceId : 79,
+        fieldIDs : {
+            mbom     : 'MANUFACTURING_BOM',
+            number   : 'ARTIKEL',
+            category : 'CATEGORY'
+        }
+    },
+    workspaceMBOM : {
+        workspaceId : 79,
+        fieldIDs : {
+            ebom     : 'ENGINEERING_BOM',
+            number   : 'ARTIKEL',
+            title    : 'BENENNUNG1_DOC',
+            category : 'CATEGORY'
+        }
+    },
+    mbomRoot : {
+        fieldsToCopy : [
+            { ebom : 'BEZEICHNUNG1_ITEM',        mbom : 'BEZEICHNUNG1_ITEM' },
+            { ebom : 'BEZEICHNUNG2_ITEM',        mbom : 'BEZEICHNUNG2_ITEM' },
+            { ebom : 'BENENNUNG1_DOC',           mbom : 'BENENNUNG1_DOC' },
+            { ebom : 'BENENNUNG2_DOC',           mbom : 'BENENNUNG2_DOC' },
+            { ebom : 'PROJEKT',                  mbom : 'PROJEKT' },
+            { ebom : 'VERANTWORTLICHER_BEREICH', mbom : 'VERANTWORTLICHER_BEREICH' },
+            { ebom : 'COMMENTS',                 mbom : 'COMMENTS' }
+        ]
+    },
+    newProcessDefaults : [
+        ['MBOM_COPY', 'true']
+    ],
+    switchEBOMRevision : 'working',
+    pinEBOMItemsInMBOM : false,
+    suffixMBOMNumber   : 'M',
+    predefinedSearchesInAddItems : [
+        { title : 'Purchased Parts', query : 'ITEM_DETAILS:CATEGORY="Standard Part"' },
+        { title : 'Packaging Parts', query : 'ITEM_DETAILS:CATEGORY="Packaging Parts"' }
+    ],
+    sectionsInCreateForm : []
     },
     portal         : {
         // downloadPatterns : [{
