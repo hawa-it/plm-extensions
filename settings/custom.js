@@ -197,7 +197,7 @@ exports.applications = {
         fieldIDs : {
             mbom     : 'MANUFACTURING_BOM',
             number   : 'ARTIKEL',
-            type: 'TEILEART',
+            type: 'SOURCE',
             category : 'CATEGORY'
         }
     },
@@ -207,7 +207,7 @@ exports.applications = {
             ebom     : 'ENGINEERING_BOM',
             number   : 'ARTIKEL',
             title    : 'BENENNUNG1_DOC',
-            type: 'TEILEART',
+            type: 'SOURCE',
             category : 'CATEGORY'
         }
     },
@@ -231,10 +231,10 @@ exports.applications = {
     pinEBOMItemsInMBOM : false,
     suffixMBOMNumber   : 'M',
     predefinedSearchesInAddItems : [
-        { title : 'Purchased Parts', query : 'ITEM_DETAILS:CATEGORY%3D%22Standard%20Part%22' },
-        { title : 'Packaging Parts', query : 'ITEM_DETAILS:CATEGORY%3D%22Packaging%20Parts%22' }
+        { title : 'Purchased Parts', query : 'ITEM_DETAILS:CATEGORY_TYPE%3D%22Standard%20Part%22' },
+        { title : 'Packaging Parts', query : 'ITEM_DETAILS:CATEGORY_TYPE%3D%22Packaging%20Parts%22' }
     ],
-    sectionsInCreateForm : []
+    //sectionsInCreateForm : []
     },
     portal         : {
         // downloadPatterns : [{
