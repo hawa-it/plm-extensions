@@ -231,8 +231,8 @@ exports.applications = {
     pinEBOMItemsInMBOM : false,
     suffixMBOMNumber   : 'M',
     predefinedSearchesInAddItems : [
-        { title : 'Purchased Parts', query : 'ITEM_DETAILS:CATEGORY_TYPE%3D%22Standard%20Part%22' },
-        { title : 'Packaging Parts', query : 'ITEM_DETAILS:CATEGORY_TYPE%3D%22Packaging%20Parts%22' }
+        { title : 'Purchased Parts', query : 'ITEM_DETAILS:CATEGORY="Standard Part"' },
+        { title : 'Packaging Parts', query : 'ITEM_DETAILS:CATEGORY="Packaging Parts"' }
     ],
     //sectionsInCreateForm : []
     },
