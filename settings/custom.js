@@ -209,6 +209,9 @@ exports.applications = {
             category : 'CATEGORY'
         }
     },
+    displayOptions : {
+        tabOperations : false
+    },    
     mbomRoot : {
         fieldsToCopy : [
             { ebom : 'BEZEICHNUNG1_ITEM',        mbom : 'BEZEICHNUNG1_ITEM' },
