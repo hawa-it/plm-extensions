@@ -197,6 +197,7 @@ exports.applications = {
         fieldIDs : {
             mbom     : 'MANUFACTURING_BOM',
             number   : 'ARTIKEL',
+            type: 'TEILEART',
             category : 'CATEGORY'
         }
     },
@@ -206,11 +207,13 @@ exports.applications = {
             ebom     : 'ENGINEERING_BOM',
             number   : 'ARTIKEL',
             title    : 'BENENNUNG1_DOC',
+            type: 'TEILEART',
             category : 'CATEGORY'
         }
     },
     displayOptions : {
-        tabOperations : false
+        tabOperations : false,
+        bomColumnMakeBuy : false
     },    
     mbomRoot : {
         fieldsToCopy : [
@@ -228,8 +231,8 @@ exports.applications = {
     pinEBOMItemsInMBOM : false,
     suffixMBOMNumber   : 'M',
     predefinedSearchesInAddItems : [
-        { title : 'Purchased Parts', query : 'ITEM_DETAILS:CATEGORY="Standard Part"' },
-        { title : 'Packaging Parts', query : 'ITEM_DETAILS:CATEGORY="Packaging Parts"' }
+        { title : 'Purchased Parts', query : 'ITEM_DETAILS:CATEGORY%3D%22Standard%20Part%22' },
+        { title : 'Packaging Parts', query : 'ITEM_DETAILS:CATEGORY%3D%22Packaging%20Parts%22'' }
     ],
     sectionsInCreateForm : []
     },
