@@ -227,7 +227,7 @@ exports.applications = {
         ]
     },
     newProcessDefaults : [
-        ['MBOM_COPY', 'true']
+        ['MBOM_COPY', true]
     ],
     switchEBOMRevision : 'working',
     pinEBOMItemsInMBOM : false,
