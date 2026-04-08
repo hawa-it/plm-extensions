@@ -197,7 +197,7 @@ exports.applications = {
         fieldIDs : {
             mbom     : 'MANUFACTURING_BOM',
             number   : 'ARTIKEL',
-            type: 'SOURCE',
+            type: 'MAKE_OR_BUY',
             category : 'CATEGORY'
         }
     },
@@ -207,7 +207,7 @@ exports.applications = {
             ebom     : 'ENGINEERING_BOM',
             number   : 'ARTIKEL',
             title    : 'BENENNUNG1_DOC',
-            type: 'SOURCE',
+            type: 'MAKE_OR_BUY',
             category : 'CATEGORY'
         }
     },
