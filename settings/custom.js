@@ -56,8 +56,8 @@ exports.common = {
 
     workspaces: {
         items : {
-            defaultBOMView : 'Tree Navigator', // This BOM view should contain columns Descriptor, Number (see next setting) and BOM Quantity only
-            fieldIdNumber  : 'NUMBER'
+            defaultBOMView : 'Basic', // This BOM view should contain columns Descriptor, Number (see next setting) and BOM Quantity only
+            fieldIdNumber  : 'ARTIKEL'
         }
     },
 
