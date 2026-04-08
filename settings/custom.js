@@ -247,7 +247,50 @@ exports.applications = {
     projects       : {},
     reports        : {},
     reviews        : {},
-    sbom           : {},
+    sbom           : {
+            appTitle : 'Vertriebs-BOM Editor',
+    sourceBOM : {
+        fieldId     : 'ENGINEERING_BOM',
+        bomViewName : 'MBOM Transition'
+    },
+    targetBOM : {
+        fieldId       : 'SALES_VBOM',
+        bomViewName   : 'MBOM Transition',
+        itemTypeValue : 'Sales BOM',
+        prefixTitle   : 'VBOM ',
+        filterLabelIn : 'Show items contained in Sales VBOM only',
+        filterLabelEx : 'Hide items contained in Sales VBOM',
+        defaults : {
+            number      : { copyFrom : 'bom.ARTIKEL',            prefix : '', suffix : 'V' },
+            title       : { copyFrom : 'bom.BEZEICHNUNG1_ITEM',  prefix : '', suffix : '' },
+            description : { copyFrom : 'bom.BEZEICHNUNG2_ITEM',  prefix : '', suffix : '' }
+        }
+    },
+    itemsFieldIds : {
+        number      : 'ARTIKEL',
+        title       : 'BEZEICHNUNG1_ITEM',
+        description : 'BEZEICHNUNG2_ITEM',
+        type        : 'CATEGORY_TYPE'
+    },
+        picklistIdItemType : 'CUSTOM_LOOKUP_WS_ARTICLE_CATEGORY',
+    itemHighlight : {
+        fieldId : 'SPARE WEAR PART'
+    },
+    bomTypes : [{
+        mode          : 'list',
+        tabLabel      : 'Vertriebs BOM',
+        buttonLabels  : ['Add all recommended'],
+        bomItemTypes  : ['Spare Parts List', 'Part', 'Sales Assembly', 'Assembly'],
+        icon          : 'icon-details',
+        color         : 'red',
+        filterLabelIn : 'Show Sales List Items Only',
+        filterLabelEx : 'Hide Sales Parts List Items',
+        basePosNumber : 1,
+        hideQuantity  : false
+    }],
+    enableBOMPin : true,
+},    
+    },
     service        : {},
     variants       : {
         // workspaceItemVariants : {
