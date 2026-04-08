@@ -237,7 +237,7 @@ exports.applications = {
         { title : 'Purchased Parts', query : 'ITEM_DETAILS:CATEGORY="Standard Part"' },
         { title : 'Packaging Parts', query : 'ITEM_DETAILS:CATEGORY="Packaging Parts"' }
     ],
-    //sectionsInCreateForm : []
+    sectionsInCreateForm : [ 'Article', 'Purchasing Informations', 'Customer Specification' ],
     },
     portal         : {
         // downloadPatterns : [{
