@@ -1011,7 +1011,8 @@ exports.applications = {
             filterLabelEx : 'Hide Spare Parts List Items',
             basePosNumber : 101,
             hideQuantity  : true
-        },{
+        },/*
+        {
             mode          : '1-level-bom',
             tabLabel      : 'Maintenance Kits',
             buttonLabels  : ['New Kit'],
@@ -1031,7 +1032,8 @@ exports.applications = {
             filterLabelIn : 'Show Services Items Only',
             filterLabelEx : 'Hide Services Items',
             basePosNumber : 301
-        }],
+        }*/
+        ],
         enableBOMPin : false,
         viewerFeatures : {
             contextMenu   : false,
