@@ -274,7 +274,7 @@ exports.applications = {
     },
         picklistIdItemType : 'CUSTOM_LOOKUP_WS_ARTICLE_CATEGORY',
     itemHighlight : {
-        fieldId : 'SPARE WEAR PART'
+        fieldId : 'SPARE_WEAR_PART'
     },
     bomTypes : [{
         mode          : 'list',
@@ -288,8 +288,7 @@ exports.applications = {
         basePosNumber : 1,
         hideQuantity  : false
     }],
-    enableBOMPin : true,
-},    
+    enableBOMPin : true,  
     },
     service        : {},
     variants       : {
