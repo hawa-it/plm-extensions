@@ -226,7 +226,7 @@ exports.applications = {
             { ebom : 'COMMENTS',                 mbom : 'COMMENTS' }
         ],
         defaultValues : [
-        ['MBOM_COPY', 'true']
+        ['MBOM_COPY', true]
     ]
     },
 
