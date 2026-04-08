@@ -226,7 +226,9 @@ exports.applications = {
             { ebom : 'COMMENTS',                 mbom : 'COMMENTS' }
         ]
     },
-
+    newProcessDefaults : [
+        ['MBOM_COPY', 'true']
+    ],
     switchEBOMRevision : 'working',
     pinEBOMItemsInMBOM : false,
     suffixMBOMNumber   : 'M',
