@@ -224,11 +224,12 @@ exports.applications = {
             { ebom : 'PROJEKT',                  mbom : 'PROJEKT' },
             { ebom : 'VERANTWORTLICHER_BEREICH', mbom : 'VERANTWORTLICHER_BEREICH' },
             { ebom : 'COMMENTS',                 mbom : 'COMMENTS' }
-        ]
-    },
-    newProcessDefaults : [
+        ],
+        defaultValues : [
         ['MBOM_COPY', true]
-    ],
+    ]
+    },
+
     switchEBOMRevision : 'working',
     pinEBOMItemsInMBOM : false,
     suffixMBOMNumber   : 'M',
