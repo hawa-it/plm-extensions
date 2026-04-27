@@ -63,8 +63,8 @@ exports.common = {
 
     viewer : {
         numberProperties   : ['TEILENUMMER', 'Artikelnummer', 'Bauteilnummer', 'Dokumentnummer_ERP', 'Dokumentnummer_ERP', 'V_Name'], //'Part Number', 'Name', 'label', 'Artikelnummer', 'Bauteilnummer'
-        suffixPrimaryFile  : ['.iam.dwf', '.iam.dwfx', '.ipt.dwf', '.ipt.dwfx', 'stp', 'step'],
-        extensionsIncluded : ['dwf', 'dwfx', 'nwd', 'ipt', 'sldprt', 'pdf'],
+        suffixPrimaryFile  : ['stp', 'step', '.iam.dwf', '.iam.dwfx', '.ipt.dwf', '.ipt.dwfx'],
+        extensionsIncluded : ['dwf', 'dwfx', 'nwd', 'ipt','stp', 'step', 'sldprt', 'pdf'],
     }
 
 }
