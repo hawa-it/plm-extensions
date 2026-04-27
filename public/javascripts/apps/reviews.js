@@ -10,6 +10,8 @@ $(document).ready(function() {
         designReviews     : config.workspaces.designReviews.workspaceId     || common.workspaceIds.designReviews,
         designReviewTasks : config.workspaces.designReviewTasks.workspaceId || common.workspaceIds.designReviewTasks,
     }
+
+    insertMenu();
     
     appendProcessing('panel-pending', false);
     appendProcessing('panel-completed', false);
@@ -365,7 +367,9 @@ function setDetails() {
         $('#alternatives').val($('<div></div>').html(getSectionFieldValue(response.data.sections, 'ALTERNATIVES', '')).text());
         $('#deficiencies').val($('<div></div>').html(getSectionFieldValue(response.data.sections, 'DEFICIENCIES', '')).text());
 
-        insertViewer(linkItem);
+        insertViewer(linkItem, {
+            features : config.viewerFeatures
+        });
         insertBOM(linkItem, { 
             id               : 'bom',
             hideHeaderLabel  : true,

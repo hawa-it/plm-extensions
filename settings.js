@@ -90,6 +90,7 @@ exports.common = {
         splitPartNumberSpacer  : '',
         backgroundColor        : [255, 255, 255, 255, 255, 255],
         cacheInstances         : true,
+        cacheBoundingBoxes     : false,
         antiAliasing           : true,
         ambientShadows         : true,
         groundReflection       : false,
@@ -174,6 +175,88 @@ exports.applications = {
 
     classes : {
         fieldsIncluded : ['DESCRIPTOR', 'WORKSPACE', 'REVISION', 'CLASS_NAME']
+    },
+
+    compare : {
+        panels : {
+            insertBOMLeft : {
+                headerLabel       : 'descriptor',
+                bomViewName       : 'Basic',
+                fieldsIn          : ['Item', 'Revision', 'Quantity'],
+                contentSize       : 'xs',
+                hideDescriptorRev : true,
+                useCache          : true,
+                toggles           : true,
+                search            : true,
+                path              : true,
+                openInPLM         : true,
+            },
+            insertBOMRight : {
+                headerLabel       : 'descriptor',
+                bomViewName       : 'Basic',
+                fieldsIn          : ['Item', 'Revision', 'Quantity'],
+                contentSize       : 'xs',
+                hideDescriptorRev : true,
+                useCache          : true,
+                toggles           : true,
+                search            : true,
+                path              : true,
+                openInPLM         : true,
+            },   
+            insertDetailsLeft : {
+                layout         : 'narrow',
+                expandSections : ['Basic']
+            },
+            insertDetailsRight : {
+                layout         : 'narrow',
+                expandSections : ['Basic']
+            },                     
+            insertSearch : {
+                headerLabel : 'Select BOM for Comparison',
+                contentSize : 'xs',
+                layout      : 'grid',
+                limit       : 50,
+                images      : true,
+                tileCounter : true,
+            },
+            insertRevisions : {
+                contentSize : 'xs',
+                hideHeader  : true,
+            },
+            insertRecentItems : {
+                contentSize   : 'xs',
+                layout        : 'grid',
+                hideHeader    : true,
+            },
+            insertBookmarks : {
+                contentSize : 'xs',
+                layout      : 'grid',
+                hideHeader  : true,
+            }
+        },
+        viewerFeatures : {
+            contextMenu  : false,
+            cube         : false,
+            orbit        : false,
+            firstPerson  : false,
+            camera       : false,
+            measure      : true,
+            section      : true,
+            explodedView : true,
+            modelBrowser : false,
+            properties   : false,
+            settings     : false,
+            fullscreen   : false,
+            markup       : false,
+            hide         : true,
+            ghosting     : true,
+            highlight    : true,
+            single       : true,
+            fitToView    : true,
+            reset        : true,
+            views        : true,
+            selectFile   : false
+        }
     },
 
     configurator : {
@@ -1374,7 +1457,7 @@ exports.applications = {
                     path             : true,
                     search           : true,
                     toggles          : true,
-                    onClickItem      : function(elemClicked) { selectBOMItem(elemClicked); },
+                    onClickItem      : function(elemClicked) { clickBOMItem(elemClicked); },
                     afterCompletion  : function(id) { genAddinPLMBOMActions(id); }
                 } 
             },{ 
@@ -1460,6 +1543,11 @@ exports.menu = [
             title    : 'Workspace Navigator',
             subtitle : 'Manage your master data easily',
             url      : '/navigator'
+        },{
+            icon     : 'icon-markup',
+            title    : 'Design Reviews',
+            subtitle : 'Perform online design reviews',
+            url      : '/reviews'
         },{
             icon     : 'icon-book',
             title    : 'Class Browser',
@@ -1569,6 +1657,7 @@ exports.server = {
         abom           : true,  // Asset BOM Editor
         classes        : true,  // Class Browser
         client         : true,  // Mobile Client
+        compare        : true,  // BOM Comparison
         dashboard      : true,  // Process Dashboard
         explorer       : true,  // Product Data Explorer
         impactanalysis : true,  // Change Impact Analysis
@@ -1663,6 +1752,12 @@ exports.chrome = {
         url        : '/explorer?',
         label      : 'Product Data Explorer',
         icon       : 'zmdi-chart',
+        workspaces : ['items']
+    },{
+        id         : 'compare',
+        url        : '/compare?compareWith=self&',
+        label      : 'Compare',
+        icon       : 'zmdi-compare',
         workspaces : ['items']
     },{
         id         : 'mbom',
