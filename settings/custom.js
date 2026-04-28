@@ -207,7 +207,7 @@ exports.applications = {
         fieldIDs : {
             ebom     : 'ENGINEERING_BOM',
             number   : 'ARTIKEL',
-            title    : 'BENENNUNG1_DOC',
+            title    : 'BEZEICHNUNG1_ITEM',
             type: 'MAKE_OR_BUY',
             category : 'CATEGORY'
         }
