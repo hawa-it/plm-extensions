@@ -2352,7 +2352,7 @@ function genPanelContents(id) {
     let elemContent = $('<div></div>').appendTo(elemTop)
         .attr('id', id + '-content')
         .addClass('panel-content')
-    //    .addClass('no-scrollbar')
+        .addClass('no-scrollbar')
         .addClass(settings[id].contentSize);
 
          if(elemTop.hasClass('surface-level-1')) elemContent.addClass('surface-level-1');
