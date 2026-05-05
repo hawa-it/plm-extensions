@@ -170,7 +170,7 @@ function setUIEvents() {
     $('#toggle-details').click(function() { 
         $('body').toggleClass('details-on');
         $(this).toggleClass('toggle-on').toggleClass('toggle-off');
-        setTimeout(function() { viewer.resize(); }, 250); 
+        viewerResize();
     })
     $('#reset').click(function() { reloadPage(); });  
     $('#save').click(function() {
@@ -188,26 +188,20 @@ function setUIEvents() {
 
     // Tabs
     $('#mode-disassemble').click(function() { 
-        resetHiddenInstances();
+        resetHiddenInstances({ id : 'viewer' });
         $('body').addClass('mode-disassemble').removeClass('mode-ebom').removeClass('mode-add').removeClass('mode-operations');
-        setTimeout(function() { 
-            viewer.resize(); 
-            viewer.setGhosting(false);
-            restoreAssembly();
-        }, 250); 
+        viewerResize();
+        viewerSetFeature({ id : 'viewer' }, 'ghosting', false);
+        restoreAssembly();
         disassembleMode = true;
         $(this).addClass('selected');
         $(this).siblings().removeClass('selected');
     });
     $('#mode-ebom').click(function() { 
         $('body').removeClass('mode-disassemble').addClass('mode-ebom').removeClass('mode-add').removeClass('mode-operations');
-        if(typeof viewer !== 'undefined') {
-            setTimeout(function() { 
-                viewer.resize(); 
-                viewer.setGhosting(true);
-                viewerResetSelection(false);
-            }, 250); 
-        }
+        viewerResize();
+        viewerSetFeature({ id : 'viewer' }, 'ghosting', true);
+        viewerResetSelection(false);
         disassembleMode = false;
         $(this).addClass('selected');
         $(this).siblings().removeClass('selected');
@@ -264,7 +258,7 @@ function setUIEvents() {
     $('.panel-nav').first().click();
     $('#search-input').keypress(function (e) {
         if (e.which === 13) {
-            searchItems('search-items', 'search-items-list', $('#search-input').val());
+            searchItems('search-items', 'search-items-list', 'DESCRIPTOR', $('#search-input').val());
             $('#search-items-list').html('');
         }
     });
@@ -278,10 +272,10 @@ function setUIEvents() {
         if(e.which === 13) {
             $('#add-processing').show().siblings().hide();
             let elemActive = $('.panel-nav.active').first();
-            let query = elemActive.attr('data-query');
+            let query = elemActive.attr('data-value');
             let value = $(this).val();
-            if(value !== '')  query = '(' + query + ')+AND+' + $(this).val();
-            searchItems(elemActive.attr('data-id') + '-list', query);
+            // if(value !== '')  query = '(' + query + ')+AND+' + $(this).val();
+            searchItems(elemActive.attr('data-id') + '-list', 'DESCRIPTOR', query);
         }
     });
     $('input.list-filter').keypress(function() {
@@ -665,7 +659,9 @@ function createMBOMRoot(ebomItemDetails, callback) {
             }
         }
 
-        createMBOMForEBOM(ebomItemDetails, number, function() {
+        createMBOMForEBOM(ebomItemDetails, number, function(linkMBOM) {
+            links.mbom = linkMBOM;
+            storeContextMBOMLink();
             callback();
         });
 
@@ -685,7 +681,8 @@ function createMBOMForEBOM(ebomItemDetails, number, callback) {
             value   : { link : ebomItemDetails.__self__ }
         },{
             fieldId : config.workspaceMBOM.fieldIDs.ebomRoot,
-            value   : ebomItemDetails.root.link
+            value   : ebomItemDetails.root.link,
+            type    : 'string'
         },{
             fieldId : config.workspaceMBOM.fieldIDs.lastMBOMSync,
             value   : syncDate
@@ -722,24 +719,23 @@ function createMBOMForEBOM(ebomItemDetails, number, callback) {
         if(response.error) {
             showErrorMessage('Error', 'Error while creating MBOM root item, the editor cannot be used at this time. Please review your server configuration.');
         } else {
-            links.mbom = response.data.split('.autodeskplm360.net')[1];
-            storeMBOMLink(ebomItemDetails.__self__);
-            storeContextMBOMLink()
-            callback();
+            let linkMBOM = response.data.split('.autodeskplm360.net')[1];
+            storeMBOMLink(ebomItemDetails.__self__, linkMBOM);
+            callback(linkMBOM);
         }
     }); 
     
 }
-function storeMBOMLink(link) {
+function storeMBOMLink(linkEBOM, linkMBOM) {
 
     let timestamp  = new Date();
     let lastSync   = timestamp.getFullYear() + '-' + (timestamp.getMonth()+1) + '-' + timestamp.getDate();
 
     let params   = { 
-        link     : link, 
+        link     : linkEBOM, 
         sections : wsEBOM.sections,
         fields   : [
-            { fieldId : config.workspaceEBOM.fieldIDs.mbom         + siteSuffix, value : { link : links.mbom } },
+            { fieldId : config.workspaceEBOM.fieldIDs.mbom         + siteSuffix, value : { link : linkMBOM } },
             { fieldId : config.workspaceEBOM.fieldIDs.lastMBOMSync + siteSuffix, value : lastSync },
             { fieldId : config.workspaceEBOM.fieldIDs.lastMBOMUser + siteSuffix, value : userAccount.displayName }
         ] 
@@ -1286,8 +1282,8 @@ function insertTileActions(elemActions, bomType) {
             if(isSelected) {
 
                 $('#mbom-root-bom').find('.item').removeClass('invisible');
-                viewer.setGhosting(true);
-                viewer.showAll();
+                viewerSetFeature({ id : 'viewer' }, 'ghosting', true);
+                viewerUnhideAll({ id : 'viewer', fitToView : false, resetColors : false, keepHidden : false });
                 
             } else {   
                 
@@ -2159,18 +2155,14 @@ function convertEBOMtoMBOM() {
                 }
             }
 
-            createMBOMRoot(responses[0].data, partNumber, function(linkMBOM) {
-
-                elemItem.attr('data-link-mbom', linkMBOM);
-                    
-                    // storeMBOMLink(link, linkNew);
-
+            createMBOMForEBOM(responses[0].data, partNumber, function(linkMBOM) {
 
                 let elemItem        = $('.item.to-convert');
                 let elemItemHead    = elemItem.children('.item-head');
                 let elemItemToggle  = elemItemHead.children('.item-toggle');
                 let elemItemActions = elemItemHead.children('.item-actions');
 
+                elemItem.attr('data-link-mbom', linkMBOM);
                 elemItem.addClass('leaf');
                 elemItem.children('.item-bom').remove();
                 elemItem.removeClass('item-has-bom');
@@ -3357,7 +3349,8 @@ function insertSearchFilters() {
             .html(view.title)
             .attr('data-id', 'saved-search-' + index)
             .attr('data-wsid', view.wsId)
-            .attr('data-query', view.query);
+            .attr('data-field', view.fieldId)
+            .attr('data-value', view.value);
 
         let elemSearchPanel = $('<div></div>').appendTo($('#add-views'))
             .attr('id', 'saved-search-' + index);
@@ -3388,7 +3381,7 @@ function clickPanelNav(elemClicked) {
 
     if(elemClicked.hasClass('saved-search')) {
         if(update) {
-            searchItems(id, id + '-list', elemClicked.attr('data-query'));
+            searchItems(id, id + '-list', elemClicked.attr('data-field'), elemClicked.attr('data-value'));
         } else {
             $('#' + id).show().siblings().hide();
         }
@@ -3412,27 +3405,46 @@ function clickPanelNav(elemClicked) {
     }
 
 }
-function searchItems(idView, idList, query) {
+function searchItems(idView, idList, field, query) {
 
     $('#' + idList).html('');
     $('#add-processing').show();
 
-    if(query === $('.panel-nav.active').first().attr('data-query') ) {
+    if(query === $('.panel-nav.active').first().attr('data-value') ) {
         if($('#' + idList).children().length > 0) {
             $('#' + idList).parent().show().siblings().hide();
             return;
         }
     }
 
-    let params = { 
-        'wsId'   : wsMBOM.wsId,
-        'limit'  : 50,
-        'offset' : 0,
-        'query'  : query,
-        'bulk'   : false
+    let params = {
+        wsId     : wsMBOM.wsId,
+        pageSize : 1000,
+        latest   : true,
+        fields   : [ 'DESCRIPTOR' ],
+        sort     : [ 'DESCRIPTOR' ],
+        filter   : [{
+            field      : field,
+            type       : (field === 'DESCRIPTOR') ? 15 : 0,
+            comparator : 'contains',
+            value      : query
+        }]
     }
 
-    $.get('/plm/search-bulk', params, function(response) {
+    if(!params.fields.includes(field)) params.fields.push(field);
+
+    $.post('/plm/search', params, function(response) {
+
+        response.data.items = [];
+        for(let row of response.data.row) {
+            response.data.items.push({
+                item : {
+                    link  : '/api/v3/workspaces/' + wsMBOM.wsId + '/items/' + row.dmsId,
+                    urn   : '-',
+                    title : row.data.DESCRIPTOR.displayValue
+                }
+            });
+        }
         setItemsList(idView, idList, response.data.items);
     });
 
@@ -3781,8 +3793,8 @@ function onViewerSelectionChanged(event) {
         $('.item.leaf').show();
         $('.item.selected').removeClass('selected');
         $('body').removeClass('with-quantity-comparison');
-        
-       viewer.clearThemingColors();
+       
+        viewerResetColors({ id : 'viewer' });
 
     }
 
@@ -3819,9 +3831,9 @@ function viewerHideInvisibleItems(elemStart) {
         });
     }
 
-    viewer.setGhosting(false);
-    viewer.hideAll();
-    viewerUnhideModels(partNumbers);
+    viewerSetFeature({ id : 'viewer' }, 'ghosting', false);
+    viewerHideAll({ id : 'viewer' });
+    viewerUnhideModels(partNumbers, { id : 'viewer' });
 
 }
 function addPartNumber(partNumbers, partsColored, elemItem, expand) {
@@ -3851,7 +3863,7 @@ function restoreAssembly() {
 
     if(!disassembleMode) return;
 
-    viewer.showAll();
+    viewerUnhideAll({ id : 'viewer', fitToView : false, resetColors : false, keepHidden : false });
     let partNumbers = [];
 
     $('#mbom').find('.item').each(function() {

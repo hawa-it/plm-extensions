@@ -1,7 +1,7 @@
 :root {
 
-    --border-v : 16px;
-    --border-h : 24px;
+    --border-v : 14px;
+    --border-h : 20px;
     
     --width-mbom         : 620px;
     --width-ebom         : 820px;
@@ -107,7 +107,8 @@ body.mode-operations #viewer { display : block !important; top : 42px; left : 0p
 body.mode-operations #ebom, body.mode-operations #add { display : none !important; }
 body.mode-operations #my-custom-toolbar-views { display : none !important; }
 
-body.details-on #tabs    { right : var(--width-details); }
+body.details-on #tabs    { right : calc(var(--width-mbom) + (2 * var(--border-h)) + var(--width-details)); }
+body.details-on #mbom    { right : var(--width-details) }
 body.details-on #details { right : 0px; }
 
 body.details-on.no-viewer #mbom         { width : calc(50% - (2 * var(--padding-panel)) - 2px - (var(--width-details) / 2)); }
@@ -896,7 +897,7 @@ select.view-selector {
 .item > .item-head > .item-icon { 
     background    : var(--color-surface-level-5); 
     border-top    : 1px solid transparent;
-    border-right  : 2px solid var(--color-font); 
+    /* border-right  : 2px solid var(--color-font);  */
     border-bottom : 1px solid transparent;
     border-left   : 1px solid transparent;
     color         : var(--color-font); 
@@ -1012,7 +1013,8 @@ select.view-selector {
     font-weight : bold;
 }
 #convert-confirm {
-    background : var(--color-status-red) !important;
+    background   : var(--color-status-red) !important;
+    border-color : var(--color-status-red) !important;
 }
 
 
@@ -1030,6 +1032,15 @@ select.view-selector {
 #details-subtitle.item-subtitle,
 #details-subtitle.item-subtitle > * {
     font-size : 14px;
+}
+#details-content {
+    right  : 10px;
+    bottom : 10px;
+    left   : 10px;
+}
+#details-tabs {
+    left  : 24px;
+    right : 24px;
 }
 .item-summary > span {
     font-weight : normal;
