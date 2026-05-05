@@ -235,9 +235,10 @@ exports.applications = {
     pinEBOMItemsInMBOM : false,
     suffixMBOMNumber   : 'M',
     predefinedSearchesInAddItems : [
-        { title : 'Purchased Parts', query : 'ITEM_DETAILS:CATEGORY="Standard Part"' },
-        { title : 'Packaging Parts', query : 'ITEM_DETAILS:CATEGORY="Packaging Parts"' }
-    ],
+            { title : 'Purchased Parts', fieldId : 'CATEGORY', value : 'Standard Part'       },
+            { title : 'Packaging Parts', fieldId : 'CATEGORY'       , value : 'Packaging Parts' },
+            { title : 'Processes'      , fieldId : 'CATEGORY'       , value : 'Process'   }
+        ],        
     sectionsInCreateForm : [ 'Article', 'Purchasing Informations', 'Customer Specification' ],
     },
     portal         : {
