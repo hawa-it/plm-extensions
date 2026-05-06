@@ -3,12 +3,10 @@ extends ../framework/layout
 block head
 
     link(rel='stylesheet', href='/stylesheets/admin/data.css')
+    
     link(rel='stylesheet', href='/stylesheets/framework/console.css')
     script(src='/javascripts/framework/console.js') 
     script(src='/javascripts/admin/data.js') 
-    script.
-        config = !{JSON.stringify(config)}
-        menu   = !{JSON.stringify(menu)};
 
 block body
 
@@ -97,7 +95,7 @@ block body
 
                     .group.surface-level-2.permission-summary
                         
-                        .text Filter using item summary data
+                        .text Filter using Item Summary data
 
                         .filter#filter-creation
                             .label Creation Date 

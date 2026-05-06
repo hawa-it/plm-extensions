@@ -6,7 +6,7 @@ $(document).ready(function() {
 
     updateLinks();
 
-    $('#theme-selector').val(theme + '-theme');
+    $('#theme-selector').val(theme);
 
     $('#tenant-name').html(tenant);
     
@@ -14,14 +14,27 @@ $(document).ready(function() {
         window.open('https://' + tenant + '.autodeskplm360.net');
     });
 
+    $('#chrome').click(function() {
+        let href = document.location.href.split('?');
+        let base = href[0] += 'chrome-extension';
+
+        if(href.length > 1) base += '?' + href[1];
+        
+        window.open(base);
+    }); 
+
+    $('#chrome-download').click(function() {
+        downloadChromeExtensionInstaller();
+    });
+
     $('#theme-selector').change(function() {
 
         $('body').removeClass('dark-theme');
         $('body').removeClass('black-theme');
         $('body').removeClass('light-theme');
-        $('body').addClass($(this).val());
+        $('body').addClass($(this).val() + '-theme');
 
-        theme = $(this).val().split('-theme')[0];
+        theme = $(this).val();
 
         $('a').each(function() {
 
@@ -56,16 +69,44 @@ $(document).ready(function() {
         window.open(base);
     });
 
+    $('#toggle').click(function() {
+        $(this).toggleClass('icon-chevron-left').toggleClass('icon-chevron-right');
+        $('body').toggleClass('no-side-panel');
+    });  
+
+    $('#layout').click(function() {
+        $(this).toggleClass('icon-tiles').toggleClass('icon-tiles-list');
+        $('body').toggleClass('layout-tiles-list');
+    });    
+
+    $('#start').click(function() {
+        let href = document.location.href.split('?');
+        let base = href[0].split('/landing')[0];
+
+        if(!base.endsWith('/')) base += '/';
+
+        let url  = base += 'start?theme=' + $('#theme-selector').val();
+
+        document.location.href = url;
+
+    });    
+
+    $('.tile').addClass('min');
+
     $('.tile').click(function(e) {
 
         $('.tiles-group-title').addClass('hidden');
         $('.tiles-group-subtitle').addClass('hidden');
         $('.tile').addClass('hidden');
-        $(this).removeClass('hidden').addClass('max');
+        $(this).removeClass('hidden').addClass('max').removeClass('min');
         $('body').removeClass('logs');
         $('.with-log').removeClass('with-log');
         $('.with-troubleshooting').removeClass('with-troubleshooting');
-        $('#main').addClass('surface-level-1').removeClass('surface-level-2');
+
+        let base = document.location.href.split('?')[0];
+        if(base.endsWith('/')) base = base.substring(0, base.length - 1);
+        let url = base + '?app=' + $(this).attr('data-id') + '&theme=' + $('#theme-selector').val();
+        window.history.replaceState(null, null, url);
     
     });
 
@@ -80,11 +121,14 @@ $(document).ready(function() {
                 $('.tiles-group-title').removeClass('hidden');
                 $('.tiles-group-subtitle').removeClass('hidden');
                 $('.tile').removeClass('hidden');
+                $('.tile').addClass('min');
                 $('.tile').removeClass('max');
                 $('.tile').removeClass('with-log');
-                $('#main').removeClass('surface-level-1').addClass('surface-level-2');
                 e.preventDefault();
                 e.stopPropagation();
+                let url = document.location.href.split('?');
+                    url = url[0] + '?theme=' + $('#theme-selector').val();
+                window.history.replaceState(null, null, url);
             });
 
         if($(this).children('.troubleshooting').length) {
@@ -133,9 +177,18 @@ $(document).ready(function() {
         if(url.indexOf('//youtu') < 0) {
 
             let location = document.location.href.split('?');
-            url = location[0] + url;
+            let baseURL = location[0].split('/landing')[0];
+            if(!baseURL.endsWith('/')) baseURL += '/';
+            url = baseURL + url;
             let concat = (url.indexOf('?') > -1) ? '&' : '?';
-            if(location.length > 1)url += concat + location[1];
+            if(location.length > 1) {
+                url += concat + location[1];
+                concat = '&';
+            }
+
+            if(url.indexOf('theme=') < 0) {
+                url += concat + 'theme=' + $('#theme-selector').val();
+            }
 
         }
 
@@ -151,8 +204,45 @@ $(document).ready(function() {
         $('.close-app').click();
         $('body').toggleClass('logs');
     });
+
+    openSelectedApp()
     
 });
+
+
+function downloadChromeExtensionInstaller() {
+
+    window.showDirectoryPicker().then((fileHandler) => {
+        $.get('/services/chrome-installer', {}, function(response) {
+            for(let file of response.files) saveChromeExtensionInstallerFiles(fileHandler, file);
+        });
+    }).catch((error) => {
+        if (error.name !== "AbortError") console.error("Unexpected error:", error);
+    });
+
+}
+async function saveChromeExtensionInstallerFiles(fileHandler, file) {
+
+    let dirHandler = await createDirectory(fileHandler, '');
+    let fileHandle = await dirHandler.getFileHandle(file.name, { create: true });
+    let writable   = await fileHandle.createWritable();
+
+    if(file.encoding === 'base64') {
+
+        const binary = atob(file.data);   
+        const len    = binary.length;
+        const bytes  = new Uint8Array(len);
+  
+        for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+
+        await writable.write(bytes);
+
+    } else await writable.write(file.data);
+
+    await writable.close();
+
+}
+
 
 function updateLinks() {
 
@@ -164,8 +254,9 @@ function updateLinks() {
 
         if(href.indexOf('youtu.be') < 0) {
             if(href.indexOf('https://github.com') < 0) {
-
-                let url = location[0] + href;
+                let base = location[0].split('/landing')[0];
+                if(!base.endsWith('/')) base += '/';
+                let url = base + href;
                 if($(this).html() === '') $(this).html(url);
                 let concat = (url.indexOf('?') > -1) ? '&' : '?';
                 if(location.length > 1)url += concat + location[1];
@@ -187,5 +278,22 @@ function updateLinks() {
     $('.url').each(function() {
         $(this).html(location[0]);
     });
+
+}
+
+
+function openSelectedApp() {
+    
+    let params = new URLSearchParams(window.location.search);
+    let app    = params.get('app');
+
+    if(app) {
+        $('.tile').each(function() {
+            let tileApp = $(this).attr('data-id');
+            if(tileApp === app) {
+                $(this).click();
+            }
+        });
+    }
 
 }

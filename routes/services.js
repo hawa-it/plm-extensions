@@ -48,7 +48,7 @@ router.get('/get-printer-status', function(req, res, next) {
 
 router.get('/submit-print-job', function(req, res, next) {
 
-    console.log(req.query.type);
+    // console.log(req.query.type);
 
     switch(req.query.type) {
 
@@ -81,15 +81,9 @@ router.get('/submit-print-job', function(req, res, next) {
 
     }
 
-    console.log('here');
-
     if(statusPrinter.supplies < 0) statusPrinter.supplies = 0;
 
-    console.log('here');
-
     if(statusPrinter.temperature > 80) statusPrinter.temperature = 80;
-
-    console.log('here');
 
     res.send(statusPrinter);
 
@@ -99,7 +93,6 @@ router.get('/resupply', function(req, res, next) {
     statusPrinter.supplies = 100;
     res.send(statusPrinter);
 });
-
 
 
 // Get list of folders in /storage
@@ -115,7 +108,8 @@ router.get('/storage/folders', function(req, res, next) {
 
     let response = {
         path    : path,
-        folders : []
+        folders : [],
+        url     : '/storage/folders'
     };
 
     if(fs.existsSync(path)) {
@@ -131,7 +125,6 @@ router.get('/storage/folders', function(req, res, next) {
     } else { res.json(response); }
 
 });
-
 
 
 // Get list of files in defined foleder within /storage
@@ -150,7 +143,8 @@ router.get('/storage/files', function(req, res, next) {
     let response = {
         path       : path,
         files      : [],
-        totalCount : 0
+        totalCount : 0,
+        url        : '/storage/files'
     };
 
     if(fs.existsSync(path)) {
@@ -174,7 +168,6 @@ router.get('/storage/files', function(req, res, next) {
     }
 
 });
-
 
 
 // Get list of files and folders in defined foleder within /storage
@@ -267,6 +260,74 @@ router.get('/storage/contents', function(req, res, next) {
         res.json(response); 
     }
 
+});
+
+
+// Get Chrome Extensions configuration settings
+router.get('/chrome', function(req, res, next) {
+
+    console.log(' ');
+    console.log('  /chrome');
+    console.log(' --------------------------------------------');
+    console.log('  # commands = ' + req.app.locals.chrome.commands.length);
+    console.log('  # buttons  = ' + req.app.locals.chrome.buttons.length);
+    console.log();
+
+    res.json(req.app.locals.chrome);
+    
+});
+
+
+// Download Chrome Extensions installation files
+router.get('/chrome-installer', function(req, res, next) {
+
+    let path = 'chrome';
+
+    let response = {
+        path  : path,
+        files : [],
+        url   : '/services/chrome-installer'
+    };    
+
+    let redirectUri = req.app.locals.redirectUri;
+    let baseURL     = redirectUri.split('/callback')[0];
+
+    if(fs.existsSync(path)) {
+        fs.readdir(path, function (err, files) {
+            files.forEach(function (file) {
+                let filePath = path + '/' + file;
+                if(!fs.lstatSync(filePath).isDirectory()) {
+                    if(file.indexOf('.') > 0) {
+
+                        let suffix   = file.split('.')[1];
+                        let encoding = (suffix == 'png') ? 'base64' : 'utf8';
+                        let data     = '';
+
+                        if(encoding === 'utf8') {
+                            data = fs.readFileSync(path + '/' + file, 'utf8');
+                            data = data.replaceAll('http://localhost:8080', baseURL);
+                        } else {
+                            data = fs.readFileSync(path + '/' + file);
+                            data = data.toString("base64");
+                        }
+
+                        response.files.push({
+                            name     : file,
+                            data     : data,
+                            encoding : encoding
+                        });
+
+                    }
+                }
+            });
+            res.json(response);
+        });
+    } else { 
+        response.error   = true;
+        response.message = 'Folder does not exist';
+        res.json(response); 
+    }
+    
 });
 
 

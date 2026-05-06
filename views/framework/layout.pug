@@ -6,6 +6,7 @@ html
     
         meta(name='viewport' content='width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=no')
         meta(charset='utf-8')
+        link(rel="icon", href="/favicon.ico")
     
         link(rel='stylesheet', href='/stylesheets/framework/basic.css')
         link(rel='stylesheet', href='/stylesheets/framework/colors.css')
@@ -15,6 +16,7 @@ html
         
         link(rel='stylesheet', href='/stylesheets/contents/item.css')
         link(rel='stylesheet', href='/stylesheets/contents/nav.css')
+        link(rel='stylesheet', href='/stylesheets/contents/classification.css')
         link(rel='stylesheet', href='/stylesheets/contents/viewer.css')
         link(rel='stylesheet', href='/stylesheets/contents/vault.css')
         link(rel='stylesheet', href='/stylesheets/contents/browser.css')
@@ -31,6 +33,7 @@ html
         script(src='/javascripts/contents/admin.js')
         script(src='/javascripts/contents/item.js')
         script(src='/javascripts/contents/nav.js')
+        script(src='/javascripts/contents/classification.js')
         script(src='/javascripts/contents/vault.js')
         script(src='/javascripts/contents/browser.js')
         script(src='/javascripts/contents/analytics.js')
@@ -46,10 +49,18 @@ html
             wsId='#{wsId}'
             dmsId='#{dmsId}' 
             descriptor='#{descriptor}' 
+            number='#{number}' 
             fileId='#{fileId}' 
             vaultId='#{vaultId}' 
+            language='#{language}' 
             revisionBias='#{revisionBias}'
-            options='#{options}'.split(',');
+            options='#{options}'.split(',')
+            type='#{type}'
+            common=!{JSON.stringify(common)}
+            config=!{JSON.stringify(config)}
+            menu=!{JSON.stringify(menu)}
+            colors=!{JSON.stringify(colors)}
+            debugMode='#{debugMode}' == 'true' 
     
         block head
 

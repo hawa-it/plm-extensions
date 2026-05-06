@@ -1,4 +1,3 @@
-let urlParameters       = getURLParameters();
 let wsConfig            = { items : {}, processes : {}, operations : {} };
 let links               = {};
 let bomPartsList        = [];
@@ -214,7 +213,7 @@ function setUIEvents() {
 
         elemParent.removeClass('no-canvas').removeClass('no-image');
 
-        viewerCaptureScreenshot(id, function() {});
+        viewerCaptureScreenshot('viewer', id, function() {});
 
     });
     $('#process-images').find('.icon-delete').click(function() {
@@ -324,7 +323,7 @@ function afterSourceBOMCompletion(id, data) {
 
         let elemRow = $(this);
         let isLeaf  = elemRow.hasClass('leaf');
-        let mob     = $(this).find('.bom-column-make_or_buy').html();
+        let mob     = $(this).find('.tree-column-make_or_buy').html();
 
         $('<td></td>').appendTo(elemRow).addClass('column-process');
 
@@ -375,8 +374,8 @@ function applyViewerColors() {
             else if(elemNode.hasClass('status-red')) pnRed.push(elemNode.attr('data-part-number'));
         });
 
-        viewerSetColors(pnGreen, { color : config.vectors.green});
-        viewerSetColors(pnRed, { color : config.vectors.red, resetColors : false});
+        viewerSetColors(pnGreen, { color : colors.vectors.green});
+        viewerSetColors(pnRed, { color : colors.vectors.red, resetColors : false});
 
     } else {
         viewerResetColors();
@@ -489,7 +488,7 @@ function syncBOMNodes(nodes, partsList) {
 
         }
 
-        let children = getBOMItemChildren(node, true);
+        let children = treeGetItemChildren(node, true);
         syncBOMNodes(children, partsList)
 
     }
@@ -624,7 +623,7 @@ function selectItemsProcess(link) {
 
     } else {
 
-        let elemBOMParent = getBOMItemParent(elemSelected);
+        let elemBOMParent = treeGetItemParent(elemSelected);
 
         if(elemBOMParent.length > 0) {
             if(!isBlank(elemBOMParent.attr('data-bop-link'))) {
@@ -1339,7 +1338,7 @@ function captureOperationScreenshot(elemButton, index) {
 
     //     elemParent.removeClass('no-canvas').removeClass('no-image');
 
-        viewerCaptureScreenshot(id, function() {});
+        viewerCaptureScreenshot('viewer', id, function() {});
 
     // });
 

@@ -1,8 +1,17 @@
 let selectDefaults  = true;
 let selectedLink    = '';
+let workspaceIds    = {};
+let wsConfig        = {}
 
 
 $(document).ready(function() {  
+
+    workspaceIds = {
+        designReviews     : config.workspaces.designReviews.workspaceId     || common.workspaceIds.designReviews,
+        designReviewTasks : config.workspaces.designReviewTasks.workspaceId || common.workspaceIds.designReviewTasks,
+    }
+
+    insertMenu();
     
     appendProcessing('panel-pending', false);
     appendProcessing('panel-completed', false);
@@ -10,14 +19,18 @@ $(document).ready(function() {
     appendProcessing('comments', false);
     appendViewerProcessing();
     appendOverlay();
-    
-    getFeatureSettings('reviews', [], function(responses) {
-        
-        getTasksWorkspace();
-        getSectionIds(config.reviews.workspaces.reviews);
-        setUIEvents();
-        // setMarkupColors();
 
+    settings['pending'  ] = { tileImage : true }
+    settings['completed'] = { tileImage : true }
+    settings['all'      ] = { tileImage : true }
+
+    let requests = [ $.get('/plm/sections', { wsId : workspaceIds.designReviews, useCache : true }) ]
+    
+    getFeatureSettings('reviews', requests, function(responses) {
+
+        wsConfig.sections = responses[0].data;
+        getTasksWorkspace();
+        setUIEvents();
     });
     
 });
@@ -90,45 +103,21 @@ function setUIEvents() {
 // Init at startup
 function getTasksWorkspace() {
 
-    if(isBlank(config.reviews.workspaces.tasks.id)) {
+    if(isBlank(workspaceIds.designReviewTaskss)) {
 
         $.get( '/plm/related-workspaces', {
-            wsId : config.reviews.workspaces.reviews.id,
+            wsId : workspaceIds.designReviews,
             view : '16'
         }, function(response) {
             if(response.data.length > 0) {
                 let link = response.data[0].link.split('/');
-                config.reviews.workspaces.tasks.id = link[link.length - 1];
-                getSectionIds(config.reviews.workspaces.tasks);
+                workspaceIds.designReviewTaskss = link[link.length - 1];
             }
         });
-
-    } else {
-        
-        getSectionIds(config.reviews.workspaces.tasks);
 
     }
 
 }
-
-
-// Determine sectionIDs for later update and creation requests
-function getSectionIds(workspace) {
-
-    $.get( '/plm/sections', { 'wsId' : workspace.id }, function(response) { 
-        for(section of response.data) {
-            for(wsSection of workspace.sections) {
-                if(section.name === wsSection.name) {
-                    let urn = section.urn.split(".");
-                    wsSection.id = urn[urn.length - 1];
-                    break;
-                }
-            }
-        }
-    });
-
-}
-
 
 
 // function onViewerLoadingDone() {
@@ -152,50 +141,52 @@ function resetTiles(elemClicked) {
 
 // Get list of Design Reviews
 function getReviewsPending() {
-    let filter = [ { field: 'WF_CURRENT_STATE', type: 1, comparator : 3, value : config.reviews.workspaces.reviews.states[2] } ];
+    let filter = [ { field: 'WF_CURRENT_STATE', type: 1, comparator : 3, value : config.workspaces.designReviews.states[2] } ];
     getReviews(filter, 'pending');
 }
 function getReviewsCompleted() {
     let filter = [ 
-        { field: 'WF_CURRENT_STATE', type: 1, comparator : 5, value : config.reviews.workspaces.reviews.states[0] }, 
-        { field: 'WF_CURRENT_STATE', type: 1, comparator : 5, value : config.reviews.workspaces.reviews.states[1] }, 
-        { field: 'WF_CURRENT_STATE', type: 1, comparator : 5, value : config.reviews.workspaces.reviews.states[2] } 
+        { field: 'WF_CURRENT_STATE', type: 1, comparator : 5, value : config.workspaces.designReviews.states[0] }, 
+        { field: 'WF_CURRENT_STATE', type: 1, comparator : 5, value : config.workspaces.designReviews.states[1] }, 
+        { field: 'WF_CURRENT_STATE', type: 1, comparator : 5, value : config.workspaces.designReviews.states[2] } 
     ];
     getReviews(filter, 'completed');
 }
 function getReviewsAll() {
     let filter = [ 
-        { field: 'WF_CURRENT_STATE', type: 1, comparator : 5, value : config.reviews.workspaces.reviews.states[0] }, 
-        { field: 'WF_CURRENT_STATE', type: 1, comparator : 5, value : config.reviews.workspaces.reviews.states[1] }
+        { field: 'WF_CURRENT_STATE', type: 1, comparator : 5, value : config.workspaces.designReviews.states[0] }, 
+        { field: 'WF_CURRENT_STATE', type: 1, comparator : 5, value : config.workspaces.designReviews.states[1] }
     ];
     getReviews(filter, 'all');
 }
 function getReviews(statusFilter, id) {
 
     statusFilter.push({
-        field       : config.reviews.fieldIdItem,
+        field       : config.fieldIdItem,
         type        : 0,
         comparator  : 21,
         value       : '' 
     });
     
     let params = {
-        wsId : config.reviews.workspaces.reviews.id,
+        wsId   : workspaceIds.designReviews,
         fields : [
             'TITLE', 
             'TYPE', 
             'TARGET_REVIEW_DATE',
-            config.reviews.fieldIdItem,
-            config.reviews.fieldIdImage,
+            config.fieldIdItem,
+            config.fieldIdImage,
             'WF_CURRENT_STATE',
             'DESCRIPTOR'
         ],
-        sort : ['TITLE'],
-        filter : statusFilter,
-        selectedTab : $('#main-tabs').find('.selected').attr('id')
+        sort             : ['TITLE'],
+        tileImage        : true,
+        tileImageFieldId : config.fieldIdImage,
+        filter           : statusFilter,
+        selectedTab      : $('#main-tabs').find('.selected').attr('id')
     }
 
-    let elemTiles = $('#list-' + id);
+    let elemTiles = $('#' + id + '-content');
         elemTiles.html('');
 
     let elemProcessing = $('#panel-' + id).find('.processing').first();
@@ -220,16 +211,17 @@ function getReviews(statusFilter, id) {
                 
                 let elemData = getItemData(params.fields, this.fields.entry);
                 let elemTile = genSingleTile({
-                    link : '',
-                    imageLink : '/api/v2/workspaces/' + config.reviews.workspaces.reviews.id + '/items/' + this.dmsId + '/field-values/' + config.reviews.fieldIdImage + '/image/' + elemData[config.reviews.fieldIdImage],
-                    tileIcon : 'icon-product',
-                    title : elemData[config.reviews.fieldIdItem],
-                    subtitle : elemData.TITLE
+                    link      : '',
+                    imageFile : this.imageFile,
+                    imageLink : '/api/v2/workspaces/' + workspaceIds.designReviews + '/items/' + this.dmsId + '/field-values/' + config.fieldIdImage + '/image/' + elemData[config.fieldIdImage],
+                    tileIcon  : 'icon-product',
+                    title     : elemData[config.fieldIdItem],
+                    subtitle  : elemData.TITLE
                 });
                     
                 elemTile.appendTo(elemTiles)
-                    .attr('data-link', '/api/v3/workspaces/' + config.reviews.workspaces.reviews.id + '/items/' + this.dmsId)
-                    .attr('data-wsId', config.reviews.workspaces.reviews.id)
+                    .attr('data-link', '/api/v3/workspaces/' + workspaceIds.designReviews + '/items/' + this.dmsId)
+                    .attr('data-wsId', workspaceIds.designReviews)
                     .attr('data-dmsId', this.dmsId)
                     .attr('data-descriptor', elemData.DESCRIPTOR)
                     .click(function() {
@@ -244,6 +236,8 @@ function getReviews(statusFilter, id) {
                 ]);
 
             });
+
+            addTilesListImages(id);
             
         }
         
@@ -318,24 +312,28 @@ function openSelectedItem(elemSelected) {
         singleToolbar   : 'controls',
         contentSize     : 'm'
     });
-    insertResults(config.reviews.workspaces.tasks.id, [{ 
+    insertResults(workspaceIds.designReviewTaskss, [{ 
         field       : 'DESIGN_REVIEW', 
         type        : 0, 
         comparator  : 15, 
         value       : $('#header-subtitle').html() 
     }],{
-        id              : 'actions',
-        hideHeaderLabel : true,
-        openOnDblClick  : true,
-        openInPLM       : true,
-        reload          : true,
-        search          : true,
-        layout          : 'list',
-        contentSize     : 'xl',
-        tileTitle       : 'DESCRIPTOR',
-        tileSubtitle    : 'DESCRIPTION',
-        tileDetails     : [ {icon : 'icon-calendar', fieldId : 'TARGET_COMPLETION_DATE'}],
-        stateColors     : [
+        id               : 'actions',
+        hideHeaderLabel  : true,
+        openOnDblClick   : true,
+        openInPLM        : true,
+        reload           : true,
+        search           : true,
+        filterByStatus   : true,
+        layout           : 'list',
+        contentSize      : 'xl',
+        singleToolbar    : 'controls',
+        tileImage        : true,
+        tileImageFieldId : 'MARKUP',
+        tileTitle        : 'DESCRIPTOR',
+        tileSubtitle     : 'DESCRIPTION',
+        tileDetails      : [ {icon : 'icon-calendar', fieldId : 'TARGET_COMPLETION_DATE'}],
+        stateColors      : [
             { color : '#dd2222', state : 'Assigned', label : 'New'     },
             { color : '#ed8d16', state : 'In Work' , label : 'In Work' },
             { color : '#6a9728', states : ['Review', 'Complete'], label : 'Complete' }
@@ -352,7 +350,6 @@ function openSelectedItem(elemSelected) {
             'WF_CURRENT_STATE'
         ],
         sortBy           : ['NUMBER'],
-        tileImageFIeldId : 'MARKUP',
         afterCompletion  : function(id) { insertCreateActionButton(id); }
     })
 
@@ -362,7 +359,7 @@ function setDetails() {
     
     $.get('/plm/details', { 'link' : $('#panel').attr('data-link') }, function(response) {
         
-        let linkItem = getSectionFieldValue(response.data.sections, config.reviews.fieldIdItem, 'link');
+        let linkItem = getSectionFieldValue(response.data.sections, config.fieldIdItem, 'link');
 
         $('#requirements').val($('<div></div>').html(getSectionFieldValue(response.data.sections, 'REQUIREMENTS', '')).text());
         $('#issues'      ).val($('<div></div>').html(getSectionFieldValue(response.data.sections, 'ISSUES',       '')).text());
@@ -370,14 +367,17 @@ function setDetails() {
         $('#alternatives').val($('<div></div>').html(getSectionFieldValue(response.data.sections, 'ALTERNATIVES', '')).text());
         $('#deficiencies').val($('<div></div>').html(getSectionFieldValue(response.data.sections, 'DEFICIENCIES', '')).text());
 
-        insertViewer(linkItem);
+        insertViewer(linkItem, {
+            features : config.viewerFeatures
+        });
         insertBOM(linkItem, { 
             id               : 'bom',
             hideHeaderLabel  : true,
             openInPLM        : true,
             search           : true,
             toggles          : true,
-            bomViewName      : config.reviews.bomViewName,
+            bomViewName      : common.workspaces.items.defaultBOMView,
+            depth            : config.bomDepth,
             collapseContents : true,
             path             : true,
             counters         : true,
@@ -393,8 +393,8 @@ function setDetails() {
 function getTransitions() {
 
     $.get( '/plm/transitions', { 'link' : $('#panel').attr('data-link') }, function(response) {
-        for(transition of response.data) {
-            if(transition.customLabel.toUpperCase() === config.reviews.transitionId) {
+        for(let transition of response.data) {
+            if(transition.customLabel.toUpperCase() === config.transitionId) {
                 $('#review-finish').removeClass('disabled');
                 $('#review-finish').addClass('default');
                 $('#review-finish').attr('data-link', transition.__self__);
@@ -459,20 +459,19 @@ function saveComments() {
     $('#comments-processing').show();
 
     let params = { 
-        link       : $('#panel').attr('data-link'),
-        sections   : [{
-            id     : config.reviews.workspaces.reviews.sections[0].id,
-            fields : [
-                { 'fieldId' : 'REQUIREMENTS', 'value' : $('#requirements').val() },
-                { 'fieldId' : 'ISSUES'      , 'value' : $('#issues').val()       },
-                { 'fieldId' : 'CONCERNS'    , 'value' : $('#concerns').val()     },
-                { 'fieldId' : 'ALTERNATIVES', 'value' : $('#alternatives').val() },
-                { 'fieldId' : 'DEFICIENCIES', 'value' : $('#deficiencies').val() }
-            ]
-        }]
+        link     : $('#panel').attr('data-link'),
+        sections : wsConfig.sections,
+        fields   : [
+            { fieldId : 'REQUIREMENTS', value : $('#requirements').val() },
+            { fieldId : 'ISSUES'      , value : $('#issues').val()       },
+            { fieldId : 'CONCERNS'    , value : $('#concerns').val()     },
+            { fieldId : 'ALTERNATIVES', value : $('#alternatives').val() },
+            { fieldId : 'DEFICIENCIES', value : $('#deficiencies').val() }
+        ]
     }
 
-    $.post('/plm/edit', params, function() {
+    $.post('/plm/edit', params, function(response) {
+        printResponseErrorMessagesToConsole(response);
         $('#comments-data').show();
         $('#comments-processing').hide();
     });
@@ -482,9 +481,9 @@ function saveComments() {
 
 function insertCreateActionButton(id) {
 
-    genPanelActionButton(id, { singleToolbar : 'controls' }, 'create', 'Create Action', 'Create new actions', function() {
+    genPanelActionButton(id, 'create', 'Create Action', 'Create new actions', function() {
 
-        insertCreate(null, [config.reviews.workspaces.tasks.id], {
+        insertCreate(null, [workspaceIds.designReviewTaskss], {
             id                  : 'create-task',
             headerLabel         : 'Create new Design Review Task',
             fieldsIn            : [ 'TITLE', 'DESCRIPTION',  'TARGET_COMPLETION_DATE', 'MARKUP' ],
@@ -494,10 +493,10 @@ function insertCreateActionButton(id) {
             // contextItem         : $('#panel').attr('data-link'),
             // contextItemFields   : [ 'DESIGN_REVIEW' ],
 
-            fieldValues       : [{
-                fieldId       : 'DESIGN_REVIEW',
-                value         :  selectedLink
-                // value         : selectedId
+            fieldValues      : [{
+                fieldId      : 'DESIGN_REVIEW',
+                value        :  selectedLink,
+                displayValue : $('#header-subtitle').html()
             }],
             viewerImageFields   : [ 'MARKUP' ],
             afterCreation       : function(createId, createLink, id) { afterChangeTaskCreation(createId, createLink, id); }
@@ -506,13 +505,11 @@ function insertCreateActionButton(id) {
 
     }).addClass('default');
 
-
-
 }
 function afterChangeTaskCreation(createId, link, id) {
 
-    settings.results['actions'].load();
-    $('#actions-action-create').removeClass('disabled');
+    settings['actions'].load();
+    $('#actions-action-create').removeClass('disabled').removeAttr('disabled');
     
 }
 
@@ -646,7 +643,7 @@ function transitionDesignReview() {
         transition : $('#review-finish').attr('data-link'),
         comment    : 'Closed by Design Review Portal'
     }
-    $.get('/plm/transition', params, function(response) {
+    $.post('/plm/transition', params, function(response) {
         if(response.error) showErrorMessage('Error while finishing review', response.data.message);
         closeReview();
         $('#overlay').hide();

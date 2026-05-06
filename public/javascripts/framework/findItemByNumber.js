@@ -3,64 +3,91 @@ $(document).ready(function() {
     setUIEvents();
     appendProcessing('create');
 
-    if(number === '') { 
+    if(!isBlank(urlParameters.level)) {
+        $('body').removeClass('surface-level-2').addClass('surface-level-' + urlParameters.level);
+    }
+
+    if(urlParameters.hasOwnProperty('host')) {
+        if(urlParameters.host !== '') $('body').addClass('addin');
+    }
+
+    if(urlParameters.number === '') { 
 
         $('#create-message').show();
         $('.processing').hide();
 
     } else {
 
+        let url = '/plm/find-match';
+
         let params = {
-            wsId     : config.items.wsId,
-            limit    : 1,
-            query    : number,
-            wildcard : false
+            wsId     : urlParameters.wsid || common.workspaceIds.items,
+            query    : urlParameters.number,
+            fieldId  : common.workspaces.items.fieldIdNumber
         }
 
-        $.post('/plm/search-descriptor', params, function(response) {
+        if(!isBlank(urlParameters.reference)) {
+            params.bulk     = true;
+            params.limit    = 1;
+            params.wildcard = false;
+            url             = '/plm/search-descriptor';
+        }
+
+        $.post(url, params, function(response) {
 
             if(response.data.items.length > 0) {
 
-                $('.processing').hide();
-                $('#search-message').hide();
-
+                let data = response.data.items[0];
                 let link = response.data.items[0].__self__;
-
                 let url  = window.location.href.split('?')[0];
-                    url += '?dmsId='      + link.split('/')[6];
-                    url += '&wsId='       + link.split('/')[4];
-                    url += '&descriptor=' + response.data.items[0].descriptor;
+                
+                if(isBlank(urlParameters.reference)) {
+
+                    url += '?dmsId=' + link.split('/')[6];
+                    url += '&wsId='  + link.split('/')[4];
+
+                } else {
+
+                    let reference = getSectionFieldValue(data.sections, urlParameters.reference, '', 'link');
+
+                    url += '?dmsId='        + reference.split('/')[6];
+                    url += '&wsId='         + reference.split('/')[4];
+                    url += '&dmsidcontext=' +      link.split('/')[6];
+                    url += '&wsidcontext='  +      link.split('/')[4];
+
+                }
                     
                 if(!isBlank(options)) url += '&options=' + options;
-                if(!isBlank(host))    url += '&host='    + host;
 
-                if(theme !== '') url += '&theme=' + theme;
+                if(!isBlank(urlParameters.type))  url += '&type='  + urlParameters.type;
+                if(!isBlank(urlParameters.host))  url += '&host='  + urlParameters.host;
+                if(!isBlank(urlParameters.theme)) url += '&theme=' + urlParameters.theme;
 
                 window.location = url;
 
-            } else if(options.includes('autoCreate')) {
+            // } else if(options.includes('autoCreate')) {
 
-                console.log('Item not found in PLM, searching in Vault ...');
+            //     console.log('Item not found in PLM, searching in Vault ...');
 
-                $.get('/vault/basic-search', {
-                    query       : number,
-                    placeholder : false,
-                    extended    : true,
-                    limit       : 1
-                }, function(response) {
+            //     $.get('/vault/basic-search', {
+            //         query       : number,
+            //         placeholder : false,
+            //         extended    : true,
+            //         limit       : 1
+            //     }, function(response) {
 
-                    if(response.data.results.length === 0) {
+            //         if(response.data.results.length === 0) {
 
-                        $('.processing').hide();
-                        $('#search-message').hide();
-                        $('.copyFromVaultFailed').show();
-                        itemNotFound();
+            //             $('.processing').hide();
+            //             $('#search-message').hide();
+            //             $('.copyFromVaultFailed').show();
+            //             itemNotFound();
 
-                    } else {
-                        console.log('Copying item from Vault');
-                    }
+            //         } else {
+            //             console.log('Copying item from Vault');
+            //         }
 
-                });
+            //     });
             } else {
                 $('.processing').hide();
                 $('#search-message').hide();
@@ -80,7 +107,7 @@ function setUIEvents() {
 
     $('#create-action').click(function() {
         $('#create-processing').show();
-        insertCreateForm(config.search.wsId, 'create', true);
+        // insertCreateForm(config.search.wsId, 'create', true);
         $('#create-title').html($(this).html());
         $('#search-screen').hide();
         $('#create-screen').show();

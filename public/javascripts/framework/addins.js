@@ -1,5 +1,93 @@
-let isolate  = false;
-let messages = [];
+let isolate          = false;
+let isAddin          = false;
+let sendAddinMessage = true;
+let messagesAddin    = [];
+
+
+
+// Register listener for CAD/PDM events
+function setAddinEvents() {
+
+    // console.log('setAddinEvents START');
+
+    if(typeof chrome !== 'undefined') {
+        if(typeof chrome.webview !== 'undefined') {
+
+            console.log('setAddinEvents : adding Event Listener');
+            
+            $('body').addClass('addin');
+            $('body').addClass('is-addin');
+            isAddin = true;
+
+            window.chrome.webview.addEventListener('message', arg => { 
+
+                console.log('---------------------------------------------------');
+                console.log('Received message from Inventor');
+                console.log(arg);              
+
+                let message = arg.data.split(';');
+                let action  = message[0].split(':')[0];
+                let number  = message[0].split(':')[1];
+
+                // am 9.2.2ß26 haben wir die absicht besprochen, das messaging zu vereinfachen
+                // es soll nur noch semicolon als trennzeichen verwendete werden
+                // wir wollen das mit messaging id verknüpfen
+                // Beispiel
+                //  - action : message[0]
+                //  - reqId : message[1]
+                //  - parmas[2..n] : Funktionsparameter
+
+                // 'response:title:text'
+                // 'selectInstance:partNumber:instanceId'
+                // selectInstance:94500A231:002771.iam|Build Assembly: 1|94500A231:1
+                // selectComponent:94500A231
+                // selectInstance('002771.iam|Build Assembly:1|94500A231:6');
+
+                $('#overlay').hide();
+
+                switch(action) {
+
+                    case 'activeDocument': 
+                        console.log(' activeDocument = ' + number);
+                        break;
+
+                    case 'plm-item': 
+                        console.log(' message = ' + arg.data);
+                        // let elemFocus = $('.addin-focus-element');
+                        // if(elemFocus.length === 1) elemFocus.focus();
+                        break;
+
+                    case 'response': 
+                        let messageTitle = response[1];
+                        console.log(' messageTitle = ' + messageTitle);
+                        let messageText  = (response.length > 2) ? response[2] : 'Please contact your administrator';
+                        if(messageTitle != 'success') showErrorMessage(messageTitle, messageText);
+                        break;
+
+                    case 'selectInstance':
+                        let instanceId = message[1] || '';
+                        console.log(' instanceId = ' + instanceId);
+                        sendAddinMessage = false;
+                        selectInstance(instanceId);
+                        break;
+
+                    case 'selectComponent':
+                        
+                        // let partNumber = (response.length > 1) ? response[1] : '';
+                        console.log(' partNumber = ' + number);
+                        selectComponent(number);
+                        break;
+
+                    default: break;
+
+                }
+
+            });
+
+        }
+    }
+
+}
 
 
 // Confirm successful login
@@ -25,6 +113,7 @@ function genAddinTilesActions(elemContent) {
 function genAddinTileActions(elemTile) {
 
     let elemActions = $('<div></div>').appendTo(elemTile).addClass('tile-actions');
+    let isDrawing   = elemTile.hasClass('drawing');
 
     switch(elemTile.attr('data-type')) {
 
@@ -42,12 +131,12 @@ function genAddinTileActions(elemTile) {
                 // genAddinTileAction(elemActions, 'gotoVaultFile', 'icon-goto-folder', 'Go To Folder'); 
                 // genAddinTileAction(elemActions, 'gotoVaultItem', 'icon-vault-item' , 'Go To Item'); 
                 genAddinTileAction(elemActions, 'openComponent', 'icon-folder-open', 'Open Component'); 
-                genAddinTileAction(elemActions, 'addComponent' , 'icon-product'    , 'Place Component'); 
+                if(!isDrawing) genAddinTileAction(elemActions, 'addComponent', 'icon-product', 'Place Component'); 
             } else {
                 genAddinTileAction(elemActions, 'gotoVaultFile', 'icon-goto-folder', 'Go To Folder'); 
                 genAddinTileAction(elemActions, 'gotoVaultItem', 'icon-vault-item' , 'Go To Item'); 
                 genAddinTileAction(elemActions, 'openComponent', 'icon-folder-open', 'Open in CAD'); 
-                genAddinTileAction(elemActions, 'addComponent' , 'icon-product'    , 'Insert into CAD'); 
+                if(!isDrawing) genAddinTileAction(elemActions, 'addComponent', 'icon-product', 'Insert into CAD'); 
             }
             break;
 
@@ -82,6 +171,10 @@ function genAddinPLMItemTileActions(elemActions) {
 }
 function genAddinTileAction(elemActions, action, icon, tooltip) {
 
+    if(typeof config.hostApplicationActions !== 'undefined') {
+        if(!config.hostApplicationActions[host.toLowerCase()][action]) return;
+    }
+
     elemActions.addClass('addin-actions');
 
     let elemAction = $('<div></div>').appendTo(elemActions)
@@ -109,14 +202,22 @@ async function invokeAddinAction(elements, action) {
     
     switch(action) {
 
-        case 'addComponent'     : chrome.webview.postMessage("addComponent:"     + getNewMessageID(null) + selection.toString()); break;
-        case 'openComponent'    : chrome.webview.postMessage("openComponent:"    + getNewMessageID(null) + selection.toString()); break;
-        case 'gotoVaultFolder'  : chrome.webview.postMessage("gotoVaultFolder:"  + getNewMessageID(null) + selection.toString()); break;
-        case 'gotoVaultFile'    : chrome.webview.postMessage("gotoVaultFile:"    + getNewMessageID(null) + selection.toString()); break;
-        case 'gotoVaultItem'    : chrome.webview.postMessage("gotoVaultItem:"    + getNewMessageID(null) + selection.toString()); break;
-        case 'gotoVaultECO'     : chrome.webview.postMessage("gotoVaultECO:"     + getNewMessageID(null) + selection.toString()); break;
-        case 'selectComponent'  : chrome.webview.postMessage("selectComponent:"  + getNewMessageID(null) + selection.toString()); break;
-        case 'isolateComponent' : chrome.webview.postMessage("isolateComponent:" + getNewMessageID(null) + selection.toString()); break;
+        case 'addComponent'     : chrome.webview.postMessage("addComponent:"      + selection.toString()); break;
+        case 'openComponent'    : chrome.webview.postMessage("openComponent:"     + selection.toString()); break;
+        case 'gotoVaultFolder'  : chrome.webview.postMessage("gotoVaultFolder:"   + selection.toString()); break;
+        case 'gotoVaultFile'    : chrome.webview.postMessage("gotoVaultFile:"     + selection.toString()); break;
+        case 'gotoVaultItem'    : chrome.webview.postMessage("gotoVaultItem:"     + selection.toString()); break;
+        case 'gotoVaultECO'     : chrome.webview.postMessage("gotoVaultECO:"      + selection.toString()); break;
+        case 'selectComponent'  : chrome.webview.postMessage("selectComponent:"   + selection.toString()); break;
+        case 'isolateComponent' : chrome.webview.postMessage("isolateComponent:"  + selection.toString()); break;
+        // case 'addComponent'     : chrome.webview.postMessage("addComponent:"     + getNewMessageID(null) + selection.toString()); break;
+        // case 'openComponent'    : chrome.webview.postMessage("openComponent:"    + getNewMessageID(null) + selection.toString()); break;
+        // case 'gotoVaultFolder'  : chrome.webview.postMessage("gotoVaultFolder:"  + getNewMessageID(null) + selection.toString()); break;
+        // case 'gotoVaultFile'    : chrome.webview.postMessage("gotoVaultFile:"    + getNewMessageID(null) + selection.toString()); break;
+        // case 'gotoVaultItem'    : chrome.webview.postMessage("gotoVaultItem:"    + getNewMessageID(null) + selection.toString()); break;
+        // case 'gotoVaultECO'     : chrome.webview.postMessage("gotoVaultECO:"     + getNewMessageID(null) + selection.toString()); break;
+        // case 'selectComponent'  : chrome.webview.postMessage("selectComponent:"  + getNewMessageID(null) + selection.toString()); break;
+        // case 'isolateComponent' : chrome.webview.postMessage("isolateComponent:" + getNewMessageID(null) + selection.toString()); break;
 
     }
 
@@ -162,7 +263,7 @@ function getNewMessageID(elements) {
     let now = new Date();
     let id  = now.getTime();
     
-    messages.push({ id : id, elements : elements });
+    messagesAddin.push({ id : id, elements : elements });
 
     return id + ';';
 
@@ -185,27 +286,36 @@ function genAddinPLMBOMActions(id) {
 
 
 // Get current active document to be added to BOM
-async function getActiveDocument(context) {
+async function getActiveDocument() {
 
     console.log('GetActiveDocument START');
-
-    if(isBlank(context)) context = '-';
-
-    console.log(context);
-
-    if(typeof chrome.webview === 'undefined') return;
     
-
-    const plmAddin = chrome.webview.hostObjects.plmAddin;
-    let partNumber = await plmAddin.getActiveDocument(context);
-
-    console.log(partNumber);
-
-    if(isBlank(partNumber)) partNumber = '01-0712';
-
-    return partNumber;
+    chrome.webview.postMessage("getActiveDocument");
 
 }
+// async function getActiveDocument(context) {
+
+//     console.log('GetActiveDocument START');
+
+//     if(isBlank(context)) context = '-';
+
+//     console.log(context);
+
+//     if(typeof chrome.webview === 'undefined') return;
+    
+//     chrome.webview.postMessage("getActiveDocument:");
+
+
+//     const plmAddin = chrome.webview.hostObjects.plmAddin;
+//     let partNumber = await plmAddin.getActiveDocument(context);
+
+//     console.log(partNumber);
+
+//     if(isBlank(partNumber)) partNumber = '01-0712';
+
+//     return partNumber;
+
+// }
 
 
 

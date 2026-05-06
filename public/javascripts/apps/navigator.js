@@ -1185,7 +1185,7 @@ function submitTransitions() {
 
     $('.select-transition').each(function() {
         let link = $(this).closest('.transition').attr('data-link');
-        requests.push($.get('/plm/transition', { 
+        requests.push($.post('/plm/transition', { 
             link        : link, 
             transition  : $(this).val(),
             comment     : $('#transitions-comment').val() 

@@ -910,11 +910,13 @@ function setItemDetails(ws, link) {
         insertDetails(link, {
             hideHeaderLabel : true,
             id              : 'item-details',
+            singleToolbar   : 'controls',
+            layout          : 'narrow',
             collapsed       : true,
             editable        : true,
             reload          : true,
-            singleToolbar   : 'controls',
-            toggles         : true
+            toggles         : true,
+            hideComputed    : true
         })
 
         $('.linking').click(function() {
@@ -971,7 +973,7 @@ function setItemAttachments(link) {
         layout          : 'list',
         reload          : true,
         singleToolbar   : 'controls',
-        size            : 'xl',
+        contentSize     : 'l',
         onLoadComplete  : function(id) { setItemAttachmentsCounter(id); }
     });
 
@@ -1364,7 +1366,7 @@ function performTransition(link, transition) {
 
     $('#overlay').show();
 
-    $.get('/plm/transition', { 'link' : link, 'transition' : transition, 'comment' : 'Performed on mobile client' }, function(response) {
+    $.post('/plm/transition', { 'link' : link, 'transition' : transition, 'comment' : 'Performed on mobile client' }, function(response) {
         console.log(response);
         $('#overlay').hide();
         openItem(link);

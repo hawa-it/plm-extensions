@@ -895,7 +895,7 @@ function performWorkflowAction() {
 
     let link = $('#item').attr('data-link');
 
-    $.get('/plm/transition', { 'link' : link, 'transition' : $('#workflow-actions').val()}, function() {
+    $.post('/plm/transition', { 'link' : link, 'transition' : $('#workflow-actions').val()}, function() {
         $('#overlay').hide();
         openItem(link);
     });
@@ -928,7 +928,7 @@ function viewerSaveMarkup() {
 
     $('#overlay').show();
 
-    viewerCaptureScreenshot(fieldId, function() {
+    viewerCaptureScreenshot('viewer', fieldId, function() {
 
         let elemMarkupImage = $('#' + fieldId);
 

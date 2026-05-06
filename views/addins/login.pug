@@ -3,15 +3,16 @@ extends ../framework/addins
 block head
 
     link(rel='stylesheet', href='/stylesheets/addins/login.css')
+    link(rel='stylesheet', href='/stylesheets/custom/addins.css')
+    
     script(src='/javascripts/addins/login.js')
-    script.
-        config = !{JSON.stringify(config)};
+    script(src='/javascripts/custom/addins.js')
 
 block body 
 
     body.addin
 
-        .screen.surface-level-2
+        .screen.no-header.surface-level-2
             #validation 
                 #validation-title Logging in to 
                     br 

@@ -12,20 +12,22 @@ block body
             #side-title Custom PLM 
                 br
                 |User Experiences
-            p Unleash the power of Fusion Manage by utilizing its REST API to provide custom built frontends based on Autodesk Platform Services. All solutions manage data in PLM only. All business rules of PLM as well as access permissions still apply.
-            div.side-toolbar
+            p Unleash the power of Fusion Manage by utilizing its REST API to provide custom built frontends based on Autodesk Platform Services. All solutions manage data in PLM only and take into account the given user's access permission in PLM.
+            #side-toolbar.side-toolbar
                 .button#version Review changes by 
-                    span#version-name 10. October 2025
-                .button#tenant Connected to 
+                    span#version-name 24. April 2026
+                .button#tenant Open related tenant
                     span#tenant-name
-            p This  version has been optimized for the tenant template released in 2023 using a single Items workspace. While the solutions can be used with any tenant thanks to their configuration capabilities, using this new tenant reduces configuration efforts. In addition, most of the solutions can be tested with the given demo datasets immediately.
+                .button#chrome Learn about the
+                    span#chrome-extension Chrome Extension
+                .button#chrome-download Download the
+                    span Chrome Extension
             p#themes 
                 span Select Theme:
                 select#theme-selector.button 
-                    option(value='light-theme') Light Theme
-                    option(value='dark-theme') Dark Theme
-                    option(value='black-theme') Black Theme
-            p#disclaimer These solutions are provided by Autodesk Technical Sales without warranty and support. There should be no assumption that updates, patches, bug fixes and / or new features will be delivered to you. There will also be no support available either through Autodesk Support channels or by the Autodesk Pre-sales Technical Team. Please feel free to take the source code and ideas from this tool to develop your own production ready tool and products. Change and reuse the source code as you like.
+                    option(value='light') Light Theme
+                    option(value='dark') Dark Theme
+                    option(value='black') Black Theme            
             p Reuse this framework and its examples to build your own custom solutions. The Developer Guide provides documentation for key library functionality, the main framework asset and includes tutorials to get started quickly:
             div.side-toolbar
                 .button#docs Explore the    
@@ -33,12 +35,113 @@ block body
                 .button#troubleshooting Having issues? Use the    
                     span#troubleshooting-name Troubleshooting 
                     |Guide
-        #main.surface-level-2.no-scrollbar
+        #disclaimer.pos-abs-bottom 
+            div These solutions are provided by Autodesk Technical Sales without warranty and support. There should be no assumption that updates, patches, bug fixes and / or new features will be delivered to you. There will also be no support available either through Autodesk Support channels or by the Autodesk Pre-sales Technical Team. Please feel free to take the source code and ideas from this tool to develop your own production ready tool and products. Change and reuse the source code as you like.
+
+        #toggle.button.icon.icon-chevron-left(title="Hide / unhide side panel")
+        #layout.button.icon.icon-tiles(title="Toggle tiles display")
+        #start.button.icon.icon-start(title="Open the application start menu")
+
+
+
+        #main.surface-level-1.no-scrollbar
             .log#framework-changes 
                 h1 Framework Changes
                 table 
                     tr  
-                        td 10. October
+                        td 24. April 2026
+                        td New Application
+                        td The new BOM comparison utility enables a graphic and easy-to-use comparion of Bill of Materials
+                    tr  
+                        td 25. March 2026
+                        td Improved Cache
+                        td The setting 
+                            span.code sharedCache 
+                            |has been added, allowing to establish a cache being shared by users of the defined group. This helps reducing load times of BOM displays for example.
+                    tr  
+                        td 
+                        td Improved Image Cache
+                        td Panels based on searches now load images faster. Same is true for Item Details panels.
+                    tr  
+                        td 24. February 2026
+                        td Enhancement
+                        td New button in Landing Page can be used to download the Chrome Extension installer. This download will automatically update the manifest.json file for you and include the UX server's address in the list of permitted hosts.
+                    tr  
+                        td 9. February 2026
+                        td Update
+                        td The definition of available services has been simplified by changing the logic of 
+                            span.code exports.server.servicesEnabled 
+                            |and removing the property 
+                            span.code exports.server.servicesDisabled
+                            |. 
+                            br
+                            |When users try accessing a disabled service, the default 404 error message will be displayed now. The disabled services also will be removed from the start menu now.
+                    tr  
+                        td 27. January 2026
+                        td Enhancement
+                        td The start menu configuration now uses the property 
+                            span.code adminsOnly 
+                            |to recognize menu entries that should only be shown for Administrators. This property can be set on column level and also on command level. See the given menu configuration in the settings file for an example configuration. Users are considered as Administrator if they are assigned to group 
+                            span.code 'Administration [SYSTEM]'
+                            |). This can only be validated after logging in, so the default start menu accessible via 
+                            span.code /start 
+                            |will always show all menu entries as it only requires a login once an appliation is started from within this menu.
+                    tr  
+                        td 22. January 2026
+                        td New Setting
+                        td The new setting 
+                            span.code exports.server.landingPage 
+                            |now can be used to set the landing page being opened when accessing /. 
+                            br
+                            |If you set this value to /portal for example, the PLM Portal will be opened automatically when users do not define an application endpoint in the URL. The landing page with all applications and instructions still can be accessed using /landing.
+                    tr  
+                        td 
+                        td New Setting
+                        td The new setting 
+                            span.code exports.server.servicesEnabled 
+                            |now can be used to control the available applications. Only application endpoints contained in this array will be accessible (i.e. servicesEnabled = ['portal', 'service', 'reviews']). If this settings does not match an empty array, all applications NOT contained in this array will not be accesible any longer and a 'page not found' message will be displayed instead.
+                    tr  
+                        td 
+                        td New Setting
+                        td The new setting 
+                            span.code exports.server.servicesDisabled 
+                            |now can be used to control the available applications. 
+                            br
+                            |Application endpoints contained in this array will not be accessible any longer and a 'page not found' message will be shown instead.
+                            br
+                            |Example : servicesDisabled = ['insights', 'projects', 'users']
+                            br
+                            |This setting will be ignored if servicesEnabled is not an empty array.
+                    tr  
+                        td 12. January 2026
+                        td Framework Change
+                        td The definition of custom settings and usage with multiple environments has been improved. Connection data now is defined in specific environment files and dedicated settings files will only contain the custom settings.
+                    tr  
+                        td 
+                        td Framework Enhancement
+                        td BOM panels now support bulk file downloads. This feature is enabled in the Service Portal and may be added to furher applications in future.
+                    tr  
+                        td 
+                        td Quality Improvement
+                        td The viewer now provides enhanced configuration settings, reliability and usability
+                    tr  
+                        td 5. December 2025
+                        td *NEW* Asset BOM Editor
+                        td This new application creates a unique copy of an existing BOM to create an individual representation of an Asset
+                    tr  
+                        td 4. December 2025
+                        td *NEW* BOM Instances Editor
+                        td This new application enables management of properties specific for each instance of an item in a BOM (i.e. Serial Numbers)
+                    tr  
+                        td 2. December 2025
+                        td Major Enhancement
+                        td The Service Portal now supports Service BOMs and Asset with given Asset Services. This requires an update of your settings.js file. See the updated documentation of the Service Portal for details.
+                    tr  
+                        td 27. October 2025
+                        td New Feature
+                        td Initial release of the Chrome Extensions reducing implementation efforts and improving accessibiliy of the UX extensions both for Administrators and End Users
+                    tr  
+                        td 10. October 2025
                         td Enhancement
                         td Improved controls in create/edit forms
                     tr  
@@ -210,6 +313,7 @@ block body
                     include ../docs/app-product-portfolio-catalog.pug
                     include ../docs/app-workspace-navigator.pug
                     include ../docs/app-mobile-client.pug
+                    include ../docs/app-service-portal.pug
             .tiles-group 
                 .tiles-group-title Dashboards
                 .tiles-group-subtitle Gain valuable insights using PLM data. These applications require demo data, but will work immediately when using the default demo tenant.
@@ -222,9 +326,12 @@ block body
                 .tiles-group-title Item &amp; BOM Management
                 .tiles-group-subtitle Manage multiple Bill of Materials based on your initial Engineering BOM. These Applications require configuration changes using the Workspace Manager and/or even changes to scripts. 
                 .tiles-group-list
+                    include ../docs/app-bom-comparison.pug
                     include ../docs/app-mbom-editor.pug
                     include ../docs/app-sbom-editor.pug
                     include ../docs/app-variants-manager.pug
+                    include ../docs/app-instances.pug
+                    include ../docs/app-abom.pug
                     include ../docs/app-class-browser.pug
             .tiles-group 
                 .tiles-group-title Managing Change
@@ -232,14 +339,13 @@ block body
                 .tiles-group-list
                     include ../docs/app-design-reviews.pug
                     include ../docs/app-change-impact-analysis.pug                
-                    include ../docs/app-service-portal.pug
             .tiles-group
                 .tiles-group-title Administration Utilities
                 .tiles-group-subtitle Utilities made for Tenant Administrators only.
                 .tiles-group-list
                     include ../docs/admin-data.pug
                     include ../docs/admin-insights.pug
-                    include ../docs/admin-workspace-comparison.pug
+                    include ../docs/admin-comparison.pug
                     include ../docs/admin-shortcuts.pug
             .tiles-group.first
                 .tiles-group-title Advanced Administration Utilities

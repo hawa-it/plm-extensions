@@ -276,6 +276,12 @@ let categories = [
         default     : '[]',
         supportedBy : ['nav-mow', 'nav-recent-items']
     },{
+        name        : 'pagination',
+        description : "Enables pagination controls if needed",
+        type        : 'Boolean',
+        default     : 'true',
+        supportedBy : ['nav-class-contents', 'nav-search', 'nav-workspace-views']
+    },{
         name        : 'userId',
         description : 'Retrieve data in context of another user, specified by the userId provided (use the mail address used for logging in).<br>This requires impersonation which can only be used if adminClientId and adminClientSecret are provided in the settings file.',
         type        : 'String',
@@ -348,6 +354,30 @@ let categories = [
             'nav-recent-items' : 'recents'
         }
     },{
+        name        : 'sortBy',
+        description : 'Sort the grid based on the Field ID provided',
+        type        : 'String',
+        default     : '',
+        supportedBy : ['item-grid']
+    },{
+        name        : 'sortDirection',
+        description : 'Sort the grid in ascending or descending order',
+        type        : 'String',
+        default     : 'asending',
+        supportedBy : ['item-grid']
+    },{
+        name        : 'sortType',
+        description : 'Define the field type for proper sorting',
+        type        : 'String',
+        default     : 'string',
+        supportedBy : ['item-grid']
+    },{
+        name        : 'sortOrder',
+        description : 'Provide an array of value pairs with sortBy, sortDirection and sortType to define multiple sorting levels',
+        type        : 'Array',
+        default     : '[]',
+        supportedBy : ['item-grid']
+    },{
         name        : 'multiSelect',
         description : 'Enables selection of multiple items within the same panel. This also adds buttons to the panel toolbar to select all or none items.',
         type        : 'Boolean',
@@ -360,131 +390,161 @@ let categories = [
         default     : '-',
         supportedBy : ['nav-mow', 'nav-recent-items']  
     },{
-    name        : 'hideCloseButton',
-    description : 'This will hide the given button, enabling dedicated toggles in the main header toolbar for example',
-    type        : 'Boolean',
-    default     : 'false',
-    supportedBy : []
-},{
-    name        : 'hideButtonCreate',
-    description : '',
-    type        : 'Boolean',
-    default     : 'false',
-    supportedBy : []
-},{
-    name        : 'hideButtonAdd',
-    description : '',
-    type        : 'Boolean',
-    default     : 'false',
-    supportedBy : []
-},{
-    name        : 'hideButtonClone',
-    description : '',
-    type        : 'Boolean',
-    default     : 'false',
-    supportedBy : []
-},{
-    name        : 'hideButtonDisconnect',
-    description : 'This will hide the button to disconnect selected item from the given view',
-    type        : 'Boolean',
-    default     : 'false',
-    supportedBy : []
-},{
-    name        : 'editable',
-    description : 'Enables edit capabilities within the panel',
-    type        : 'Boolean',
-    default     : 'false',
-    supportedBy : []
-},{
-    name        : 'cloneable',
-    description : 'Enables cloning capabilities within the panel',
-    type        : 'Boolean',
-    default     : 'false',
-    supportedBy : []
-},{
-    name        : 'contextId',
-    description : 'Provide additional Id of element invoking the create dialog to access its settings and enable refresh using the afterCreation event',
-    type        : 'String',
-    default     : 'false',
-    supportedBy : []
-},{
-    name        : 'contextItem',
-    description : 'Provide the API-Link of the context item to create a link in defined pick list fields (see seeting contextItemFields)',
-    type        : 'String',
-    default     : 'false',
-    supportedBy : []
-},{
-    name        : 'contextItems',
-    description : 'Provide the API-Link of multiple context items to create links in defined pick list fields (see seeting contextItemFields which must be of same array length)',
-    type        : 'String',
-    default     : 'false',
-    supportedBy : []
-},{
-    name        : 'contextItemFields',
-    description : 'List of fieldIds which should be set to current context item (ie AFFECTED_ITEM)',
-    type        : 'String',
-    default     : '',
-    supportedBy : []
-},{
-    name        : 'createContextItem',
-    description : '',
-    type        : 'String',
-    default     : '',
-    supportedBy : ['item-change-processes']
-},{
-    name        : 'createContextItems',
-    description : '',
-    type        : 'String',
-    default     : '',
-    supportedBy : ['item-change-processes']
-},{
-    name        : 'createContextItemFields',
-    description : 'List of fieldIds which should be set to current context item (ie AFFECTED_ITEM)',
-    type        : 'String',
-    default     : '',
-    supportedBy : ['item-change-processes']
-},{
-    name        : 'createViewerImageFields',
-    description : 'List of fieldIds which should be seto a screenshot of the current viewer session',
-    type        : 'String',
-    default     : '',
-    supportedBy : ['item-change-processes']
-},{
-    name        : 'createConnectAffectedItem',
-    description : 'Once the new change process has been created, the related item can be connected as affected item automatically',
-    type        : 'Boolean',
-    default     : true,
-    supportedBy : ['item-change-processes']
-},{
-    name        : 'createHeaderLabel',
-    description : 'Sets the header label of the create dialog',
-    type        : 'String',
-    default     : 'Create Process',
-    supportedBy : []
-},{
-    name        : 'createButtonLabel',
-    description : 'Sets the label of the create button',
-    type        : 'String',
-    default     : 'Create',
-    supportedBy : []
-},{
-    name        : 'fieldValues',
-    description : 'Set and fix values for defined fields. Provide fieldid / value pairs (see variant management and design reviews)',
-    type        : 'Array',
-    default     : '[]',
-    supportedBy : []
-},{
-    name        : 'disconnectLabel',
-    description : 'Sets the label of the disconnect button',
-    type        : 'String',
-    default     : 'Remove',
-    supportedBy : []
-},{
-    name        : 'disconnectIcon',
-    description : 'Sets the icon of the disconnect button (select from the icons provided by this framework as listed in the given page)',
-    type        : 'String',
-    default     : 'icon-disconnect',
-    supportedBy : []
+        name        : 'hideCloseButton',
+        description : 'This will hide the given button, enabling dedicated toggles in the main header toolbar for example',
+        type        : 'Boolean',
+        default     : 'false',
+        supportedBy : []
+    },{
+        name        : 'hideButtonCreate',
+        description : '',
+        type        : 'Boolean',
+        default     : 'false',
+        supportedBy : []
+    },{
+        name        : 'hideButtonAdd',
+        description : '',
+        type        : 'Boolean',
+        default     : 'false',
+        supportedBy : []
+    },{
+        name        : 'hideButtonClone',
+        description : '',
+        type        : 'Boolean',
+        default     : 'false',
+        supportedBy : []
+    },{
+        name        : 'hideButtonDisconnect',
+        description : 'This will hide the button to disconnect selected item from the given view',
+        type        : 'Boolean',
+        default     : 'false',
+        supportedBy : []
+    },{
+        name        : 'hideDescriptor',
+        description : 'This will hide the descriptor column which is used as first column otherwise',
+        type        : 'Boolean',
+        default     : 'false',
+        supportedBy : ['insertBOM']
+    },{
+        name        : 'editable',
+        description : 'Enables edit capabilities within the panel',
+        type        : 'Boolean',
+        default     : 'false',
+        supportedBy : []
+    },{
+        name        : 'cloneable',
+        description : 'Enables cloning capabilities within the panel',
+        type        : 'Boolean',
+        default     : 'false',
+        supportedBy : []
+    },{
+        name        : 'contextId',
+        description : 'Provide additional Id of element invoking the create dialog to access its settings and enable refresh using the afterCreation event',
+        type        : 'String',
+        default     : 'false',
+        supportedBy : []
+    },{
+        name        : 'contextItem',
+        description : 'Provide the API-Link of the context item to create a link in defined pick list fields (see seeting contextItemFields)',
+        type        : 'String',
+        default     : 'false',
+        supportedBy : []
+    },{
+        name        : 'contextItems',
+        description : 'Provide the API-Link of multiple context items to create links in defined pick list fields (see seeting contextItemFields which must be of same array length)',
+        type        : 'String',
+        default     : 'false',
+        supportedBy : []
+    },{
+        name        : 'contextItemFields',
+        description : 'List of fieldIds which should be set to current context item (ie AFFECTED_ITEM)',
+        type        : 'String',
+        default     : '',
+        supportedBy : []
+    },{
+        name        : 'createContextItem',
+        description : '',
+        type        : 'String',
+        default     : '',
+        supportedBy : ['item-change-processes']
+    },{
+        name        : 'createContextItems',
+        description : '',
+        type        : 'String',
+        default     : '',
+        supportedBy : ['item-change-processes']
+    },{
+        name        : 'createContextItemFields',
+        description : 'List of fieldIds which should be set to current context item (ie AFFECTED_ITEM)',
+        type        : 'String',
+        default     : '',
+        supportedBy : ['item-change-processes']
+    },{
+        name        : 'createViewerImageFields',
+        description : 'List of fieldIds which should be seto a screenshot of the current viewer session',
+        type        : 'String',
+        default     : '',
+        supportedBy : ['item-change-processes']
+    },{
+        name        : 'createConnectAffectedItem',
+        description : 'Once the new change process has been created, the related item can be connected as affected item automatically',
+        type        : 'Boolean',
+        default     : true,
+        supportedBy : ['item-change-processes']
+    },{
+        name        : 'createHeaderLabel',
+        description : 'Sets the header label of the create dialog',
+        type        : 'String',
+        default     : 'Create Process',
+        supportedBy : []
+    },{
+        name        : 'createButtonLabel',
+        description : 'Sets the label of the create button',
+        type        : 'String',
+        default     : 'Create',
+        supportedBy : []
+    },{
+        name        : 'fieldValues',
+        description : 'Set and fix values for defined fields. Provide fieldid / value pairs (see variant management and design reviews)',
+        type        : 'Array',
+        default     : '[]',
+        supportedBy : []
+    },{
+        name        : 'disconnectLabel',
+        description : 'Sets the label of the disconnect button',
+        type        : 'String',
+        default     : 'Remove',
+        supportedBy : []
+    },{
+        name        : 'disconnectIcon',
+        description : 'Sets the icon of the disconnect button (select from the icons provided by this framework as listed in the given page)',
+        type        : 'String',
+        default     : 'icon-disconnect',
+        supportedBy : []
+    },{
+        name        : 'uploadFileLabel',
+        description : 'Sets the label for the file upload button',
+        type        : 'String',
+        default     : 'Upload File',
+        supportedBy : ['item-acttachments']
+    },{
+        name        : 'uploadScreenshotLabel',
+        description : 'Sets the label for the viewer screenshot upload button',
+        type        : 'String',
+        default     : 'Save Screenshot',
+        supportedBy : ['item-acttachments']        
+    },{
+        name        : 'uploadScreenshot',
+        description : "When viewer is contained in application and this setting is true, users can upload the current viewer's display as screenshot",
+        type        : 'Boolean',
+        default     : 'false',
+        supportedBy : ['item-acttachments']        
+    },{
+        name        : 'hideButtonLabels',
+        description : "When set to true, only icons of buttons will be displayed and labels will be shown as tooltips only",
+        type        : 'Boolean',
+        default     : 'false',
+        supportedBy : ['item-grid']        
 },{
     name        : 'picklistLimit',
     description : 'Defines the number of items being retrieved for picklist fields',
@@ -640,7 +700,7 @@ let categories = [
     description : 'Displays toggle buttons in panel header toolbar to quickly expand and collapse the contents being displayed',
     type        : 'Boolean',
     default     : 'false',
-    supportedBy : []
+    supportedBy : ['insertGrid']
 },{
     name        : 'saveTabSelection',
     description : 'When switching between records, the summary will automatically select the previously selected tab if layout "tabs" is used',
@@ -751,10 +811,10 @@ let categories = [
     supportedBy : []
 },{
     name        : 'limit',
-    description : 'Sets search results limit of the initial search',
+    description : 'Sets limit of records being displayed at initial load',
     type        : 'Integer',
     default     : '25',
-    supportedBy : []
+    supportedBy : ['nav-search', 'nav-workspace-views']
 },{
     name        : 'workspaceIds',
     description : 'Will override workspacesIn if defined, will restrict search within the given list of workspaces',
@@ -810,6 +870,30 @@ let categories = [
     default     : 'true',
     supportedBy : []
 },{
+    name        : 'downloadFiles',
+    description : 'Enables download of files from PLM  BOM(requires given permission in PLM)',
+    type        : 'Boolean',
+    default     : 'true',
+    supportedBy : ['insert-bom']
+},{
+    name        : 'downloadFormats',
+    description : 'Defines list of available formats for BOM file download, based on an array with key / value pairs made of label, filter and tooltip',
+    type        : 'Array',
+    default     : "[ { label : 'STEP'  , filter : ['.step', '.stp'], tooltip : 'File suffix stp and step will be taken into account' },]",
+    supportedBy : ['insert-bom']
+},{
+    name        : 'downloadRequests',
+    description : 'Sets the maximum number of parallel download processes',
+    type        : 'Integer',
+    default     : 3,
+    supportedBy : ['insert-bom']
+},{
+    name        : 'downloadPatterns',
+    description : "Adds additional rename patterns to the download panel. Must contain properties fields, separator and label ( Example: [{ fields : ['NUMBER', 'PDM_ITEM_REVISION'], separator : ' ', label : 'Number PDM-Revision' }]",
+    type        : 'Array',
+    default     : [],
+    supportedBy : ['insert-bom']
+},{
     name        : 'includeRelatedFiles',
     description : 'When enabled, related attachments will be displayed as well',
     type        : 'Boolean',
@@ -856,7 +940,7 @@ let categories = [
     description : 'Sets the label of the Save button',
     type        : 'String',
     default     : 'Save',
-    supportedBy : []   
+    supportedBy : ['insertGrid']   
 },{
     name        : 'includeBookmarks',
     description : 'When enabled, users also can select the list of bookmarked items of the defined workspace using the views drop down',
@@ -896,9 +980,21 @@ let categories = [
 },{
     name        : 'autoClick',
     description : 'Once the contents have been loaded, the first entry will be clicked / selected automatically when set to true',
-    type        : 'Booleand',
+    type        : 'Boolean',
     default     : 'false',
     supportedBy : []
+},{
+    name        : 'performTransition',
+    description : 'Provide the internal ID of a workflow transition from the initial status to let this transition be performed right after item creation',
+    type        : 'String',
+    default     : '',
+    supportedBy : ['insertCreate']
+},{
+    name        : 'createPerformTransition',
+    description : 'Provide the internal ID of a workflow transition from the initial status to let this transition be performed right after new change process creation',
+    type        : 'String',
+    default     : '',
+    supportedBy : ['insertChangeProcesses']
 
 }]}];
 

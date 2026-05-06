@@ -1,86 +1,260 @@
+
+:root {
+
+    --border-v : 18px;
+    --border-h : 26px;
+
+    --width-tree    : 360px;
+    --width-filters : 440px;
+    --width-summary : 360px;
+
+}
+
+.addin {
+
+    --border-v : 6px;
+    --border-h : 10px;
+
+    --width-tree    : 280px;
+    --width-filters : 330px;
+
+}
+
+.single-select-action { order : -1; }
+
+
 /* MASTER LAYOUT */
 /* ----------------------------------------------------------------------------- */
-:root {
-    --padding-v         : 24px;
-    --padding-h         : 36px;
-    --width-panel       : 700px;
-    --height-viewer     : 350px;
+#classes {
+    border-width : var(--border-v) var(--border-h);
+    width        : var(--width-tree);
+    z-index      : 3;
 }
-#items {
-    border-width    : var(--padding-v) var(--padding-h);
-    top             : 0px;
-    right           : 0px;
-    bottom          : 0px;
-    left            : 0px
+#filters {
+    border-width : var(--border-v) var(--border-h);
+    top     : 0px;
+    bottom  : 0px;
+    left    : calc(var(--width-tree) + (2 * var(--border-h)));
+    width   : var(--width-filters);
+    z-index : 2;
 }
-#item {
-    border-width    : var(--padding-v) var(--padding-h) var(--padding-h) var(--padding-h);
-    top             : 0px;
-    right           : calc(0px - var(--width-panel) - (2 * var(--padding-h)));;
-    bottom          : 0px;
-    width           : var(--width-panel);
+#contents {
+    border-width : var(--border-v) var(--border-h);
+    top    : 0px;
+    right  : calc(var(--width-summary) + (2 * var(--border-h)));
+    bottom : 0px;
+    left   : calc(var(--width-tree) + var(--width-filters) + (4 * var(--border-h)));
+}
+#summary {
+    border-width : var(--border-v) var(--border-h);
+    top    : 0px;
+    right  : 0px;
+    bottom : 0px;
+    width  : var(--width-summary);
 }
 
-.no-viewer #viewer { display : none; }
-.no-viewer #details { top : 0px; }
+.no-classes #classes  { left : calc(0px - var(--width-tree) - (2 * var(--border-h))); }
+.no-classes #filters  { left : 0px; }
+.no-classes #contents { left : calc(var(--width-filters) + (2 * var(--border-h))); }
 
-.with-panel #items { right : calc((2 * var(--padding-h)) + var(--width-panel)); }
-.with-panel #item { right : 0px }
+.no-filters #filters  { left : calc(var(--width-tree) - var(--width-filters)); }
+.no-filters #contents { left : calc(var(--width-tree) + (2 * var(--border-h))); }
+
+.no-classes.no-filters #filters  { left : calc(0px - var(--width-filters)); }
+.no-classes.no-filters #contents { left : 0px; }
+
+.no-summary #contents { right : 0px; }
+.no-summary #summary  { right : calc(0px - var(--width-summary) - (2 * var(--border-h))); }
+
+.addin #header {
+    background : var(--color-surface-level-1) !important;
+    left       : unset;
+    z-index    : 3;
+}
+.addin #classes,
+.addin #filters,
+.addin #contents { top : -40px; }
 
 
+/* CLASSES TREE */
+/* ----------------------------------------------------------------------------- */
+#classes-actions {
+    justify-content: center;;
+}
+
+.addin #classes-search-input { min-width : 68px; }
+
+
+/* CLASS FILTERS */
+/* ----------------------------------------------------------------------------- */
+#filters-content {
+    padding-top : 4px;
+}
+#filters select {
+    height        : 38px;
+    padding-right : 10px;
+    padding-left  : 10px;
+    text-align    : left;
+}
+.class-filters {
+    display        : flex;
+    flex-direction : column;
+    gap            : 1px;
+    padding-top    : 1px;
+}
+.class-filter {
+    background : var(--color-surface-level-2);
+    display    : flex;
+    gap        : 0px;
+}
+.class-filter-property {
+    background    : var(--color-surface-level-3);
+    flex-grow     : 1;
+    line-height   : 38px;
+    padding       : 0px 6px 0px 14px;
+    overflow      : hidden;
+    text-overflow : ellipsis;
+    white-space   : nowrap;
+}
+.class-filter > select,
+.class-filter > .button { border-radius : 0px; }
+.class-filter > select {
+    line-height : 38px;
+    padding     : 0px;
+    max-width   : 46px;
+    min-width   : 46px;
+    width       : 46px;
+}
+.class-filter > select.class-filter-symbol {
+    font-size : 20px;
+}
+.class-filter > select.class-filter-comparator {
+    max-width    : 116px;
+    min-width    : 116px;
+    width        : 116px;
+}
+.class-filter > select.class-filter-picklist {
+    margin-right : 1px;
+    max-width    : 221px;
+    min-width    : 221px;
+    width        : 221px;
+}
+.class-filter > input {
+    text-align : center;
+    max-width  : 90px;
+    min-width  : 90px;
+    width      : 90px;
+}
+.class-property-selector {
+    width : 100%; 
+}
+.panel-section-title {
+    background  : var(--color-surface-level-2);
+    font-weight : 700;
+    padding     : 12px 14px 0px;
+}
+.panel-section-subtitle {
+    background  : var(--color-surface-level-2);
+    font-size   : 12px;
+    line-height : 16px;
+    padding     : 4px 14px 8px;
+}
+.class-filter-advanced {
+    padding : 8px 14px;
+    width   : calc(100% - 28px);
+    height  : 80px;
+}
+.content-item.reference > td.content-column-number {
+    background       : var(--color-yellow-800)  !important;
+    border-top-color : var(--color-yellow-800)  !important;
+}
+.content-item.reference > td {
+    background       : var(--color-yellow-500) !important;
+    border-top-color : var(--color-yellow-500) !important;
+}
+
+.light-theme .class-property-selector { margin-bottom : 4px; }
+.light-theme .class-filters,
+.light-theme .class-filter { gap : 4px; }
+.light-theme .class-filter > input { border-color : var(--color-surface-level-5); }
+.light-theme .class-filter > select.class-filter-picklist { max-width : 225px; min-width : 225px; }
+
+.addin #filters-content { 
+    padding-top : 0px; 
+    top         : 36px;
+}
+.addin .class-filter-property {
+    line-height : 24px;
+    padding     : 0px 4px 0px 16px;
+}
+.addin .class-filter > select.class-filter-picklist {
+    padding-left : 4px !important;
+    max-width    : 167px;
+    min-width    : 167px;
+    width        : 167px;
+}
+.addin .class-filter > select.class-filter-comparator {
+    padding-right : 4px !important;
+    padding-left  : 4px !important;
+    max-width     : 90px;
+    min-width     : 90px;
+    width         : 90px;
+}
+.addin .class-filter > select.class-filter-symbol {
+    font-size : 12px;
+}
+.addin .class-filter-input {
+    padding   : 0px 4px;
+    max-width : 70px;
+    min-width : 70px;
+    width     : 70px;
+}
 
 
 /* ITEMS */
 /* ----------------------------------------------------------------------------- */
-#items-content { 
-    display : block !important;
-    bottom : 58px;
-}
-#items-toggles {
-    position : absolute;
-    right    : 0px;
-    bottom   : 0px;
-    left     : 0px;
-    height   : 48px;
-}
-#items-toggles > div {
-    margin    : auto;
-    max-width : 900px;
-    position  : unset;
-}
-#items-toggles > div > div {
-    min-width : 200px;
-}
-#items-list { 
-    width : 100%; 
-}
-tr.reference td {
-    color       : var(--color-font);
-    font-weight : bold;
-}
-.value.neutral {
-    font-weight : normal;
-}
+#contents-actions { justify-content : right; }
+.value.neutral {  font-weight : normal;}
 .value.diff  { background : var(--color-status-red-bright);   }
 .value.match { background : var(--color-status-green-bright); }
+.content-column-number {
+    left     : 0;
+    position : sticky;
+}
+.content-column-descriptor,
+.list-column-descriptor {
+    left      : 40px;
+    max-width : 220px;
+    position  : sticky;
+}
+th.content-column-number,
+th.content-column-descriptor {
+    z-index  : 6 !important;
+}
+td.content-column-number,
+td.content-column-descriptor {
+    z-index  : 4 !important;
+}
+#contents-content {
+    bottom : 0px;
+}
+#contents-pagination-controls {
+    top    : 64px;
+    right  : unset;
+    bottom : unset;
+    left   : 0px;
+}
+.addin #contents-pagination-controls {
+    padding-left : 18px;
+    top : 42px;
+}
 
-/* ITEM */
+
+/* SUMMARY */
 /* ----------------------------------------------------------------------------- */
-#item-header {
-    padding : 0px;
+.panel-content.with-panel-sections {
+    display        : flex;
+    flex-direction : column;
+    gap            : 16px;
 }
-#item-tabs {
-    top : 58px;
-}
-#item-content {
-    top     : 92px;
-    right   : 0px;
-    bottom  : 0px;
-    left    : 0px;
-}
-#item.includes-viewer #item-tabs {
-    top : 358px;
-}
-#item.includes-viewer #item-content {
-    top : 392px;
-}
+.addin #summary-subtitle { display : none; }

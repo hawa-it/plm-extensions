@@ -1,16 +1,16 @@
 let wsContext        = { id : '', sections  : [], fields : [] }
-let wsVariants       = { id : '', sections  : [], fields : [], bomViews : [], viewId : '' }
+let wsVariants       = { id : '', sections  : [], fields : [], bomViews : [], viewId : '', bomViewLinks : [] }
 let listVariants     = [];
 let fieldsVariant    = [];
 let variantBOMClenup = [];
 let classesViewer    = [ 'standard', 'viewer-left', 'viewer-off'];
 let modeViewer       = 0;
-let urlParameters    = getURLParameters();
 let derivedData;
+
 
 let saveActions = {
     retrieval : {
-        label       : 'Getting derived item details',
+        label       : 'Getting derived data for variant item creation',
         className   : 'pending-retrieval',
         selector    : '.content-item',
         maxRequests : 5,
@@ -21,15 +21,15 @@ let saveActions = {
         selector    : '.variant-item',
         maxRequests : 1,
     },
-    removal : {
-        label       : 'Deleting BOM entries',
-        className   : 'pending-removal',
+    addition : {
+        label       : 'Adding BOM entries to new variants',
+        className   : 'pending-addition',
         selector    : '.variant-item',
         maxRequests : 5,
     },
-    addition : {
-        label        : 'Adding BOM entries',
-        className   : 'pending-addition',
+    replacement : {
+        label       : 'Replacing items in BOM with variants',
+        className   : 'pending-replacement',
         selector    : '.variant-item',
         maxRequests : 5,
     },
@@ -94,7 +94,7 @@ let paramsSummary = {
 $(document).ready(function() {
 
     wsContext.id  = wsId;
-    wsVariants.id = config.variants.wsIdItemVariants;
+    wsVariants.id = config.workspaceItemVariants.workspaceId;
 
     appendOverlay(true);
     setUIEvents();
@@ -102,15 +102,22 @@ $(document).ready(function() {
     getFeatureSettings('variants', [$.get( '/plm/details', { link : urlParameters.link })], function(responses) {
 
         if(!isBlank(urlParameters.fieldidebom)) {
+
             urlParameters.product = urlParameters.link;
-            urlParameters.link = getSectionFieldValue(responses[0].data.sections, urlParameters.fieldidebom, '', 'link');
+            urlParameters.link    = getSectionFieldValue(responses[0].data.sections, urlParameters.fieldidebom, '', 'link');
+
             $.get( '/plm/details', { link : urlParameters.link }, function(response) {
-                urlParameters.root = response.data.root.link;
+                urlParameters.root       = response.data.root.link.split('/').pop();
+                urlParameters.partNumber = getSectionFieldValue(response.data.sections, common.workspaces.items.fieldIdNumber, '');
                 initEditor();
             });
+
         } else {
-            urlParameters.root = responses[0].data.root.link;
+
+            urlParameters.root       = responses[0].data.root.link.split('/').pop();
+            urlParameters.partNumber = getSectionFieldValue(responses[0].data.sections, common.workspaces.items.fieldIdNumber, '');
             initEditor();
+
         }
 
     });
@@ -128,19 +135,17 @@ function setUIEvents() {
             id                : 'create',
             createButtonIcon  : '',
             createButtonLabel : 'Submit',
-            headerLabel       : 'Create new variant',
+            headerLabel       : 'Create new variant for ' + urlParameters.partNumber,
             hideComputed      : true,
-            fieldsIn          : ['TITLE', config.variants.fieldIdBaseItem],
+            fieldsIn          : [config.workspaceItemVariants.fieldIds.title, config.workspaceItemVariants.fieldIds.baseItem],
             contextItem       : urlParameters.link,
-            contextItemFields : [ config.variants.fieldIdBaseItem ],
+            contextItemField  : config.workspaceItemVariants.fieldIds.baseItem,
             fieldValues       : [{
-                fieldId       : config.variants.fieldIdRootItemDmsId,
-                value         : urlParameters.root.split('/').pop()
-                // fieldId       : config.variants.fieldIdVariantBaseItem,
-                // value         : dmsId
+                fieldId : config.workspaceItemVariants.fieldIds.rootDMSId,
+                value   : urlParameters.root
             }],
             hideSections      : true,
-            afterCreation     : function(id, link) { addNewVariant(link); }
+            afterCreation     : function(id, link, data, contextId) { addNewVariant(link); }
         });
 
     });
@@ -169,29 +174,30 @@ function setUIEvents() {
 
 // Get item details to pull further information from PLM
 function initEditor() {
-    getInitialData(urlParameters.root.split('/').pop());
+
+    getInitialData();
     insertViewer(urlParameters.link);
     insertItemSummary(urlParameters.link, paramsSummary);
 }
-function getInitialData(rootDmsId) {
+function getInitialData() {
 
     let requests = [
         $.get('/plm/details'              , { link : urlParameters.link }),
-        $.get('/plm/sections'             , { wsId : wsContext.id,  useCache : true  }),
-        $.get('/plm/sections'             , { wsId : wsVariants.id, useCache : true  }),
-        $.get('/plm/fields'               , { wsId : wsVariants.id, useCache : true  }),
-        $.get('/plm/bom-views-and-fields' , { wsId : wsVariants.id, useCache : true  })
+        $.get('/plm/sections'             , { wsId : wsContext.id,  useCache : true }),
+        $.get('/plm/sections'             , { wsId : wsVariants.id, useCache : true }),
+        $.get('/plm/fields'               , { wsId : wsVariants.id, useCache : true }),
+        $.get('/plm/bom-views-and-fields' , { wsId : wsVariants.id, useCache : true })
     ];
 
     requests.push($.post( '/plm/search', {
         wsId   : wsVariants.id,
-        fields : [ 'TITLE', config.variants.fieldIdRootItemDmsId ],
-        sort   : ['TITLE'],
+        fields : [ config.workspaceItemVariants.fieldIds.title, config.workspaceItemVariants.fieldIds.rootDMSId ],
+        sort   : [ config.workspaceItemVariants.fieldIds.title ],
         filter : [{
-            field       : config.variants.fieldIdRootItemDmsId,
+            field       : config.workspaceItemVariants.fieldIds.rootDMSId,
             type        : 0,
             comparator  : 15,
-            value       : rootDmsId
+            value       : urlParameters.root
         }]
     }));
 
@@ -210,15 +216,16 @@ function getInitialData(rootDmsId) {
 
         for(let variant of variants.data.row) {
             listVariants.push({
-                label : getSearchResultFieldValue(variant, 'TITLE', ''),
+                label : getSearchResultFieldValue(variant, config.workspaceItemVariants.fieldIds.title, ''),
                 link  : '/api/v3/workspaces/' + wsVariants.id + '/items/' + variant.dmsId
             });
         }
 
-        wsContext.sections  = responses[1].data;
-        wsVariants.sections = responses[2].data;
-        wsVariants.fields   = responses[3].data;
-        wsVariants.bomViews = responses[4].data;
+        wsContext.sections   = responses[1].data;
+        wsVariants.sections  = responses[2].data;
+        wsVariants.fields    = responses[3].data;
+        wsVariants.bomViews  = responses[4].data;
+        wsVariants.picklists = [];
 
         getVariantsWSConfig();
 
@@ -230,34 +237,16 @@ function getVariantsWSConfig() {
     let foundSection = false;
 
     for(let section of wsVariants.sections) {
-        if(section.name === config.variants.sectionLabelVariantDefinition) {
+        if(section.name === config.workspaceItemVariants.sectionLabel) {
             
             foundSection = true;
-            wsVariants.sectionIdVariantDefinition = section.__self__.split('/')[6];
             
             for(let sectionField of section.fields) {
                 for(let field of wsVariants.fields) {
                     if(field.__self__ === sectionField.link) {
-                        
-                        let elemControl = insertDetailsField(
-                            field, 
-                            null,  
-                            null, 
-                            false, 
-                            {
-                                editable      : true,
-                                hideLabels    : true,
-                                suppressLinks : true
-                            }
-                        );
-                        
-                        fieldsVariant.push({
-                            id      : field.__self__.split('/')[8],
-                            title   : sectionField.title,
-                            type    : field.type.title,
-                            control : elemControl
-                        });
-                        
+                        field.id    = field.__self__.split('/').pop();
+                        fieldsVariant.push(field);
+                        break;
                     }
                 }  
             }
@@ -265,20 +254,19 @@ function getVariantsWSConfig() {
         }
     }
 
-    if(!foundSection) showErrorMessage('Error loading data', 'Cannot find section with name  ' + config.variants.variantsSectionLabel + ' in workspace ' +  config.variants.wsIdItemVariants + ' (wsIdItemVariants)');
-
-    wsVariants.fieldIdVariantBaseItem   = config.variants.fieldIdVariantBaseItem;
-    wsVariants.sectionIdBaseItem        = getFieldSectionId(wsVariants.sections, config.variants.fieldIdBaseItem);
+    if(!foundSection) showErrorMessage('Error loading data', 'Cannot find section with name  ' + config.workspaceItemVariants.sectionLabel + ' in workspace ' +  config.workspaceItemVariants.workspaceId + ' (wsIdItemVariants)');
 
     for(let bomView of wsVariants.bomViews) {
-        if(bomView.name === config.variants.bomViewNameVariants) {
+        if(bomView.name === config.workspaceItemVariants.bomViewName) {
 
-            wsVariants.viewId  = bomView.id;
-            wsVariants.columns = bomView.fields;
+            wsVariants.viewId       = bomView.id;
+            wsVariants.columns      = bomView.fields;
+            wsVariants.bomViewLinks = [];
 
             for(let field of bomView.fields) {
 
-                if(field.fieldId === 'QUANTITY') wsVariants.colIdQuantity  = field.__self__.link;
+                if(field.fieldId === 'QUANTITY') wsVariants.bomViewLinks.quality  = field.__self__.link;
+                if(field.fieldId === config.workspaceItemVariants.bomFieldIdBaseBOMPath) wsVariants.bomViewLinks.baseBOMPath  = field.__self__.link;
 
                 for(let fieldVariant of fieldsVariant) {
                     if(fieldVariant.id === field.fieldId) fieldVariant.link = field.__self__.link;
@@ -289,28 +277,37 @@ function getVariantsWSConfig() {
         }
     }
 
-    if(isBlank(wsVariants.columns)) showErrorMessage('Error loading workspace configuration', 'Cannot find BOM view with name "' + config.variants.bomViewNameVariants + '" in workspace ' +  config.variants.wsIdItemVariants + ' (wsIdItemVariants)');
+    if(isBlank(wsVariants.columns)) showErrorMessage('Error loading workspace configuration', 'Cannot find BOM view with name "' + config.workspaceItemVariants.bomViewName + '" in workspace ' +  config.workspaceItemVariants.workspaceId + ' (wsIdItemVariants)');
 
     $('#button-create-variant').removeClass('disabled');
 
-    insertBOM(urlParameters.link, { 
-        headerLabel       : 'BOM & Variants', 
-        bomViewName       : config.variants.bomViewNameItems, 
-        reload            : true, 
-        hideDetails       : false, 
-        includeOMPartList : true, 
-        quantity          : true, 
-        headers           : true,
-        search            : true,
-        toggles           : true,
-        path              : true,
-        counters          : false,
-        collapseContents  : true,
-        viewerSelection   : true,
-        fieldsIn          : ['Item', 'Quantity'],
-        depth             : config.variants.maxBOMLevels,
-        onClickItem       : function(elemClicked) { setItemSummary(elemClicked); },
-        afterCompletion   : function (id, data) { insertVariants(id, data); }
+    settings['create-variant'] = { editable : true };
+
+    getFieldsPicklistsData('create-variant', fieldsVariant, function(response) {
+
+        wsVariants.picklists = response;
+
+        insertBOM(urlParameters.link, { 
+            headerLabel       : 'BOM & Variants', 
+            bomViewName       : config.workspaceItems.bomViewName || common.workspaces.items.defaultBOMView, 
+            fieldsIn          : ['Item', 'Quantity', 'Qty'],
+            contentSize       : 'xs',
+            reload            : true, 
+            hideDetails       : false, 
+            includeOMPartList : true, 
+            quantity          : true, 
+            headers           : true,
+            search            : true,
+            toggles           : true,
+            path              : true,
+            counters          : false,
+            collapseContents  : true,
+            openInPLM         : true,
+            viewerSelection   : true,
+            depth             : config.maxBOMLevels,
+            onClickItem       : function(elemClicked) { setItemSummary(elemClicked); },
+            afterCompletion   : function (id, data) { insertVariants(id, data); }
+        });
     });
 
 }
@@ -355,7 +352,6 @@ function insertVariants(id, data) {
     $('<tr></tr>').prependTo(elemTHead)
         .attr('id', 'table-head-row-fields')
         .append('<th class="top-left-table-cell" colspan="2"></th>')
-        .append('<th style="background:none" ></th>')
   
 
     let requests = [];
@@ -363,39 +359,45 @@ function insertVariants(id, data) {
     sortArray(listVariants, 'label');
 
     for(let variant of listVariants) requests.push($.get('/plm/bom', { 
-        link         : variant.link, 
-        depth        : config.variants.maxBOMLevels,
-        revisionBias : 'working',
-        viewId       : wsVariants.viewId 
+        link            : variant.link, 
+        depth           : config.maxBOMLevels,
+        getBOMPartsList : true,
+        revisionBias    : 'working',
+        viewId          : wsVariants.viewId 
     } ));
 
     Promise.all(requests).then(function(responses) {
         let index = 0;
-        for(let variant of listVariants) insertVariant(variant, index, responses[index++]);
+        for(let variant of listVariants) {
+            variant.index        = index;
+            variant.bomPartsList = responses[index++].data.bomPartsList;
+            insertVariant(variant);
+            // insertVariant(variant, index, responses[index++]);
+        }
     });
 
 }
 
 
 // Insert existing or new variants to the table
-function insertVariant(variant, index, response) {
-    
-    insertVariantHeaderColumns(variant, index);
-    insertVariantTableCells(variant, index, response);
+function insertVariant(variant) {
+
+    insertVariantHeaderColumns(variant);
+    insertVariantTableCells   (variant);
 
     $('<option></option>').appendTo($('#variant-selector'))
-        .attr('value', index)
+        .attr('value', variant.index)
         .html(variant.label);
 
 }
-function insertVariantHeaderColumns(variant, index) {
+function insertVariantHeaderColumns(variant) {
 
     let elemTHeadFields = $('#table-head-row-fields');
     let elemTHeadTitles = $('#table-head-row-titles');
     let elemSpacerHead  = $('<th></th>')
         .addClass('variant-spacer')
         .addClass('variant-filter')
-        .addClass('variant-index-' + index);
+        .addClass('variant-index-' + variant.index);
             
     elemTHeadFields.append(elemSpacerHead.clone());
     elemTHeadTitles.append(elemSpacerHead.clone());
@@ -406,53 +408,55 @@ function insertVariantHeaderColumns(variant, index) {
         .html(variant.label)
         .addClass('variant-head')
         .addClass('variant-filter')
-        .addClass('variant-index-' + index)
+        .addClass('variant-index-' + variant.index)
+        .attr('title', 'Click to open variant ' + variant.label + ' in new tab')
         .click(function() {
             openItemByLink($(this).attr('data-link'));
         });
 
     for(let fieldVariant of fieldsVariant) {
         $('<th></th>').appendTo(elemTHeadTitles)
-            .html(fieldVariant.title)
+            .html(fieldVariant.name)
             .addClass('variant-filter')
-            .addClass('variant-index-' + index)
+            .addClass('variant-index-' + variant.index)
             .addClass('field-id-' + fieldVariant.id.toLowerCase());
     }
 
     $('<th></th>').appendTo(elemTHeadTitles)
         .html('Item')
         .addClass('variant-filter')
-        .addClass('variant-index-' + index);
+        .addClass('variant-index-' + variant.index);
 
 }
-function insertVariantTableCells(variant, index, response) {
+function insertVariantTableCells(variant) {
 
-    let elemCellSpacer      = $('<td></td>').addClass('variant-spacer').addClass('variant-filter');
-    let variantBOMPartsList = getBOMPartsList({ columns : wsVariants.columns }, response.data);
+    let elemCellSpacer = $('<td></td>').addClass('variant-spacer').addClass('variant-filter');
 
-    for(let variantBOMItem of variantBOMPartsList) variantBOMItem.hasMatch = false;
+    for(let variantBOMItem of variant.bomPartsList) variantBOMItem.hasMatch = false;
 
     $('#bom-tbody').children().each(function() {
 
-        let className      = 'status-missing';
-        let elemBaseItem   = $(this);
-        let baseRootLink   = $(this).attr('data-root-link');
-        let basePartNumber = $(this).attr('data-part-number');
-        let baseQuantity   = $(this).attr('data-quantity');
-        let status         = 'missing';
-        let variantItem    = getVariantBOMItem(elemBaseItem, variantBOMPartsList);
+        let className    = 'status-missing';
+        let elemBaseItem = $(this);
+        let baseRootLink = $(this).attr('data-root-link');
+        let baseQuantity = $(this).attr('data-quantity');
+        let baseEdgeId   = $(this).attr('data-edgeid');
+        let status       = 'missing';
+        let variantItem  = getVariantBOMItem(elemBaseItem, variant);
 
         if(variantItem.edgeId !== '') {
-            if(baseQuantity != variantItem.quantity) {
+            if(baseEdgeId == variantItem.edgeId) {
+                status = 'identical';
+            } else if(baseQuantity != variantItem.quantity) {
                 status = 'update';
             } else if(baseRootLink === variantItem.root) {
                 status = 'identical';
-            } else if(basePartNumber === variantItem.details[config.variants.fieldIdBaseItemNumber]) {
+            } else if(baseRootLink.split('/').pop() === variantItem.details[config.workspaceItemVariants.fieldIds.rootDMSId]) {
                 status = 'match';
             } 
         }
 
-        elemCellSpacer.clone().appendTo($(this)).addClass('variant-index-' + index);
+        elemCellSpacer.clone().appendTo($(this)).addClass('variant-index-' + variant.index);
 
         for(let fieldVariant of fieldsVariant) {
 
@@ -460,49 +464,32 @@ function insertVariantTableCells(variant, index, response) {
                 .addClass('variant-filter')
                 .addClass('field-value')
                 .addClass('field-id-' + fieldVariant.id.toLowerCase())
-                .addClass('variant-index-' + index);
-                
-            let elemControl = fieldVariant.control.clone();
+                .addClass('variant-index-' + variant.index);
 
-            elemControl.appendTo(elemCellField)
-                .click(function(e) {
+                let elemInput = insertField({ editable : true}, elemCellField, fieldVariant, variantItem.fields, wsVariants.picklists, [], []);
+
+                elemInput.dblclick(function(e) {
+                    e.preventDefault();
                     e.stopPropagation();
                 }).change(function() {
                     valueChanged($(this));
                 });
-
-            for(let field of variantItem.fields) {
-
-                if(field.fieldId === fieldVariant.id) {
-                    let elemInput = elemControl.children().first();
-                    switch (fieldVariant.type) {
-
-                        case 'Single Selection':
-                            elemInput.val(field.value.link);
-                            break;
-
-                        default:
-                            elemInput.val(field.value);
-                            break;
-
-                    }
-                }
-            }
-
+                
         }
 
         let elemCellItem = $('<td></td>').appendTo($(this))
-            .attr('data-link'       , variantItem.link)
-            .attr('data-edgeid'     , variantItem.edgeId)
-            .attr('data-edgeid-ref' , variantItem.edgeIdRef)
-            .attr('data-quantity'   , variantItem.quantity)
-            .attr('data-number'     , variantItem.number)
-            .attr('data-link-parent', variantItem.parent)
-            .attr('data-link-root'  , response.params.link)
-            .attr('data-variant-id' , index)
+            .attr('data-link'        , variantItem.link)
+            .attr('data-edgeid'      , variantItem.edgeId)
+            .attr('data-edgeid-ref'  , variantItem.edgeIdRef)
+            .attr('data-quantity'    , variantItem.quantity)
+            .attr('data-number'      , variantItem.number)
+            .attr('data-link-parent' , variantItem.parent)
+            .attr('data-root-link'   , variantItem.root)
+            .attr('data-variant-link', variant.link)
+            .attr('data-variant-id'  , variant.index)
             .attr('title', 'Use shift-click to open the related item in a new window')
             .addClass('variant-filter')
-            .addClass('variant-index-' + index)
+            .addClass('variant-index-' + variant.index)
             .addClass('variant-item')
             .addClass(className)
             .click(function(e) {
@@ -513,7 +500,7 @@ function insertVariantTableCells(variant, index, response) {
 
     });
 
-    for(let variantBOMItem of variantBOMPartsList) {
+    for(let variantBOMItem of variant.bomPartsList) {
         if(!variantBOMItem.hasMatch) {
             variantBOMClenup.push({
                 link   : variantBOMItem.linkParent,
@@ -521,6 +508,8 @@ function insertVariantTableCells(variant, index, response) {
             });
         }
     }
+
+    insertAllPicklistData({}, wsVariants.picklists, $('#bom-tbody'));
 
 }
 function setVariantItemStyle(elemCell, status) {
@@ -536,7 +525,7 @@ function setVariantItemStyle(elemCell, status) {
         case 'changed'  : icon = 'link-add'   ; title = 'Variant BOM requires update to link selected item'; break; // variant parameter of a variant item has been changed, new variant item must be created
         case 'replaced' : icon = 'link-update'; title = 'Variant BOM requires update to link replaced item'; break; // variant item got replaced with another variant
         case 'update'   : icon = 'link-update'; title = 'Variant BOM requires update due to BOM link property changes (ie Quantity)'; break; // bom relationship property got changed, but same item is still in place
-        case 'match'    : icon = 'link'       ; title = 'Variant item has been created and linked'; break; // uses variant item, all data is in sync
+        case 'match'    : icon = 'link'       ; title = 'Variant item has been created and linked. Use [Shift]-click to open the item in PLM.'; break; // uses variant item, all data is in sync
 
     }
 
@@ -576,19 +565,21 @@ function addNewVariant(link) {
 
     let index = $('.variant-head').length + 1;
 
-    $.get('/plm/details', { link : link}, function(response) {
+    $.get('/plm/details', { link : link }, function(response) {
         let label = response.data.title.split(' - ').pop();
         insertVariant({
-            link :  link,
-            label : label
-        }, index, {
-            data : {
-                nodes : [],
-                edges : []
-            },
-            params : {
-                link : link
-            }
+            link         :  link,
+            label        : label,
+            bomPartsList : [],
+            index        :  index
+        // }, index, {
+        //     data : {
+        //         nodes : [],
+        //         edges : []
+        //     },
+        //     params : {
+        //         link : link
+        //     }
         });
     });
 
@@ -603,16 +594,24 @@ function addNewVariant(link) {
         }
 
         $.post('/plm/add-grid-row', params, function() {});
+
     }
 
+    $.post('/plm/add-relationship', {
+        link        : link,
+        relatedId   : urlParameters.dmsId,
+        description : 'Base Item',
+        type        : 'uni'
+    }, function() {});
 
 }
 
 
 // Match table cells to BOM rows
-function getVariantBOMItem(elemBaseItem, variantBOMPartsList) {
+function getVariantBOMItem(elemBaseItem, variant) {
 
-    let baseNumberPath = elemBaseItem.attr('data-number-path');
+    let baseBOMPath = elemBaseItem.attr('data-number-path');
+    let baseEdgeId  = elemBaseItem.attr('data-edgeid');
 
     let result = {
         link       : '',
@@ -626,9 +625,10 @@ function getVariantBOMItem(elemBaseItem, variantBOMPartsList) {
         fields     : []
     }
 
-    for(let variantBOMItem of variantBOMPartsList) {
+    for(let variantBOMItem of variant.bomPartsList) {
 
-        if(baseNumberPath === variantBOMItem.numberPath) {
+        // if(baseBOMPath === prefixNumberPath + variantBOMItem.numberPath) {
+        if(baseBOMPath === variantBOMItem.details.BASE_BOM_PATH) {
 
             result.link       = variantBOMItem.link;
             result.root       = variantBOMItem.root;
@@ -645,6 +645,13 @@ function getVariantBOMItem(elemBaseItem, variantBOMPartsList) {
 
             break;
 
+        } else if(baseEdgeId == variantBOMItem.edgeId) {
+
+            result.edgeId = variantBOMItem.edgeId;
+            result.link   = variantBOMItem.link;
+
+            break;
+
         }
 
     }
@@ -655,7 +662,7 @@ function getVariantBOMItem(elemBaseItem, variantBOMPartsList) {
 function getEdgeQuantity(edge) {
 
     for(let edgeField of edge.fields) {
-        if(edgeField.metaData.link === wsVariants.colIdQuantity) return edgeField.value;
+        if(edgeField.metaData.link === wsVariants.bomViewLinks.quality) return edgeField.value;
     }
 
     return 0;
@@ -665,24 +672,25 @@ function valueChanged(elemControl) {
 
     let elemVariant = elemControl;
 
-    if(!elemVariant.hasClass('variant-item')) elemVariant  = elemControl.parent().nextAll('.variant-item').first();
+    if(!elemVariant.hasClass('variant-item')) elemVariant = elemControl.parent().nextAll('.variant-item').first();
 
-    let index        = elemVariant.index();
-    let elemBaseItem = elemVariant.closest('tr');
-    let levelNext    = Number(elemBaseItem.attr('data-level')) - 1;
-    let elemPrev     = elemBaseItem.prev();
-    let linkBaseItem = elemVariant.closest('tr').attr('data-link');
-    let linkVariant  = elemVariant.attr('data-link');
+    let index            = elemVariant.index();
+    let elemBaseItem     = elemVariant.closest('tr');
+    let levelBase        = Number(elemBaseItem.attr('data-level'));
+    let levelNext        = levelBase - 1;
+    let elemPrev         = elemBaseItem.prev();
+    // let linkBaseItemRoot = elemBaseItem.attr('data-root-link');
+    // let linkVariantRoot  = elemVariant.attr('data-root-link');
 
-    if(linkBaseItem === linkVariant) {
+    // if(linkBaseItemRoot === linkVariantRoot) {
         setVariantItemStyle(elemVariant, 'new');
-    } else {
-        setVariantItemStyle(elemVariant, 'changed');
-    }
+    // } else {
+        // setVariantItemStyle(elemVariant, 'changed');
+    // }
 
     while(levelNext > 0) {
         
-        let linkBasePrev = elemPrev.attr('data-link');
+        let linkBaseItemParentRoot = elemPrev.attr('data-root-link');
 
         if(elemPrev.length > 0) {
 
@@ -691,12 +699,13 @@ function valueChanged(elemControl) {
             if(level === levelNext) {
 
                 levelNext--;
-                let elemVariantParent = elemPrev.children().eq(index);
-                let linkVariantParent = elemVariantParent.attr('data-link');
+                let elemVariantParent     = elemPrev.children().eq(index);
+                let linkVariantParentRoot = elemVariantParent.attr('data-root-link');
 
-                if(linkBasePrev === linkVariantParent) {
+                if(linkBaseItemParentRoot === linkVariantParentRoot) {
                     setVariantItemStyle(elemVariantParent, 'new');
-                }
+                    if((levelBase - levelNext) === 1) { elemControl.addClass('addition'); }
+                } else if((levelBase - levelNext) === 1) { elemControl.addClass('replacement'); }
 
             }
 
@@ -741,19 +750,17 @@ function clickItemCell(e, elemClicked) {
 
     } else {
 
-        let queryFields = [];
+        let queryFields = ['DESCRIPTOR'];
 
         for(let fieldVariant of fieldsVariant) queryFields.push(fieldVariant.id);
 
         insertResults(
             wsVariants.id, 
             [{
-                // field       : config.variants.fieldIdVariantBaseItem,
-                field       : config.variants.fieldIdBaseItemNumber,
-                type        : 0,
-                comparator  : 15,
-                // value       : linkItem.split('/').pop()
-                value       : elemClicked.closest('tr').attr('data-part-number')
+                field      : config.workspaceItemVariants.fieldIds.rootDMSId,
+                type       : 0,
+                comparator : 15,
+                value      : elemClicked.closest('tr').attr('data-root-link').split('/').pop()
             }], {
                 id              : 'selector',
                 headerLabel     : 'Variants of ' + elemClicked.closest('tr').attr('data-title'),
@@ -763,7 +770,7 @@ function clickItemCell(e, elemClicked) {
                 fields          : queryFields,
                 openInPLM       : true,
                 openOnDblClick  : true,
-                sort            : ['TITLE'],
+                sort            : [config.workspaceItemVariants.fieldIds.title],
                 afterCompletion : function(id) { addSelectorFooterButtons(id); }
             }
         )
@@ -772,11 +779,11 @@ function clickItemCell(e, elemClicked) {
 }
 function addSelectorFooterButtons(id) {
 
-    genPanelFooterActionButton(id, {}, 'cancel', { label : 'Cancel' }, function() {
+    genPanelFooterActionButton(id, 'cancel', { label : 'Cancel' }, function() {
         $('#selector-close').click();
     });
 
-    genPanelFooterActionButton(id, {}, 'cancel', { label : 'Confirm', default : true }, function() {
+    genPanelFooterActionButton(id, 'cancel', { label : 'Confirm', default : true }, function() {
         let elemSelected = $('#selector-tbody').find('.content-item.selected');
         if(elemSelected.length === 1) {
             insertSelectedItem(elemSelected);
@@ -788,71 +795,119 @@ function insertSelectedItem(elemSelected) {
 
     $('#selector').hide();
 
-    let elemCell = $('.item-cell-clicked').first();
-        elemCell.attr('data-link', elemSelected.attr('data-link'));
+    let elemCell     = $('.item-cell-clicked').first();
+    let elemBaseItem = elemCell.closest('tr');
+    let level        = Number(elemBaseItem.attr('data-level'));
+    let linkCurrent  = elemCell.attr('data-link');
+    let linkNew      = elemSelected.attr('data-link');
 
-    valueChanged(elemCell);
-
-    setVariantItemStyle(elemCell, 'replaced');
-
-    $.get('/plm/details', { link : elemSelected.attr('data-link')}, function(response) {
-    
+    if(linkCurrent === linkNew) {
         $('#overlay').hide();
-    
-        let index         = fieldsVariant.length - 1;
-        let elemCellField = elemCell.prev();
+        return;
+    }
+
+    elemCell.attr('data-link', linkNew);
+
+    let requests = [
+        $.get('/plm/details', { link : linkNew }),
+        $.get('/plm/bom',     { 
+            link            : linkNew, 
+            depth           : config.maxBOMLevels - level,
+            viewId          : wsVariants.viewId,
+            getBOMPartsList : true
+        })
+    ];
+
+    Promise.all(requests).then(function(responses) {
+
+        $('#overlay').hide();
+
+        let index           = fieldsVariant.length - 1;
+        let elemField       = elemCell.prev();
+        let variant         = responses[1].data;
+        let indexVariant    = elemCell.index();
+
+        elemCell.attr('data-root-link', responses[0].data.root.link)
+            .addClass('replacement')
+            .removeClass('item-cell-clicked');
 
         do {
 
-            let elemControl = elemCellField.children().first();
-            let elemInput   = elemControl.children().first();
-            let fieldId     = elemControl.attr('data-id');
-            // let picklist    = elemControl.hasClass('picklist');
-            let value       = getSectionFieldValue(response.data.sections, fieldId, '', 'link');
+            let fieldId = elemField.attr('data-id');
+            let value   = getSectionFieldValue(responses[0].data.sections, fieldId, '', 'object');
+            
+            setFieldValue(elemField, value);
 
-            elemInput.val(value);
-
-            // switch (fieldVariant.type) {
-
-            //     case 'Single Selection':
-            //         elemInput.val(field.value.link);
-            //         break;
-
-            //     default:
-            //         elemInput.val(field.value);
-            //         break;
-
-            // }
-
-
-
-
-
-    //     let value           = '';
-    //     let elemCellValue   = elemClicked.find('.tile-key-' + fieldsVariant[index].id);
-    //     let elemInput       = elemCellField.children().first();
-
-    //     if(elemCellValue.length > 0) value = elemCellValue.html();
-
-    //     if(elemInput.is('select')) {
-    //         elemInput.children('option').each(function() {
-    //             if($(this).attr('displayValue') === value) {
-    //                 value = $(this).attr('value');
-    //             }
-    //         });
-    //     }
-        
-    //     elemInput.val(value);
             index--;
-            elemCellField = elemCellField.prev();
+            elemField = elemField.prev();
 
         } while (index >= 0);
 
-        elemCell.removeClass('item-cell-clicked');
+        setVariantItemStyle(elemCell, 'replaced');
+
+        if(variant.bomPartsList.length === 0) return;
+
+        elemBaseItem.nextAll().each(function() {
+
+            let newBaseItem = $(this);
+            let nextLevel   = Number(newBaseItem.attr('data-level'));
+
+            if(nextLevel > level) {
+
+                let baseRootLink = newBaseItem.attr('data-root-link');
+                let baseQuantity = newBaseItem.attr('data-quantity');
+                let status       = 'missing';
+                let variantItem  = getVariantBOMItem(newBaseItem, variant);
+                let elemCellItem = newBaseItem.children().eq(indexVariant);
+
+                if(variantItem.edgeId !== '') {
+                    if(baseQuantity != variantItem.quantity) {
+                        status = 'update';
+                    } else if(baseRootLink === variantItem.root) {
+                        status = 'identical';
+                    } else if(baseRootLink.split('/').pop() === variantItem.details[config.workspaceItemVariants.fieldIds.rootDMSId]) {
+                        status = 'match';
+                    } 
+                }
+
+                setVariantItemStyle(elemCellItem, status);
+                setVariantItemCell(elemCellItem, variantItem);
+                setVariantItemFields(elemCellItem, variantItem);
+
+            } else return false;
+        });
 
     });
 
 }
+function setVariantItemCell(elemCellItem, variantItem) {
+
+    elemCellItem.attr('data-link',      variantItem.link    );
+    elemCellItem.attr('data-root-link', variantItem.root    );
+    elemCellItem.attr('data-edgeId',    variantItem.edgeId  );
+    elemCellItem.attr('data-quantity',  variantItem.quantity);
+    elemCellItem.attr('data-number',    variantItem.number  );
+
+}
+function setVariantItemFields(elemCellVariant, variantItem) {
+
+    let index     = fieldsVariant.length - 1;
+    let elemField = elemCellVariant.prev();
+
+    do {
+
+        let fieldId = elemField.attr('data-id');
+        let value   = isBlank(variantItem.details) ? null : variantItem.details[fieldId];
+            
+        setFieldValue(elemField, value);
+
+        index--;
+        elemField = elemField.prev();
+
+    } while (index >= 0);
+
+}
+
 
 
 // Apply Changes to PLM
@@ -879,14 +934,13 @@ function setSaveActions() {
 
             elemBaseItem.addClass(saveActions.retrieval.className); 
             elemVariant.addClass(saveActions.creation.className); 
-            elemVariant.addClass(saveActions.removal.className); 
-            elemVariant.addClass(saveActions.addition.className); 
+            elemVariant.addClass(saveActions.replacement.className); 
+            // elemVariant.addClass(saveActions.addition.className); 
 
-            if(!elemBaseItem.hasClass('leaf')) {
-                let children = getBOMItemChildren(elemBaseItem, true);
-                for(let child of children) {
-                    child.children().eq(index).addClass(saveActions.addition.className);
-                }
+            let children = treeGetItemChildren(elemBaseItem, true);
+            
+            for(let child of children) {
+                child.children().eq(index).addClass(saveActions.addition.className);
             }
 
         } else if(elemVariant.hasClass('status-update')) {
@@ -897,11 +951,11 @@ function setSaveActions() {
 
             elemBaseItem.addClass(saveActions.retrieval.className); 
             elemVariant.addClass(saveActions.creation.className); 
-            elemVariant.addClass(saveActions.removal.className); 
-            elemVariant.addClass(saveActions.addition.className); 
+            elemVariant.addClass(saveActions.replacement.className); 
+            // elemVariant.addClass(saveActions.addition.className); 
 
             if(!elemBaseItem.hasClass('leaf')) {
-                let children = getBOMItemChildren(elemBaseItem, true);
+                let children = treeGetItemChildren(elemBaseItem, true);
                 for(let child of children) {
                     child.children().eq(index).addClass(saveActions.addition.className);
                 }
@@ -910,8 +964,8 @@ function setSaveActions() {
 
         } else if(elemVariant.hasClass('status-replaced')) {
 
-            elemVariant.addClass(saveActions.removal.className); 
-            elemVariant.addClass(saveActions.addition.className); 
+            elemVariant.addClass(saveActions.replacement.className); 
+            // elemVariant.addClass(saveActions.addition.className); 
 
         } else if(elemVariant.hasClass('status-missing')) {
 
@@ -923,7 +977,7 @@ function setSaveActions() {
             } else {
                 
                 // For Levels 2+ validate if parent is being added
-                let elemParent        = getBOMItemParent(elemBaseItem);
+                let elemParent        = treeGetItemParent(elemBaseItem);
                 let elemParentVariant = elemParent.children().eq(index);
 
                 if(elemParentVariant.hasClass('status-missing')) {
@@ -944,7 +998,7 @@ function setSaveActions() {
         saveActions[key].count += $('.' + saveActions[key].className).length;
     }
 
-    saveActions.removal.count += variantBOMClenup.length;
+    // saveActions.replacement.count += variantBOMClenup.length;
 
 }
 function showSaveProcessingDialog() {
@@ -952,20 +1006,20 @@ function showSaveProcessingDialog() {
     $('.step-bar').addClass('transition-stopper')
     $('.step-bar').css('width', '0%');
     $('#overlay').show();
-    $('#confirm-saving').addClass('disabled').removeClass('default');
+    // $('#confirm-saving').addClass('disabled').removeClass('default');
+    $('#confirm-saving').removeClass('disabled').addClass('default');
     $('.in-work').removeClass('in-work');
     $('#step1').addClass('in-work');
     $('.step-bar').removeClass('transition-stopper');
 
     for(let key of Object.keys(saveActions)) {
-        $('#step-counter' + saveActions[key].index).html('0 of ' + saveActions[key].count);
         $('#step-label'   + saveActions[key].index).html(saveActions[key].label);
+        $('#step-counter' + saveActions[key].index).html('0 of ' + saveActions[key].count);
     }
-
     
     $('#dialog-saving').show();
 
-    getDerivedData(saveActions.retrieval);
+    save1GetDerivedData(saveActions.retrieval);
 
 }
 function updateProgressBar(action) {
@@ -989,9 +1043,31 @@ function completeProgressBar(action) {
     $('#step-counter' + action.index).html(action.count + ' of ' + action.count);
 
 }
-function getDerivedData(action) {
+function getParentLink(elemItem) {
 
-    // console.log(' >> getDerivedData START');
+    let elemRefItem = elemItem.closest('tr');
+    let level       = Number(elemRefItem.attr('data-level')) - 1;
+    let index       = elemItem.index();
+    let result      = '';
+
+    if(level === 0) return elemItem.attr('data-variant-link');
+
+    elemRefItem.prevAll('tr').each(function() {
+        let newLevel = Number($(this).attr('data-level'));
+        if(result === '') {
+            if(newLevel === level) {
+                result = $(this).children().eq(index).attr('data-link');
+                return result;
+            } 
+        }
+    });
+
+    return result;
+
+}
+function save1GetDerivedData(action) {
+
+    // console.log(' >> save1GetDerivedData START');
 
     let pending  = updateProgressBar(action);
     let requests = [];
@@ -1002,12 +1078,14 @@ function getDerivedData(action) {
 
             if(requests.length < action.maxRequests) {
 
-                requests.push($.get('/plm/derived', {
-                    wsId        : wsVariants.id,                            //'create item wsid
-                    fieldId     : config.variants.fieldIdBaseItem,               //'BASE_ITEM'
-                    pivotItemId : $(this).attr('data-link').split('/')[6],  //'dmsid of selected picklist ittem;
+                let params = {
+                    wsId        : wsVariants.id,                                   //'create item wsid
+                    fieldId     : config.workspaceItemVariants.fieldIds.baseItem,  //'BASE_ITEM'
+                    pivotItemId : $(this).attr('data-link').split('/')[6],         //'dmsid of selected picklist ittem;
                     link        : $(this).attr('data-link')
-                }));
+                }
+
+                requests.push($.get('/plm/derived', params));
 
                 $(this).removeClass(action.className);
 
@@ -1027,21 +1105,21 @@ function getDerivedData(action) {
                 }
             }
 
-            getDerivedData(action);
+            save1GetDerivedData(action);
             
         });
 
     } else {
-        
+
         completeProgressBar(action);
-        createNewItems(saveActions.creation);
+        save2CreateNewItems(saveActions.creation);
         
     }
 
 }
-function createNewItems(action) {
+function save2CreateNewItems(action) {
 
-    // console.log(' >> createNewItems START');
+    // console.log(' >> save2CreateNewItems START');
 
     let pending  = updateProgressBar(action);
     let requests = [];
@@ -1055,48 +1133,69 @@ function createNewItems(action) {
 
                 let elemBaseItem    = $(this).closest('tr');
                 let elemCellControl = $(this).prev();
+                let fieldValues     = {};
+                let title           = '';
 
                 let params = {
-                    wsId       : wsVariants.id,
-                    sections   : [{
-                        id     : wsVariants.sectionIdBaseItem,
-                        fields : [{ 
-                            fieldId : config.variants.fieldIdBaseItem, 
-                            value   : elemBaseItem.attr('data-link').split('/')[6] 
-                        },{
-                            fieldId : config.variants.fieldIdRootItemDmsId,
-                            value   : elemBaseItem.attr('data-root-link').split('/').pop()
-                        }]
+                    wsId        : wsVariants.id,
+                    sections    : wsVariants.sections,
+                    getDetails  : true,
+                    fields      : [{
+                        fieldId : config.workspaceItemVariants.fieldIds.baseItem,
+                        value   : elemBaseItem.attr('data-link')
                     },{
-                        id     : wsVariants.sectionIdVariantDefinition,
-                        fields : []          
+                        fieldId : config.workspaceItemVariants.fieldIds.rootDMSId,
+                        value   : elemBaseItem.attr('data-root-link').split('/').pop()
                     }]
                 };
 
                 for(let index = fieldsVariant.length - 1; index >= 0; index--) {
 
-                    // let field = fieldsVariant[index];
-                    let data  = getFieldValue(elemCellControl.children().first());
-                    // let value = elemCellControl.children().first().val();
+                    let data  = getFieldValue(elemCellControl);
 
-                    // if(field.type === 'Single Selection') value = { 'link' : value };
-
-                    params.sections[1].fields.push({
+                    params.fields.push({
                         fieldId : data.fieldId,
                         value   : data.value
                     });
 
-                    // let fieldValue = getFieldValue(elemCellControl.children().first());
-                    // console.log(fieldValue);
+                    elemCellControl           = elemCellControl.prev();
+                    fieldValues[data.fieldId] = null;
 
-                    elemCellControl = elemCellControl.prev();
+                    if(data.value !== null) fieldValues[data.fieldId] = (typeof data.value === 'object') ? data.value.title : data.value;
 
                 }
 
+                if(config.newItemVariantsTitle.fieldsToConcatenate.length === 0) {
+
+                    for(let fieldValue of fieldValues) {
+                        if(title !== '') title += config.newItemVariantsTitle.separator;
+                        title += fieldValue.value;
+                    }
+
+                } else {
+                    for(let fieldId of config.newItemVariantsTitle.fieldsToConcatenate) {
+                        if(title !== '') title += config.newItemVariantsTitle.separator;
+                        title += fieldValues[fieldId];
+                    }
+                }
+
+                if(title === '') title = elemBaseItem.attr('data-title');
+
+                params.fields.push({
+                    fieldId : config.workspaceItemVariants.fieldIds.title,
+                    value   : title
+                })
+
                 for(let derived of derivedData) {
                     if(derived.params.link === elemBaseItem.attr('data-link')) {
-                        addDerivedFieldsToPayload(params.sections, wsVariants.sections, derived.data);
-                        break;
+                          for(let section of derived.data.sections) {
+                            for(let field of section.fields) {
+                                params.fields.push({
+                                    fieldId : field.__self__.split('/').pop(),
+                                    value : field.value,
+                                })
+                            }
+                        }
                     }
                 }
 
@@ -1109,39 +1208,39 @@ function createNewItems(action) {
 
         Promise.all(requests).then(function(responses) {
 
-            requests   = [];
             let errors = false;
 
             for(let response of responses) {
-
                 if(response.error) {
                     showErrorMessage('Error', response.data.message);
                     errors = true;
-                } else {
-                    requests.push($.get('/plm/descriptor', {
-                        link : response.data.split('.autodeskplm360.net')[1]
-                    }));
                 }
             }
 
             if(errors) { endProcessing(); } else {
 
-                Promise.all(requests).then(function(responses) {
+                let index = 0;
 
-                    let index = 0;
+                for(let response of responses) {
 
-                    for(let response of responses) {
+                    let elemCell = elements[index++];
+                    
+                    elemCell.attr('data-link', response.data.__self__)
+                        .addClass('pending-bom-addition')
+                        .removeClass(action.className);
 
-                        let elemCell = elements[index++];
-                            elemCell.attr('data-link', response.params.link).removeClass(action.className);
+                    setVariantItemStyle(elemCell, 'changed');
 
-                        setVariantItemStyle(elemCell, 'changed');
+                    $.post('/plm/add-relationship', {
+                        link        : response.data.__self__,
+                        relatedId   : urlParameters.dmsId,
+                        description : 'Base Item',
+                        type        : 'uni'
+                    }, function() {});
 
-                    }
+                }
 
-                    createNewItems(action); 
-
-                });
+                save2CreateNewItems(action); 
 
             } 
 
@@ -1150,82 +1249,14 @@ function createNewItems(action) {
     } else {
 
         completeProgressBar(action);
-        cleanupVariantBOM(saveActions.removal);
+        save3AddBOMs(saveActions.addition);
 
     }
 
 }
-function cleanupVariantBOM(action) {
+function save3AddBOMs(action) {
 
-    // console.log(' >> cleanupVariantBOM START');
-
-    let pending  = $('.variant-item.pending-removal').length + variantBOMClenup.length;
-    let progress = (action.count - pending) * 100 / action.count; 
-
-    $('#step-bar'     + action.index).css('width', progress + '%');
-    $('#step-counter' + action.index).html((action.count - pending.length) + ' of ' + action.count);
-
-    if(variantBOMClenup.length > 0) {
-
-        let requests = [];
-
-        for(let cleanup of variantBOMClenup) {
-            if(requests.length < action.maxRequests) {
-                requests.push($.get('/plm/bom-remove', cleanup));
-            }
-        }
-
-        Promise.all(requests).then(function() {
-            variantBOMClenup.splice(0, requests.length);
-            cleanupVariantBOM(action);
-        });
-
-    } else  removeBOMItems(saveActions.removal);
-
-}
-function removeBOMItems(action) {
-
-    // console.log(' >> removeBOMItems START');
-
-    let pending  = updateProgressBar(action);
-    let requests = [];
-
-    if(pending.length > 0) {
-        
-        pending.each(function() {
-
-            if(requests.length < action.maxRequests) {
-
-                let elemItem   = $(this);
-                let linkParent = getParentLink(elemItem);
-
-                if(!isBlank(linkParent)) {
-                    requests.push($.get('/plm/bom-remove', {
-                        link   : linkParent,
-                        edgeId : elemItem.attr('data-edgeid')
-                    }));
-                }
-
-                elemItem.removeClass(action.className);
-                elemItem.attr('data-edgeid', '');
-
-            }
-
-        });
-
-        Promise.all(requests).then(function(responses) { removeBOMItems(action); });
-
-    } else {
-
-        completeProgressBar(action);
-        addBOMItems(saveActions.addition);
-
-    }
-
-}  
-function addBOMItems(action) {
-
-    // console.log(' >> addBOMItems START');
+    // console.log(' >> save3AddBOMs START');
 
     let pending  = updateProgressBar(action);
     let requests = [];
@@ -1252,12 +1283,18 @@ function addBOMItems(action) {
                     linkChild  : linkItem,
                     quantity   : baseItem.attr('data-quantity'),
                     number     : baseItem.attr('data-number'),
-                    pinned     : true
+                    pinned     : true,
+                    fields     : []
                 }
+
+                params.fields.push({
+                    link  : wsVariants.bomViewLinks.baseBOMPath,
+                    value : baseItem.attr('data-number-path')
+                })
 
                 requests.push($.post('/plm/bom-add', params));
                 elements.push(elemItem);
-                elemItem.removeClass('pending-update-bom');
+                elemItem.removeClass('pending-addition');
 
             }
 
@@ -1268,9 +1305,6 @@ function addBOMItems(action) {
             let index = 0;
 
             for(let response of responses) {
-
-                console.log(response);
-
 
                 if(response.error) {
                     showErrorMessage('Error when adding BOM entries', response.data.message);
@@ -1290,43 +1324,21 @@ function addBOMItems(action) {
 
             }
 
-            addBOMItems(action);
+            save3AddBOMs(action);
 
         });
 
     } else {
 
         completeProgressBar(action);
-        updateBOMItems(saveActions.update);
+        step4ReplaceBOMItems(saveActions.replacement);
 
     }
 
 }
-function getParentLink(elemItem) {
-
-    let elemRefItem = elemItem.closest('tr');
-    let level       = Number(elemRefItem.attr('data-level')) - 1;
-    let index       = elemItem.index();
-    let result      = '';
-
-    if(level === 0) return elemItem.attr('data-link-root');
-
-    elemRefItem.prevAll('tr').each(function() {
-        let newLevel = Number($(this).attr('data-level'));
-        if(result === '') {
-            if(newLevel === level) {
-                result = $(this).children().eq(index).attr('data-link');
-                return result;
-            } 
-        }
-    });
-
-    return result;
-
-}
-function updateBOMItems(action) {       
+function step4ReplaceBOMItems(action) {       
         
-    // console.log(' >> updateBOMItems START');
+    // console.log(' >> step4ReplaceBOMItems START');
 
     let pending  = updateProgressBar(action);
     let requests = [];
@@ -1376,7 +1388,71 @@ function updateBOMItems(action) {
         
             }
 
-            updateBOMItems(action);
+            step4ReplaceBOMItems(action);
+
+        });
+
+    } else {
+
+        completeProgressBar(action);
+        save5UpdateBOMItems(saveActions.update);
+
+    }
+    
+}
+function save5UpdateBOMItems(action) {       
+        
+    // console.log(' >> save5UpdateBOMItems START');
+
+    let pending  = updateProgressBar(action);
+    let requests = [];
+    let elements = [];
+
+    if(pending.length > 0) {
+
+        pending.each(function() {
+
+            if(requests.length < action.maxRequests) {
+
+                let elemItem     = $(this);
+                let elemBaseItem = elemItem.closest('tr');
+
+                let params = {                    
+                    linkParent : getParentLink(elemItem),
+                    linkChild  : elemItem.attr('data-link'),
+                    edgeId     : elemItem.attr('data-edgeid'),
+                    number     : elemBaseItem.attr('data-number'),
+                    quantity   : elemBaseItem.attr('data-quantity'),
+                    pinned     : false
+                };
+
+                requests.push($.post('/plm/bom-update', params));
+                elements.push(elemItem);
+
+            }
+
+        });
+
+        Promise.all(requests).then(function(responses) {
+
+            let index = 0;
+
+            for(let response of responses) {
+
+                let elemItem = elements[index++];
+                    elemItem.removeClass(action.className).attr('data-quantity', response.params.qty);
+
+                let linkParent = elemItem.closest('tr').attr('data-link');
+
+                if(linkParent === elemItem.attr('data-link')) {
+                    setVariantItemStyle(elemItem, 'identical');
+                } else {
+                    setVariantItemStyle(elemItem, 'match');
+                }
+        
+            }
+
+            save5UpdateBOMItems(action);
 
         });
 
@@ -1397,5 +1473,158 @@ function endProcessing() {
     $('#overlay').show();
     $('#confirm-saving').removeClass('disabled').addClass('default');
     $('.in-work').removeClass('in-work');    
+    $('td').removeClass('changed');    
 
 }
+
+
+// function cleanupVariantBOM(action) {
+
+//     // console.log(' >> cleanupVariantBOM START');
+
+//     let pending  = $('.variant-item.pending-replacement').length + variantBOMClenup.length;
+//     let progress = (action.count - pending) * 100 / action.count; 
+
+//     $('#step-bar'     + action.index).css('width', progress + '%');
+//     $('#step-counter' + action.index).html((action.count - pending.length) + ' of ' + action.count);
+
+//     if(variantBOMClenup.length > 0) {
+
+//         let requests = [];
+
+//         for(let cleanup of variantBOMClenup) {
+//             if(requests.length < action.maxRequests) {
+//                 requests.push($.get('/plm/bom-remove', cleanup));
+//             }
+//         }
+
+//         Promise.all(requests).then(function() {
+//             variantBOMClenup.splice(0, requests.length);
+//             cleanupVariantBOM(action);
+//         });
+
+//     } else removeBOMItems(saveActions.replacement);
+
+// }
+// function removeBOMItems(action) {
+
+//     // console.log(' >> removeBOMItems START');
+
+//     let pending  = updateProgressBar(action);
+//     let requests = [];
+
+//     if(pending.length > 0) {
+        
+//         pending.each(function() {
+
+//             if(requests.length < action.maxRequests) {
+
+//                 let elemItem   = $(this);
+//                 let linkParent = getParentLink(elemItem);
+
+//                 if(!isBlank(linkParent)) {
+//                     // requests.push($.get('/plm/bom-remove', {
+//                     //     link   : linkParent,
+//                     //     edgeId : elemItem.attr('data-edgeid')
+//                     // }));
+//                 }
+
+//                 elemItem.removeClass(action.className);
+//                 elemItem.attr('data-edgeid', '');
+
+//             }
+
+//         });
+
+//         Promise.all(requests).then(function(responses) { removeBOMItems(action); });
+
+//     } else {
+
+//         completeProgressBar(action);
+//         addBOMItems(saveActions.addition);
+
+//     }
+
+// }  
+// function addBOMItems(action) {
+
+//     // console.log(' >> addBOMItems START');
+
+//     let pending  = updateProgressBar(action);
+//     let requests = [];
+//     let elements = [];
+
+//     if(pending.length > 0) {
+        
+//         pending.each(function() {
+
+//             if(requests.length < action.maxRequests) {
+
+//                 let elemItem    = $(this);
+//                 let linkParent  = getParentLink(elemItem);
+//                 let linkItem    = elemItem.attr('data-link');
+//                 let baseItem    = elemItem.closest('tr');
+
+//                 if(elemItem.hasClass('status-missing') || elemItem.hasClass('status-identical')) {
+//                     linkItem = baseItem.attr('data-link');
+//                     elemItem.attr('data-link', linkItem);
+//                 }
+
+//                 let params = {
+//                     linkParent : linkParent,
+//                     linkChild  : linkItem,
+//                     quantity   : baseItem.attr('data-quantity'),
+//                     number     : baseItem.attr('data-number'),
+//                     pinned     : true,
+//                     fields     : []
+//                 }
+
+//                 params.fields.push({
+//                     link  : wsVariants.bomViewLinks.baseBOMPath,
+//                     value : baseItem.attr('data-number-path')
+//                 })
+
+//                 // requests.push($.post('/plm/bom-add', params));
+//                 elements.push(elemItem);
+//                 elemItem.removeClass('pending-update-bom');
+
+//             }
+
+//         });
+
+//         Promise.all(requests).then(function(responses) {
+            
+//             let index = 0;
+
+//             for(let response of responses) {
+
+//                 if(response.error) {
+//                     showErrorMessage('Error when adding BOM entries', response.data.message);
+//                     return;
+//                 }
+
+//                 let elemItem = elements[index++];
+//                     elemItem.removeClass(action.className);
+//                     elemItem.attr('data-edgeid', response.data.split('/bom-items/')[1]);
+                    
+//                 if(elemItem.hasClass('status-missing')) {
+//                     setVariantItemStyle(elemItem, 'identical');
+//                 } else if(!elemItem.hasClass('status-identical')) {
+//                     setVariantItemStyle(elemItem, 'match');
+
+//                 }
+
+//             }
+
+//             addBOMItems(action);
+
+//         });
+
+//     } else {
+
+//         completeProgressBar(action);
+//         updateBOMItems(saveActions.update);
+
+//     }
+
+// }

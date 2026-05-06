@@ -1,0 +1,81 @@
+.tile(data-name='BOM Comparison' data-id='compare')
+    .tile-image(style="background: url('images/app-compare.png') no-repeat;background-size:contain;")
+    .tile-details
+        .tile-title BOM Comparison
+        .tile-subtitle Compare two selected BOMs side by side and benefit from color highligting, filtering and synchronised viewers when reviewing changes across revisions or alternatives of a design
+        .tile-access 
+            .tile-endpoint /compare
+            .tile-button.button.default(href="compare?compareWith=18764&wsId=57&dmsid=18685" target="_blank") Open
+            .tile-button.button.icon.icon-start.default(href="https://youtu.be/LCwprtYzqqg" target="_blank")            
+    .instructions
+        h1 Features
+        p Once the Chrome Extension of this UX server is installed, users can open the BOM comparison from any item. It will automatically open the comparison against the working version or latest released version, depending from where it is opened. Users can select another BOM to compare against by using searches, the revision list, bookmarks and recent items.
+        a(href='chrome-extension' target='_blank') Learn about the Chrome Extension
+        p If the Chrome Extension should or cannot be used, you can also add a Computed Field to the Items workspace in order to launch the BOM comparison. 
+            br
+            |However, this requires a (hidden) field DMS_ID being set by script to store the current item's dmsId.
+        p The following field will render a button to launch the BOM comparison for the current item, but lets the user select the target BOM to compare against:
+        p.code '&lt;a style="border: 1px solid #bec8d2;border-radius:4px;padding:5px 16px;color: #0a131c;font-size:12px;font-weight:700;line-height:30px;text-align:center;text-decoration:none !important;white-space:nowrap;" target="_blank" href ="LOCATIONcompare?wsId=57&dmsId='||DMS_ID||'"&gt;BOM Comparison&lt;/a&gt;'
+        p If the comparison should be launched automatically against the latest released revision or the working version, simply append the parameter 
+            span.code compareWith 
+            |to the button's URL:
+        p.code '&lt;a style="border: 1px solid #bec8d2;border-radius:4px;padding:5px 16px;color: #0a131c;font-size:12px;font-weight:700;line-height:30px;text-align:center;text-decoration:none !important;white-space:nowrap;" target="_blank" href ="LOCATIONcompare?wsId=57&dmsId='||DMS_ID||'&compareWith=self"&gt;BOM Comparison&lt;/a&gt;'
+        p Once the comparison has been started, the following features are available: 
+            ul 
+                li Select from multiple viewer sizes 
+                li Filter the BOM trees by type of change 
+                li Display item details for selected items 
+                li Apply change type colors to the viewer 
+                li Enable / disable viewer sync
+        p This application does not require any configuration changes in the tenant.
+        h1 Application Configuration Settings
+        p The following settings can be adjusted in your custom settings file within 
+            span.code exports.applications.compare 
+            |to adjust the application's behavior. 
+            br
+            |In order to change any of these settings, copy the standard value from settings.js to your custom settings file in folder settings.                        
+        table 
+            tr
+                th Setting 
+                th Default Value 
+                th Description  
+            tr  
+                td panels.insertBOMLeft
+                td {..}
+                td Configures the left BOM tree display
+            tr  
+                td panels.insertBOMRight
+                td {..}
+                td Configures the right BOM tree display
+            tr  
+                td panels.insertDetailsLeft
+                td {..}
+                td Configures the left Item Details panel
+            tr  
+                td panels.insertDetailsRight
+                td {..}
+                td Configures the left Item Details panel
+            tr  
+                td panels.insertSearch
+                td {..}
+                td Configures the Search panel for selection of the BOM to compare
+            tr  
+                td panels.insertRevisions
+                td {..}
+                td Configures the Revisions list for selection of the BOM to compare
+            tr  
+                td panels.insertRecentItems
+                td {..}
+                td Configures the Recent Items panel for selection of the BOM to compare
+            tr  
+                td panels.insertBookmarks
+                td {..}
+                td Configures the Bookmarks panel for selection of the BOM to compare
+        h1 Viewer Configuration Settings
+        include ../framework/viewer.pug                  
+    .log 
+        h1 BOM Comparison Change Log 
+        table
+                td 7. July 2023
+                td Release
+                td This is the initial release of this application

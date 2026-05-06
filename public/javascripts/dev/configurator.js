@@ -435,7 +435,7 @@ function resetEditor() {
     // $('#features-list').html('');
 
 }
-function insertDetailsDataDone(id, sections, fields, data) {
+function insertDetailsDataDone(id, data) {
 
     console.log(data);
 
@@ -450,14 +450,14 @@ function clickBOMItemDone(elemClicked, e) {
 
     if(elemClicked.hasClass('selected')) {
         viewerSetColor(partNumber, { 
-            color     : config.vectors.red,
+            color     : colors.vectors.red,
             fitToView : true,
             unhide    : false
         });
     } else viewerResetColors();
 
 }
-function changeBOMViewDone(id, fields, bom, selectedItems, dataFlatBOM, dataAdditional) {
+function openBOMViewDone(id, fields, bom, selectedItems, dataAdditional) {
 
     let elemTop = $('#features-list')
     // let selectedOptions = [];
@@ -680,9 +680,7 @@ function changeBOMViewDone(id, fields, bom, selectedItems, dataFlatBOM, dataAddi
                 if($(this).attr('data-edge-link') === edgeLink) {
                     $(this).addClass(className);
 
-                    // console.log(getBOMItemPath($(this)));
-
-                    let bomPath = getBOMItemPath($(this)).string;
+                    let bomPath = getTreeItemPath($(this)).string;
 
                     elemOption.attr('data-path', bomPath);
 
@@ -870,11 +868,11 @@ function updateViewer() {
 
                 pathLast = dataPath;
 
-                // viewerSetColor(config.vectors.yellow);
+                // viewerSetColor(colors.vectors.yellow);
             } else {
                 pathsHighlight.push(dataPath);
 
-                // viewerSetColor(config.vectors.blue);
+                // viewerSetColor(colors.vectors.blue);
             }
         } else {
             viewerHideModel(dataPath, { usePath : true, fitToView: false, ghosting : false });
@@ -885,7 +883,7 @@ function updateViewer() {
     // viewerResetColors();
     viewerSetColors(pathsHighlight, { resetColors: true, usePath : true, fitToView: false, unhide : false});
 
-    if(pathLast !== '') viewerSetColor(pathLast, { resetColors : false, usePath : true, fitToView: false, unhide : false, color : config.vectors.yellow });
+    if(pathLast !== '') viewerSetColor(pathLast, { resetColors : false, usePath : true, fitToView: false, unhide : false, color : colors.vectors.yellow });
 
 }
 
@@ -1022,7 +1020,7 @@ function uploadImage() {
     $('#overlay').show();
 
 
-    viewerCaptureScreenshot('viewer-markup-image', function() {
+    viewerCaptureScreenshot('viewer', 'viewer-markup-image', function() {
     // viewerCapturePerspective('perspective', 'viewer-markup-image', function() {
 
         // values.push(elemImage[0].toDataURL('image/jpg'));

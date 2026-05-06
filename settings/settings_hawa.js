@@ -11,7 +11,7 @@ let redirectUri     = 'http://localhost:8080/callback';
 let tenant          = '';
 let defaultTheme    = 'dark';   // Set the standard theme to dark or light
 let enableCache     = false;    
-
+// Test
 
 // ---------------------------------------------------------------------------------------------------------------------------
 //  OPTIONAL ADDITIONAL CLIENT ID FOR 2-LEGGED AUTHENTICATION
@@ -104,71 +104,54 @@ exports.config = {
         lightPreset             : 4
     },
 
-	    assetEditor : {
-		workspaceId     : 312,
-        landingHeader   : 'Select From Exsiting Assets',
-        bomViewName     : 'Basic',
-        fieldIdBOM      : 'EBOM',
-        exportFileName  : 'Serial Numbers',
-        workspaces      : [{
-            label       : 'Serial Numbers',
-            fieldId     : 'SERIAL_NUMBERS_LIST',
-            workspaceId : 275,
-            colorIndex  : 1,
-            bomIcon     : 'icon-tag',
-            columnsIn   : ['Serial #', 'Installation Date', 'Location', 'Item Number', 'Instance ID'],
-            columnsDef  : {
-                partNumber   : 'NUMBER',
-                path         : 'LOCATION',
-                instanceId   : 'INSTANCE_ID',
-                bomReference : 'ITEM_REFERENCE'
-            },
-            groupBy     : 'NUMBER',
-            filter      : {
-                fieldId : 'SERIAL_NUMBER',
-                value   : true
+    abom : {
+        bomLabel      : 'Asset BOM',
+        assetFieldIDs : {
+            ebom          : 'ENGINEERING_BOM',
+            abom          : 'ASSET_BOM',
+            serialNumbers : 'SERIAL_NUMBERS_LIST'
+        },
+        assetItems : {
+            workspaceId   : 282,
+            workspaceName : 'Asset Item',
+            bomViewName   : 'Default View',
+            fieldIDs: {
+                id        : 'ID',
+                asset     : 'ASSET',
+                item      : 'REFERENCE_ITEM',
+                number    : 'REFERENCE_ITEM_NUMBER',
+                root      : 'REFERENCE_ITEM_ROOT',
+                path      : 'REFERENCE_ITEM_PATH',
+                endItem   : 'END_ITEM',
+                sparePart : 'SPARE_PART',
+                purchased : 'PURCHASED',
+                serial    : 'SERIAL',
+                supplier  : 'SUPPLIER',
             }
-        }],
+        },
+        items : {
+            bomViewName : 'Asset BOM Editor',
+            fields : {
+                sparePart     : { fieldId : 'SPARE_WEAR_PART', values : ['spare part', 'yes', 'y']     },
+                serialNumber  : { fieldId : 'SERIAL_NUMBER'  , value  : true                           },
+                purchasedPart : { fieldId : 'PDM_CATEGORY'   , values : ['purchased', 'purchased part']}
+            }
+        },
+        deliveriesWorkspaceId : 279,
         viewerFeatures : {
-            contextMenu   : true,
-            cube          : true,
-            orbit         : true,
+            contextMenu   : false,
+            cube          : false,
+            orbit         : false,
             firstPerson   : false,
-            camera        : true,
+            camera        : false,
             measure       : true,
             section       : true,
             explodedView  : true,
-            modelBrowser  : true,
-            properties    : true,
-            settings      : true,
-            fullscreen    : true,
-            markup        : true,
-            hide          : true,
-            ghosting      : true,
-            highlight     : true,
-            single        : true,
-            fitToView     : true,
-            reset         : true,
-            views         : true,
-            selectFile    : true
-        }
-    },	
-	
-    classes : {
-        viewerFeatures : {
-            contextMenu   : true,
-            cube          : true,
-            orbit         : true,
-            firstPerson   : false,
-            camera        : true,
-            measure       : true,
-            section       : true,
-            explodedView  : true,
-            modelBrowser  : true,
-            properties    : true,
-            settings      : true,
-            fullscreen    : true,
-            markup        : true,
+            modelBrowser  : false,
+            properties    : false,
+            settings      : false,
+            fullscreen    : false,
+            markup        : false,
             hide          : true,
             ghosting      : true,
             highlight     : true,
@@ -180,6 +163,11 @@ exports.config = {
         }
     },
 
+    classes : {
+        fieldsIncluded : ['DESCRIPTOR', 'WORKSPACE', 'REVISION']
+    },
+
+	
     configurator : {
         wsIdConfigurationFeatures : '274',
         bomViewName               : 'Configurator',
@@ -449,7 +437,6 @@ exports.config = {
     },
 
     impactanalysis : {
-        fieldIdProposedChange             : 'PROPOSED_CHANGE',
         fieldIdStockQuantity              : 'STOCK_QUANTITY',
         fieldIdNextProductionOrderQantity : 'NEXT_PO_QUANTITY',
         fieldIdPendingSupplies            : 'PENDING_SUPPLIES',
@@ -486,6 +473,140 @@ exports.config = {
         usersExcluded       : ['Administrator', 'Import User', 'Job User', 'Integration User'],
         workspacesExcluded  : ['Approval Lists', 'Change Approval Templates', 'Checklist Templates', 'Project Templates']
     },
+
+	
+    instances : {
+        assets : {
+            workspaceId : 280,
+            fieldIdBOM  : 'EBOM'
+        },
+        landingHeader     : 'Select From Exsiting Assets',
+        bomViewName       : 'Instance Editor',
+        exportFileName    : 'Serial Numbers',
+        tabs : [{
+            label       : 'Serial Numbers',
+            fieldId     : 'SERIAL_NUMBERS_LIST',
+            workspaceId : 275,
+            colorIndex  : 1,
+            bomIcon     : 'icon-tag',
+            fieldsIn    : ['Serial #', 'Installation Date', 'Location', 'Item Number', 'Instance #', 'Instance Path'],
+            fieldsList  : {
+                partNumber   : 'NUMBER',
+                path         : 'LOCATION',
+                instanceId   : 'INSTANCE_ID',
+                instancePath : 'INSTANCE_PATH',
+                boundingBox  : 'BOUNDING_BOX'
+            },
+            groupBy     : 'NUMBER',
+            sortOrder : [
+                { sortBy : 'INSTANCE_ID', sortType : 'integer', sortDirection : 'ascending' },
+                { sortBy : 'LOCATION'   , sortType : 'string' , sortDirection : 'ascending' }
+            ],            
+            filter      : {
+                fieldId : 'SERIAL_NUMBER',
+                value   : true
+            }
+        // },{            
+        //     label       : 'Motors',
+        //     fieldId     : 'SERIAL_NUMBERS_LIST',
+        //     workspaceId : 276,
+        //     colorIndex  : 2,
+        //     bomIcon     : 'icon-item',
+        //     fieldsIn    : ['Supplier', 'Model', 'Serial #', 'Power Supply', 'Installation Date', 'Location', 'Item Title', 'Item Rev', 'Instance #', 'Instance Path'],
+        //     fieldsList  : {
+        //         partNumber   : 'NUMBER',
+        //         title        : 'ITEM_TITLE',
+        //         revision     : 'ITEM_REV',
+        //         path         : 'LOCATION',
+        //         instanceId   : 'INSTANCE_ID',
+        //         instancePath : 'INSTANCE_PATH',
+        //         boundingBox  : 'BOUNDING_BOX'
+        //     },
+        //     groupBy     : 'NUMBER',
+        //     sortOrder : [
+        //         { sortBy : 'INSTANCE_ID', sortType : 'integer', sortDirection : 'ascending' },
+        //         { sortBy : 'LOCATION'   , sortType : 'string' , sortDirection : 'ascending' }
+        //     ],
+        //     filter      : {
+        //         fieldId : 'MOTOR',
+        //         value   : true
+        //     }
+        // },{
+        //     label       : 'Sensors',
+        //     fieldId     : 'SERIAL_NUMBERS_LIST',
+        //     workspaceId : 277,
+        //     colorIndex  : 3,
+        //     bomIcon     : 'icon-highlight',
+        //     fieldsIn    : ['Serial #', 'Installation Date', 'Location', 'Item Title', 'Item Rev', 'Instance #', 'Instance Path'],
+        //     fieldsList  : {
+        //         partNumber   : 'NUMBER',
+        //         title        : 'ITEM_TITLE',
+        //         revision     : 'ITEM_REV',
+        //         path         : 'LOCATION',
+        //         instanceId   : 'INSTANCE_ID',
+        //         instancePath : 'INSTANCE_PATH',
+        //         boundingBox  : 'BOUNDING_BOX'
+        //     },
+        //     groupBy     : 'NUMBER',
+        //     sortOrder : [
+        //         { sortBy : 'INSTANCE_ID', sortType : 'integer', sortDirection : 'ascending' },
+        //         { sortBy : 'LOCATION'   , sortType : 'string' , sortDirection : 'ascending' }
+        //     ],
+        //     filter      : {
+        //         fieldId : 'SENSOR',
+        //         value   : true
+        //     }
+        // },{
+        //     label       : 'Control Elements',
+        //     fieldId     : 'SERIAL_NUMBERS_LIST',
+        //     workspaceId : 278,
+        //     colorIndex  : 4,
+        //     bomIcon     : 'icon-sliders',
+        //     fieldsIn    : ['Serial #', 'Installation Date', 'Location', 'Item Title', 'Item Rev', 'Instance #', 'Instance Path'],
+        //     fieldsList  : {
+        //         partNumber   : 'NUMBER',
+        //         title        : 'ITEM_TITLE',
+        //         revision     : 'ITEM_REV',
+        //         path         : 'LOCATION',
+        //         instanceId   : 'INSTANCE_ID',
+        //         instancePath : 'INSTANCE_PATH',
+        //         boundingBox  : 'BOUNDING_BOX'
+        //     },
+        //     groupBy     : 'NUMBER',
+        //     sortOrder : [
+        //         { sortBy : 'INSTANCE_ID', sortType : 'integer', sortDirection : 'ascending' },
+        //         { sortBy : 'LOCATION'   , sortType : 'string' , sortDirection : 'ascending' }
+        //     ],
+        //     filter      : {
+        //         fieldId : 'CONTROL_ELEMENT',
+        //         value   : true
+        //     }            
+        }],
+        viewerFeatures : {
+            contextMenu   : false,
+            cube          : false,
+            orbit         : false,
+            firstPerson   : false,
+            camera        : false,
+            measure       : true,
+            section       : true,
+            explodedView  : true,
+            modelBrowser  : false,
+            properties    : false,
+            settings      : false,
+            fullscreen    : true,
+            markup        : true,
+            hide          : true,
+            ghosting      : true,
+            highlight     : true,
+            single        : true,
+            fitToView     : false,
+            reset         : true,
+            views         : true,
+            selectFile    : false
+        }
+    },
+
 
     mbom : {
         wsIdEBOM                      : '79',
@@ -556,13 +677,17 @@ exports.config = {
         autoClick        : true,
 		openMostRecent   : true,
 		searchInputText  : 'Enter part number',
+		searchTileImages : true,
         workspacesIn     : ['Articles'], //Items
+        bomViewName      : 'Basic',
+        bomLevels        : 10,
         expandSections   : ['Basic'],
         sectionsExcluded : ['AML Summary', 'Quality Inspection', 'Sustainability', 'Compliance', 'Others'],
         sectionsIncluded : [],
         sectionsOrder    : ['Basic', 'Technical Details', 'PDM Data'],
         fieldsExcluded   : ['ESTIMATED_COST', 'PENDING_PACKAGES'],
         fieldsIncluded   : [],
+        viewingFormats   : ['dwf', 'dwfx'],
 		suppressLinks    : false,
         viewerFeatures   : {
             contextMenu   : true,
@@ -673,21 +798,21 @@ exports.config = {
     sbom : {
         appTitle  : 'Vertriebs-BOM Editor',
         sourceBOM : {
-            fieldId     : 'ENGINEERING_BOM', //EBOM
+            fieldId     : '', //EBOM, ENGINEERING_BOM
             bomViewName : 'MBOM Transition', //Service
             headerLabel : 'Engineering BOM'
         },
         targetBOM : {
-            fieldId       : 'SALES_BOM',
+            fieldId       : 'SALES_VBOM', // 
             bomViewName   : 'MBOM Transition', //Service
-            itemTypeValue : 'Product',
-            prefixTitle   : 'Service BOM of ',
-            filterLabelIn : 'Show items contained in Sales BOM only', //Show items contained in Service BOM only
-            filterLabelEx : 'Hide items contained in Sales BOM', //Hide items contained in Service BOM
+            itemTypeValue : 'Sales BOM',
+            prefixTitle   : 'VBOM ', // Service BOM of 
+            filterLabelIn : 'Show items contained in Sales VBOM only', //Show items contained in Service BOM only
+            filterLabelEx : 'Hide items contained in Sales VBOM', //Hide items contained in Service BOM
 			defaults : {
-                number      : { copyFrom : 'bom.ARTIKEL'     , prefix  : ''               , suffix : 'V' }, //-SBOM
-                title       : { copyFrom : 'ctx.TITLE'      , prefix  : 'Service BOM of ', suffix : ''      }, // ctx für context, Inhalt aus Produkt
-                description : { copyFrom : 'bom.DESCRIPTION', prefix  : ''               , suffix : ''      }
+                number      : { copyFrom : 'bom.ARTIKEL' 			, prefix  : ''		, suffix : 'V' }, //-SBOM
+                title       : { copyFrom : 'bom.BEZEICHNUNG1_ITEM'  , prefix  : ''		, suffix : ''      }, // ctx für context, Inhalt aus Produkt / Service BOM of
+                description : { copyFrom : 'bom.BEZEICHNUNG2_ITEM'  , prefix  : ''      , suffix : ''      }
             }
         },
         itemsFieldIds : {
@@ -698,7 +823,7 @@ exports.config = {
         },
         picklistIdItemType : 'CUSTOM_LOOKUP_WS_ARTICLE_CATEGORY', //CUSTOM_LOOKUP_ITEM_TYPES
         itemHighlight : {
-            fieldId        : 'SPARE_WEAR_PART',
+            fieldId        : 'SPARE WEAR PART',
             fieldValues    : ['spare', 'spare part', 'yes', 'x', 'y', 'true'],
             bomColumnTitle : 'Spare/Wear',
             filterLabelIn  : 'Show Recommended Spare Parts Only',
@@ -706,16 +831,18 @@ exports.config = {
         },
         bomTypes : [{
             mode          : 'list',
-            tabLabel      : 'Spare Parts',
+            tabLabel      : 'Vertriebs BOM', //Spare Parts
             buttonLabels  : ['Add all recommended'],
-            bomItemTypes  : ['Spare Parts List', 'Part'],
+            bomItemTypes  : ['Spare Parts List', 'Part', 'Sales Assembly', 'Assembly'],
             icon          : 'icon-details',
             color         : colors.red,
-            filterLabelIn : 'Show Spare Parts List Items Only',
-            filterLabelEx : 'Hide Spare Parts List Items',
-            basePosNumber : 101,
-            hideQuantity  : false
-        },{
+            filterLabelIn : 'Show Sales List Items Only', //Show Spare Parts List Items Only
+            filterLabelEx : 'Hide Sales Parts List Items', //Hide Spare Parts List Items
+            basePosNumber : 1, //101
+            hideQuantity  : false //false
+        },
+		/*
+		{
             mode          : '1-level-bom',
             tabLabel      : 'Vertriebs BOM', //Maintenance Kits
             buttonLabels  : ['New V-Level'], //New Kit
@@ -735,8 +862,10 @@ exports.config = {
             filterLabelIn : 'Show Services Items Only',
             filterLabelEx : 'Hide Services Items',
             basePosNumber : 301
-        }],
-        enableBOMPin : false,
+        }
+		*/
+		],
+        enableBOMPin : true,
         viewerFeatures : {
             contextMenu   : true,
             cube          : true,
@@ -763,64 +892,179 @@ exports.config = {
     },
 
     service : {
-        applicationFeatures : {
-            homeButton             : true,
-            toggleItemAttachments  : true,
-            toggleItemDetails      : true,
-            productDocumentation   : true,
-            manageProblemReports   : true,
-            showStock              : true,
-            requestWorkflowActions : true,
-            enableCustomRequests   : true
+        labels : {
+            homeSparePartRequests : 'Spare Part Requests',
+            homeProblemReports    : 'Problem Reports'
         },
         products : {
-            workspaceId         : 95,
-            icon                : 'icon-product',
-            headerLabel         : 'Serviceable Products',
-            groupBy             : 'PRODUCT_LINE',
-            contentSize         : 'l',
-            fieldIdTileImage    : 'IMAGE',
-            fieldIdTileTitle    : 'TITLE',
-            fieldIdTileSubtitle : 'DESCRIPTION',
-            fieldIdBOM          : 'ENGINEERING_BOM',
-            filter              : [{
-                field       : 'ENGINEERING_BOM',
-                type        : 0,
-                comparator  : 21,
-                value       : ''
-            }]
+            workspaceId  : 95,
+            headerLabel  : 'Serviceable Products',
+            icon         : 'icon-product',
+            groupBy      : 'PRODUCT_LINE',
+            contentSize  : 'l',
+            tileImage    : 'IMAGE',
+            tileTitle    : 'TITLE',
+            tileSubtitle : 'DESCRIPTION',
+            filter       : [{
+                field      : 'ENGINEERING_BOM',
+                type       : 0,
+                comparator : 21,
+                value      : ''
+            }],
+            fieldIDs : {
+                ebom : 'ENGINEERING_BOM',
+                sbom : 'SERVICE_BOM'
+            }           
         },
         items : {
-            bmoViewName          : 'Service',
+            bomViewName          : 'Service',
             bomRevisionBias      : 'release',
-            fieldIdImage         : 'IMAGE',
             fieldIdSparePart     : 'SPARE_WEAR_PART',
             fieldValuesSparePart : ['spare part', 'yes', 'x', 'y', 'wear part'],
             endItemFilter        : { fieldId : 'SBOM_END_ITEM', value : true },
             sparePartTileDetails : ['MATERIAL', 'ITEM_WEIGHT', 'DIMENSIONS']
-        },
-        problemReports : {
-            workspaceId  : 82,
-            fieldIdImage : 'IMAGE_1'
-        },
+        },       
         sparePartsRequests : {
             workspaceId         : 241,
             sectionsExpanded    : [ 'Requestor Contact Details', 'Request Details' ],
             sectionsExcluded    : [ 'Planning & Tracking', 'Request Confirmation', 'Quote Submission & Response', 'Real Time KPIs', 'Workflow Activity', 'Quote Summary', 'Order Processing', 'Related Processes' ],
             gridColumnsExcluded : [ 'Line Item Cost', 'Availability [%]', 'Manufacturer', 'Manufacturer P/N', 'Unit Cost', 'Total Cost', 'Make or Buy', 'Lead Time (w)', 'Long Lead Time'],
+            stateColors         : [
+                { color : '#faa21b', states : ['Received']                            , label : 'New'      },
+                { color : '#dd2222', states : ['Awaiting Response', 'Quote Submitted'], label : 'TODO'     },
+                { color : '#faa21b', states : ['Order in process', 'Shipment']        , label : 'Shipment' },
+                { color : '#6a9728', state  : 'Completed'                             , label : 'Complete' }
+            ],
         },
+        problemReports : {
+            workspaceId  : 82,
+            fieldIdImage : 'IMAGE_1',
+            stateColors  : [
+                { color : '#222222', state  : 'Create'                                           , label : 'New'      },
+                { color : '#faa21b', states : ['Review','Technical Analysis']                    , label : 'Review'   },
+                { color : '#6a9728', state  : 'Completed'                                        , label : 'Complete' },
+                { color : '#dd2222', states : ['Change Request in progress', 'CAPA in prorgress'], label : 'In Work'  }
+            ]
+        },  
+        serviceBOMTypes : {
+            sparePart : {
+                fieldValue : 'Spare Parts List',
+                groupLabel : 'Spare Parts',
+                icon       : 'icon-package'
+            },
+            kit : {
+                fieldValue : 'Service Kit',
+                groupLabel : 'Kits',
+                icon       : 'icon-list'
+            },
+            offering : {
+                fieldValue : 'Service Offering',
+                groupLabel : 'Service Offerings',
+                icon       : 'icon-layers'
+            },
+            custom : {
+                icon      : 'icon-settings'
+            }
+        },                 
+        assetServices : {
+            workspaceId     : 284,
+            headerLabel     : 'Pending Asset Services',
+            icon            : 'icon-product',
+            fieldIDAssignee : 'ASSIGNEE',
+            hideStates      : ['Completed', 'Cancelled'],
+            fieldIDs        : {
+                asset       : 'ASSET',
+                assignee    : 'ASSIGNEE',
+                serialnrs   : 'SERIAL_NUMBERS_LIST'
+            },
+            detailsPanel : {
+                headerLabel     : 'Asset Service Ticket',
+                expandSections  : ['Asset Details'],
+                excludeSections : ['Images'],
+                layout          : 'narrow',
+            }
+        },
+        projects : {
+            workspaceId  : 283,
+            headerLabel  : 'Projects / Facilities',
+            hideStates   : ['Archived', 'Decomissioned'],
+            tileSubtitle : 'CUSTOMER',
+            tileDetails  : [{
+                icon     : 'icon-flag',
+                fieldId  : 'COUNTRY',
+                prefix   : 'Country'
+            }, {
+                icon    : 'icon-city',
+                fieldId : 'CITY',
+                prefix  : 'City'
+            }],
+        },
+        assets : {
+            workspaceId  : 280,
+            icon         : 'icon-product',
+            tableColumns : ['ASSET_SN', 'ASSET_GROUP', 'ASSET_TYPE', 'ASSET_SYSTEM', 'ASSET_FUNCTION'],
+            fieldIDs     : {
+                project   : 'PROJECT',
+                ebom      : 'ENGINEERING_BOM',
+                sbom      : 'SERVICE_BOM',
+                serialnrs : 'SERIAL_NUMBERS_LIST'
+            }
+        },
+        serialNumbers : {
+            tableColumns : ['ID', 'STATUS', 'SERIAL', 'ITEM_NUMBER', 'NUMBER', 'ITEM_REV', 'LOCATION', 'SUPPLIER', 'PREVIOUS_SERIAL', 'INSTANCE_ID', 'INSTANCE_PATH'],
+            fieldIDs : {
+                partNumber   : 'NUMBER',
+                path         : 'LOCATION',
+                instanceId   : 'INSTANCE_ID',
+                instancePath : 'INSTANCE_PATH'
+            },
+        },      
+        paramsItemDetails : {
+            id               : 'details-top',
+            headerLabel      : 'descriptor',
+            layout           : 'narrow',
+            collapseContents : true,
+            useCache         : true,
+            fieldsEx         : ['ACTIONS'],
+            sectionsEx       : ['Sourcing Summary','Others']
+        },
+        paramsItemAttachments : { 
+            extensionsEx    : ['.dwf','.dwfx'],
+            headerLabel     : 'Files',
+            layout          : 'list',
+            filterByType    : true,
+            contentSize     : 'xs'
+        },
+        paramsDocumentation : {
+            extensionsEx : ['.dwf','.dwfx'],
+            layout       : 'list',
+            size         : 'm'
+        },
+        applicationFeatures : {
+            homeButton              : true,
+            itemDetails             : true,
+            itemAttachments         : true,
+            contextDocumentation    : true,
+            manageSparePartRequests : true,
+            manageProblemReports    : true,
+            showStock               : true,
+            requestWorkflowActions  : true,
+            problemWorkflowActions  : true,
+            enableCustomRequests    : true,
+            openInPLM               : true
+        },        
         viewerFeatures : {
-            contextMenu   : true,
-            cube          : true,
-            orbit         : true,
+            contextMenu   : false,
+            cube          : false,
+            orbit         : false,
             firstPerson   : false,
-            camera        : true,
+            camera        : false,
             measure       : true,
             section       : true,
             explodedView  : true,
-            modelBrowser  : true,
-            properties    : true,
-            settings      : true,
+            modelBrowser  : false,
+            properties    : false,
+            settings      : false,
             fullscreen    : true,
             markup        : true,
             hide          : true,
@@ -835,28 +1079,39 @@ exports.config = {
     },
 
     variants : {
-        wsIdItemVariants               : 274,
-        sectionLabelVariantDefinition  : 'Variant Definition',
-        fieldIdBaseItem                : 'BASE_ITEM',
-        fieldIdBaseItemNumber          : 'BASE_ITEM_NUMBER',
-        fieldIdRootItemDmsId           : 'ROOT_ITEM_DMS_ID',
-        bomViewNameItems               : 'Variant Manager',
-        bomViewNameVariants            : 'Variant Manager',
-        maxBOMLevels                   : 4,
+        workspaceItems  : {
+            bomViewName : 'Basic'
+        },
+        workspaceItemVariants : {
+            workspaceId       : 571,
+            sectionLabel      : 'Variant Definition',
+            fieldIds          : {
+                baseItem      : 'BASE_ITEM',
+                title         : 'TITLE',
+                rootDMSId     : 'BASE_ROOT_DMS_ID',
+            },
+            bomFieldIdBaseBOMPath : 'BASE_BOM_PATH',
+            bomViewName           : 'Variant Manager'
+        },
+        newItemVariantsTitle : {
+            fieldsToConcatenate : ['COLOUR', 'MATERIAL'],
+            separator           : ' / '
+        },
+        maxBOMLevels : 4,
         viewerFeatures : {
-            contextMenu   : true,
-            cube          : true,
-            orbit         : true,
+            contextMenu   : false,
+            cube          : false,
+            orbit         : false,
             firstPerson   : false,
             camera        : false,
             measure       : true,
             section       : true,
             explodedView  : true,
-            modelBrowser  : true,
-            properties    : true,
-            settings      : true,
+            modelBrowser  : false,
+            properties    : false,
+            settings      : false,
             fullscreen    : true,
-            markup        : true,
+            markup        : false,
             hide          : true,
             ghosting      : true,
             highlight     : true,
@@ -1017,6 +1272,123 @@ exports.menu = [
     }]
 ]
 
+
+// ---------------------------------------------------------------------------------------------------------------------------
+//  CHOROME EXTENSION CONFIGURATION
+// ---------------------------------------------------------------------------------------------------------------------------
+// Configure the commands to be added to the Fusion Manage main menu and the buttons to be added to matching item's header
+exports.chrome = {
+    commands : [{
+        id    : 'users',
+        url   : '/users',
+        label : 'User Settings Manager',
+        icon  : 'zmdi-accounts-list',
+        order : 101
+    },{
+        id    : 'data',
+        url   : '/data',
+        label : 'Data Manager',
+        icon  : 'zmdi-storage',
+        order : 102
+    },{
+        id    : 'workspace-comparison',
+        url   : '/workspace-comparison',
+        label : 'Workspace Comparison',
+        icon  : 'zmdi-blur-linear',
+        order : 103
+    },{   
+        id    : 'insights',
+        url   : '/insights',
+        label : 'Tenant Insights',
+        icon  : 'zmdi-graphic-eq',
+        order : 104
+    },{
+        id    : 'outstanding-work',
+        url   : '/outstanding-work',
+        label : 'Outstanding Work Report',
+        icon  : 'zmdi-assignment-account',
+        order : 105 
+    }],  
+    buttons : [{
+        id         : 'mbom',
+        url        : '/mbom?',
+        label      : 'MBOM Editor',
+        workspaces : ['items']
+    },{
+        id         : 'sbom',
+        url        : '/sbom?',
+        label      : 'Service BOM Editor',
+        workspaces : ['products']
+    },{
+        id         : 'cia',
+        url        : '/impactanalysis?',
+        label      : 'Change Impact Analysis',
+        workspaces : ['pr', 'cr', 'co']
+    },{
+        id         : 'items-variants',
+        url        : '/variants?',
+        label      : 'Variants Manager',
+        workspaces : ['items']
+    },{
+        id         : 'pde',
+        url        : '/explorer?',
+        label      : 'Product Data Explorer',
+        icon       : 'zmdi-chart',
+        workspaces : ['items']
+    },{
+        id         : 'insights-asset',
+        url        : '/explorer?options=fieldIdEBOM:EBOM&',
+        label      : 'Insights',
+        icon       : 'zmdi-chart',
+        workspaces : ['assets']  
+    },{
+        id         : 'mbom',
+        url        : '/mbom?',
+        label      : 'Edit MBOM',
+        workspaces : ['items']
+    },{
+        id         : 'product-variants',
+        url        : '/variants?options=fieldIdEBOM:ENGINEERING_BOM&',
+        label      : 'Manage Variants',
+        workspaces : ['products']        
+    },{
+        id         : 'instances',
+        url        : '/instances?',
+        label      : 'Instance Editor',
+        workspaces : ['assets']
+    },{
+        id         : 'abom',
+        url        : '/abom?',
+        label      : 'Edit Asset BOM',
+        workspaces : ['assets']
+    },{
+        id         : 'sbom',
+        url        : '/sbom?',
+        label      : 'Edit Service BOM',
+        workspaces : ['products', 'assets']
+    },{
+        id         : 'class-browser',
+        url        : '/classes?',
+        label      : 'Browse Class',
+        icon       : 'zmdi-labels',
+        workspaces : ['items']             
+    },{
+        id         : 'service-portal',
+        url        : '/service?',
+        label      : 'Service Portal',
+        icon       : 'zmdi-wrench',
+        workspaces : ['items']
+    }],
+    workspaces : {
+        items    : 79,
+        pr       : 82,
+        cr       : 83,
+        co       : 84,
+        products : 95,
+        assets   : 280
+    },
+    customStyle : true
+}
 
 
 // ---------------------------------------------------------------------------------------------------------------------------

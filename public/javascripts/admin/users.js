@@ -249,7 +249,7 @@ function getUsers() {
     dataUsers = null;
 
     $.get('/plm/users', { 
-        bulk       : false,
+        bulk       : true,
         activeOnly : true, 
         mappedOnly : false
     }, function(response) {
@@ -431,8 +431,8 @@ function getWorkspaces() {
 
         for(let workspace of response.data.items) {
             workspaces.push({
-                link  : workspace.link,
-                title : workspace.title
+                link  : workspace.link  || workspace.__self__,
+                title : workspace.title || workspace.name
             })
         }
 
@@ -1665,7 +1665,6 @@ function assignGroups(index) {
         }
 
         Promise.all(requests).then(function(responses) {
-            console.log(responses);
             assignGroups(index + 1);
         });
  

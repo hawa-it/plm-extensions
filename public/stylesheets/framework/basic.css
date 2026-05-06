@@ -171,7 +171,7 @@ table.grid.rotated th {
     padding : 5px 16px;
     text-align : right;
 }
- table.grid.rotated tr:first-of-type > td {
+table.grid.rotated tr:first-of-type > td {
     border-top : 1px solid var(--color-surfac-level-3);
 }
 .fixed-header > thead > tr > th,
@@ -181,9 +181,18 @@ table.grid.rotated th {
     top     : 0; 
     z-index : 5;
 }
+.fixed-column > thead > tr > th:first-of-type,
+.fixed-column > tbody > tr > td:first-of-type {
+    left     : 0px;
+    position : sticky;
+    z-index  : 6;
+}
+.fixed-column > thead > tr > th:first-of-type {
+    z-index : 7;
+}
 table.row-hovering tr:hover td,
 table.row-hovering tbody tr:hover td {
-    border-color    : var(--color-hover-border) !important;
+    border-color    : var(--color-hover-border);
     cursor          : pointer;
 }
 table.row-hovering tr:hover td.field-readonly,
