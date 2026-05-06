@@ -106,17 +106,16 @@ exports.applications = {
     configurator   : {},
     dashboard      : {},
     explorer       : {
-            panels : {
-
-        insertBOM : {
+        panels : {
+            insertBOM : {
             bomViewName : 'Basic',
-            fieldsEx    : ['ARTIKEL']
+            fieldsEx    : ['ARTIKEL', 'Descriptor', 'Category Code', 'Open in Vault']
         },
 
         insertDetails : {
             sectionsEx     : ['AML Summary', 'Sourcing Summary', 'Others', 'HIDDEN'],
             expandSections : ['Article'],
-            fieldsEx       : ['ACTIONS', 'OPEN_IN_VAULT']
+            fieldsEx       : ['ACTIONS', 'OPEN_IN_VAULT', 'BOM_COMPARISON', 'PLM_PORTAL', 'MBOM_EDITOR_NEW', 'VBOM_EDITOR']
         }
 
     },
