@@ -90,10 +90,10 @@ exports.applications = {
     compare        : {
         panels : {
         insertBOMLeft : {
-            fieldsIn : ['ARTIKEL', 'Revision', 'Quantity']
+            fieldsIn : ['Revision', 'Quantity']
         },
         insertBOMRight : {
-            fieldsIn : ['ARTIKEL', 'Revision', 'Quantity']
+            fieldsIn : ['Revision', 'Quantity']
         }
     },
     viewerFeatures : {
@@ -106,6 +106,20 @@ exports.applications = {
     configurator   : {},
     dashboard      : {},
     explorer       : {
+            panels : {
+
+        insertBOM : {
+            bomViewName : 'Basic',
+            fieldsEx    : ['ARTIKEL']
+        },
+
+        insertDetails : {
+            sectionsEx     : ['AML Summary', 'Sourcing Summary', 'Others', 'HIDDEN'],
+            expandSections : ['Article'],
+            fieldsEx       : ['ACTIONS', 'OPEN_IN_VAULT']
+        }
+
+    },
             kpis : [
             // ------------------------------------------------------------------------------------------------------------------
             // Use the following parameters to define the KPIs:
