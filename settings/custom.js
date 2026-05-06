@@ -87,6 +87,22 @@ exports.applications = {
         // },
     },
     classes        : {},
+    compare        : {
+        panels : {
+        insertBOMLeft : {
+            fieldsIn : ['ARTIKEL', 'Revision', 'Quantity']
+        },
+        insertBOMRight : {
+            fieldsIn : ['ARTIKEL', 'Revision', 'Quantity']
+        }
+    },
+    viewerFeatures : {
+        contextMenu : true,
+        properties  : true,
+        settings    : true,
+        selectFile  : true
+    }    
+    },
     configurator   : {},
     dashboard      : {},
     explorer       : {
