@@ -378,7 +378,9 @@ exports.menu = []
 // ---------------------------------------------------------------------------------------------------------------------------
 exports.server = {
     landingPage     : '',  // Set the default URL to be opened if no app URL is provided (default is '')
-    servicesEnabled : {}   // Defines the applications to enable. When an application is set to false, an error 404 page will be shown when users try accessing the given page.
+    servicesEnabled : {
+        editor : true   // Specification Editor (beta)
+    }   // Defines the applications to enable. When an application is set to false, an error 404 page will be shown when users try accessing the given page.
 }
 
 
