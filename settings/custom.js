@@ -34,7 +34,7 @@ exports.common = {
         items                        : 79, //57
         nonConformances              : 98,
         problemReports               : 82,
-        requirements                 : 143,
+        requirements                 : 835,
 
         // Products & Projects Workspaces
         products               : 95,
@@ -106,7 +106,19 @@ exports.applications = {
     },
     configurator   : {},
     dashboard      : {},
-    editor         : {},
+    editor         : {
+        requirements : {
+            wsContexts : [{
+                workspace : 'products',
+                fieldIds  : {
+                    link  : 'PRODUCT_REQUIREMENTS',  // Field in context workspaces referencing the Requirements Structure
+                    title : 'DESCRIPTOR'             // Title field being used as default title for the new root element
+                }
+            },{
+                workspace : 'equipments'
+            }]
+        }
+    },
     explorer       : {
         panels : {
             insertBOM : {
