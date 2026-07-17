@@ -108,11 +108,16 @@ exports.applications = {
     dashboard      : {},
     editor         : {
         requirements : {
+            wsMain     : {
+                workspaceId   : 835,
+                workspaceName : 'Requirements Custom',
+                bomViewName   : 'Requirements Overview'
+            },
             wsContexts : [{
                 workspace : 'products',
                 fieldIds  : {
                     link  : 'PRODUCT_REQUIREMENTS',  // Field in context workspaces referencing the Requirements Structure
-                    title : 'DESCRIPTOR'             // Title field being used as default title for the new root element
+                    title : 'TITLE'                  // Title field being used as default title for the new root element
                 }
             },{
                 workspace : 'equipments'
