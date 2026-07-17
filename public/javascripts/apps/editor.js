@@ -112,6 +112,7 @@ $(document).ready(function() {
 
         if(links.context !== '') {
             links.root     = getSectionFieldValue(responses[2].data.sections, config.wsContext.fieldIds.link, '', 'link');
+            if(Array.isArray(links.root)) links.root = (links.root.length > 0) ? links.root[0].link : '';
             headerSubtitle = responses[2].data.title;
             let newTitle   = responses[2].data.title;
             if(config.wsContext.fieldIds.title !== 'DESCRIPTOR') newTitle = getSectionFieldValue(responses[2].data.sections, config.wsContext.fieldIds.title, '');
