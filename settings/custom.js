@@ -111,7 +111,13 @@ exports.applications = {
             wsMain     : {
                 workspaceId   : 835,
                 workspaceName : 'Requirements Custom',
-                bomViewName   : 'Requirements Overview'
+                bomViewName   : 'Requirements Overview',
+                newDefaultValues      : [
+                    [ 'REQUIREMENT_TYPE', { link : '/api/v3/lookups/CUSTOM_LOOKUP_REQUIREMENT_TYPE_LEVEL/options/2' } ], // Specification (new root structure)
+                ],
+                newChildDefaultValues : [
+                    [ 'REQUIREMENT_TYPE', { link : '/api/v3/lookups/CUSTOM_LOOKUP_REQUIREMENT_TYPE_LEVEL/options/1' } ], // Project (new child requirement)
+                ]
             },
             wsContexts : [{
                 workspace : 'products',

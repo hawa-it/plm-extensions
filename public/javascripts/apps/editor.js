@@ -2412,6 +2412,12 @@ function createNewItems(action) {
                 params.fields.push({ fieldId : 'TITLE', value : elemItem.find('.editor-item-title').val() });
                 params.fields.push({ fieldId : 'DESCRIPTION', value : elemItem.find('.rte-input').html() });
 
+                if(!isBlank(config.wsMain.newChildDefaultValues)) {
+                    for(let defaultValue of config.wsMain.newChildDefaultValues) {
+                        params.fields.push({ fieldId : defaultValue[0], value : defaultValue[1] });
+                    }
+                }
+
                 elemAdvanced.find('.field-editable.changed').each(function() {
                     const fieldValue = getFieldValue($(this));
                     params.fields.push({ fieldId : fieldValue.fieldId, value : fieldValue.value });
@@ -2426,20 +2432,25 @@ function createNewItems(action) {
 
         Promise.all(requests).then(function(responses) {
 
+            let hasError = false;
+
             for(let response of responses) {
                 if(response.error) {
+                    hasError = true;
                     showErrorMessage('Error', response.data.message);
                     endSaveProcessing();
                 }
             }
 
+            if(hasError) return;
+
             for(let element of elements) {
                 unlockEditorItem(element);
                 element.find('.editor-item-reuse').remove();
-            }            
+            }
 
             storeNewItemLinks(action, elements, responses);
-            createNewItems(action); 
+            createNewItems(action);
 
         });
 
