@@ -666,7 +666,7 @@ function afterBOMCompletion(id, data) {
 
         console.log(draftList);
 
-        if(draftList !== null) {
+        if((draftList !== null) && (draftList.length > 0)) {
             for(let item of draftList) {
                 bomPartsList.push({
                     link       : '',
