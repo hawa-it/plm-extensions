@@ -196,15 +196,27 @@ function setUIEvents() {
                     fields   : [{ fieldId : 'TITLE', value : $('#start-name').val() }]
                 }
 
+                if(!isBlank(config.wsMain.newDefaultValues)) {
+                    for(let defaultValue of config.wsMain.newDefaultValues) {
+                        params.fields.push({ fieldId : defaultValue[0], value : defaultValue[1] });
+                    }
+                }
+
                 $.post('/plm/create', params, function(response) {
 
                     printResponseErrorMessagesToConsole(response);
 
+                    if(response.error) {
+                        showErrorMessage('Error', response.data.message);
+                        $('#overlay').hide();
+                        return;
+                    }
+
                     links.root = response.data.split('.autodeskplm360.net')[1];
 
-                    // storeRootLinkOnContextItem();
+                    storeRootLinkOnContextItem();
                     openEditor();
-    
+
                 });
 
             }
