@@ -660,7 +660,7 @@ function afterBOMCompletion(id, data) {
 
     bomPartsList = data.bomPartsList;
 
-    if(bomPartsList.length == 1) {
+    if(bomPartsList.length <= 1) {
 
         const draftList = parseDraft();
 
