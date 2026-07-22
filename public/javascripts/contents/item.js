@@ -5318,6 +5318,8 @@ function getBOMViews(id) {
 
         sortArray(response.data, 'name');
 
+        let bomViewMissing = !isBlank(settings[id].bomViewName);
+
         for(let bomView of response.data) {
 
             $('<option></option>').appendTo(elemSelect)
@@ -5327,6 +5329,7 @@ function getBOMViews(id) {
             if(!isBlank(settings[id].bomViewName)) {
                 if(bomView.name === settings[id].bomViewName) {
                     elemSelect.val(bomView.id);
+                    bomViewMissing = false;
                 }
             }
 
@@ -5390,6 +5393,8 @@ function getBOMViews(id) {
             settings[id].bomViews.push(view);
 
         }
+        
+        if(bomViewMissing) console.error('BOM view "' + settings[id].bomViewName + '" could not be found in workspace ' + settings[id].link.split('/')[4] + ' for panel "' + id + '"');
 
         if(settings[id].bomViewSelector) elemSelect.show();
 
