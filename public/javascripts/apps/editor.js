@@ -130,7 +130,7 @@ $(document).ready(function() {
             
         Promise.all(requestsPicklists).then(function(responses) {
         
-            config.wsMain.picklists = responses;
+            config.wsMain.picklists = responses.map(function(response) { return response.data; });
 
             if(urlParameters.link === '') openLandingPage();
             else if(links.root    === '') openStartScreen();
@@ -1035,7 +1035,7 @@ function insertAdvancedFields(elemTop, data) {
 
                 // column.id = column.fieldId;
                 // let data = [{ id : column.fieldId, value : getBOMCellValue(edge.child, column.__self__.urn, bom.nodes, 'title')}];
-        insertField(formSettings, elemValue, field.def, null, [], false, false);
+        insertField(formSettings, elemValue, field.def, null, config.wsMain.picklists, false, false);
 
         elemValue.addClass('field-value');
         elemValue.appendTo(elemField);
