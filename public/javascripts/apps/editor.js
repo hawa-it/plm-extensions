@@ -1018,7 +1018,7 @@ function insertAdvancedFields(elemTop, data) {
         let elemField = $('<div></div>').appendTo(elemAdvanced)
             .addClass('field')
             .addClass('content-item')
-            .attr('id', 'field-' + field.id)
+            .attr('id', 'field-' + field.fieldId)
 
         let elemValue = $('<div></div>').attr('data-class-id', field.classId || '');       
     
@@ -2522,7 +2522,12 @@ function editExistingItems(action) {
 
         });
 
-        Promise.all(requests).then(function(responses) { editExistingItems(action); });
+        Promise.all(requests).then(function(responses) {
+            for(let response of responses) {
+                if(response.error) showErrorMessage('Error', response.data.message);
+            }
+            editExistingItems(action);
+        });
 
     }
     
