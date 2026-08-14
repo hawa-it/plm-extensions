@@ -112,6 +112,7 @@ exports.applications = {
                 workspaceId   : 835,
                 workspaceName : 'Requirements Custom',
                 bomViewName   : 'Requirements Overview',
+                advancedFieldIds      : [ 'MATERIAL_COST', 'TOOLING_COST', 'EFFORT', 'TEST_PROCEDURE', 'EXPECTED_RESULT', 'SUCCESS_CRITERIA', 'REQ_LEVEL', 'SOURCE', 'TYPE' ],
                 newDefaultValues      : [
                     [ 'REQUIREMENT_TYPE', { link : '/api/v3/lookups/CUSTOM_LOOKUP_REQUIREMENT_TYPE_LEVEL/options/2' } ], // Specification (new root structure)
                 ],
