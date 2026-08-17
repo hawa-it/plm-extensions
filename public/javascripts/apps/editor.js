@@ -2105,7 +2105,7 @@ function setAddExistingPanel() {
 
     params.hideHeader   = true;
     params.dragable     = (editMode !== 'template');;
-    params.onDragStart  = params.onDragStart;
+    params.onDragStart  = params.onDragStart  || 'onDragStart(event)';
     params.onDragEnd    = params.onDragEnd    || 'onAddDragEnd(event)';
     params.tileTitle    = params.tileTitle    || 'DESCRIPTOR';
     params.tileSubtitle = params.tileSubtitle || 'DESCRIPTION';
