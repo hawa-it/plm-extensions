@@ -707,7 +707,6 @@ function afterBOMCompletion(id, data) {
 
         elemItem.addClass('id-' + nextId);
         elemItem.attr('data-id', nextId);
-        if(!isBlank(bomPart.details)) bomPart.details.NUMBER = bomPart.partNumber;
         insertContentEditorElement(null, bomPart.link, bomPart.number, bomPart.revision, bomPart.linkParent, bomPart.edgeId, bomPart.level, bomPart.details);
 
     }

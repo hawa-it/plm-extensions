@@ -132,6 +132,10 @@ exports.applications = {
             panels : {
                 insertBOM : {
                     hideDescriptor : false // Shows the item Descriptor (Number + Title) per node in the Navigator tree
+                },
+                insertWorkspaceSearch : {
+                    searchLatestOnly   : false, // Most requirements are still Working, not yet released
+                    searchReleasedOnly : false
                 }
             }
         }
