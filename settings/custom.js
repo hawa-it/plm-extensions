@@ -128,7 +128,12 @@ exports.applications = {
                 }
             },{
                 workspace : 'equipments'
-            }]
+            }],
+            panels : {
+                insertBOM : {
+                    hideDescriptor : false // Shows the item Descriptor (Number + Title) per node in the Navigator tree
+                }
+            }
         }
     },
     explorer       : {

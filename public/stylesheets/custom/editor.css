@@ -1,0 +1,18 @@
+.editor-item-id {
+    background    : var(--color-surface-level-3);
+    border-top    : 1px solid var(--color-surface-level-3);
+    border-bottom : 1px solid var(--color-surface-level-3);
+    font-size     : 14px;
+    padding       : 0px 10px;
+    max-width     : 90px;
+    min-width     : 90px;
+    width         : 90px;
+    text-align    : center;
+    overflow      : hidden;
+    text-overflow : ellipsis;
+    white-space   : nowrap;
+}
+.editor-item.hover .editor-item-id {
+    background   : var(--color-hover-image) !important;
+    border-color : var(--color-hover-border);
+}

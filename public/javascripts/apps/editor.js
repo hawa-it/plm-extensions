@@ -704,9 +704,10 @@ function afterBOMCompletion(id, data) {
         
         let bomPart  = bomPartsList[index];
         let elemItem = $('#tree').find('.tree-item').eq(nextId - 1);
-        
+
         elemItem.addClass('id-' + nextId);
         elemItem.attr('data-id', nextId);
+        if(!isBlank(bomPart.details)) bomPart.details.NUMBER = bomPart.partNumber;
         insertContentEditorElement(null, bomPart.link, bomPart.number, bomPart.revision, bomPart.linkParent, bomPart.edgeId, bomPart.level, bomPart.details);
 
     }
