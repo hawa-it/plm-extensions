@@ -20,3 +20,10 @@ insertContentEditorElement = function(elemPrevious, link, number, revision, pare
     return elemTop;
 
 };
+
+// TEMPORARY: global drag/drop event tracer to diagnose Add From Library drag-and-drop
+document.addEventListener('dragstart', function(e) { console.log('[DND] dragstart on', e.target); }, true);
+document.addEventListener('dragenter', function(e) { console.log('[DND] dragenter on', e.target); }, true);
+document.addEventListener('dragover',  function(e) { console.log('[DND] dragover on' , e.target); }, true);
+document.addEventListener('drop',      function(e) { console.log('[DND] drop on'     , e.target); }, true);
+document.addEventListener('dragend',   function(e) { console.log('[DND] dragend on'  , e.target); }, true);
