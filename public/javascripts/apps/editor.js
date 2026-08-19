@@ -2170,6 +2170,8 @@ function onAddDragEnd(e) {
 }
 function onEditorDrop(e) {
 
+    console.log('onEditorDrop CALLED, e.target =', e.target);
+
     e.preventDefault();
     e.stopPropagation();
 
@@ -2179,6 +2181,8 @@ function onEditorDrop(e) {
     const elemDragged     = $('.dragged').first();
     const elemContentItem = elemDragged.closest('.content-item');
     const link            = elemContentItem.attr('data-link');
+
+    console.log('onEditorDrop DEBUG: elemTarget.length=' + elemTarget.length + ' elemPrevious.length=' + elemPrevious.length + ' elemDragged.length=' + elemDragged.length + ' elemContentItem.length=' + elemContentItem.length + ' link=' + link);
     
     let levelPrev = Number(elemPrevious.attr('data-level'));
     let levelNext = levelPrev;
