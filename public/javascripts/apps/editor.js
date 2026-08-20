@@ -2198,6 +2198,7 @@ function onEditorDrop(e) {
         let data = {
             TITLE       : getSectionFieldValue(response.data.sections, 'TITLE', ''),
             DESCRIPTION : getSectionFieldValue(response.data.sections, 'DESCRIPTION', ''),
+            ID          : getSectionFieldValue(response.data.sections, 'ID', ''),
         }
 
         for(let advancedField of config.wsMain.advancedFields) {

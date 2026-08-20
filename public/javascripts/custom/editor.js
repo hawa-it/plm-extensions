@@ -192,3 +192,29 @@ function syncReusedStatus() {
 
 }
 
+// insertMatchingBOMTreeNode (apps/editor.js) only gives the Navigator row a bare title, so a
+// freshly reused item shows up there without its ID or reused marking until a full page
+// refresh re-fetches the tree from the BOM view. Fix it in place instead: the Content Editor
+// row built just before this runs (see onEditorDrop) already carries both, via the
+// insertContentEditorElement wrap above and setReusedStatus in the core file, so mirror them
+// onto the matching tree row directly rather than doing a disruptive full-editor refresh.
+const baseInsertMatchingBOMTreeNode = insertMatchingBOMTreeNode;
+
+insertMatchingBOMTreeNode = function(elemEditor, elemPrevious) {
+
+    baseInsertMatchingBOMTreeNode(elemEditor, elemPrevious);
+
+    const elemTreeItem = $('#tree-tbody').find('.id-' + elemEditor.attr('data-id')).first();
+
+    const requirementId = elemEditor.find('.editor-item-id').first().html();
+
+    if(!isBlank(requirementId)) {
+        elemTreeItem.find('.tree-column-title').prepend(requirementId + ' - ');
+    }
+
+    if(elemEditor.hasClass('reused')) {
+        elemTreeItem.addClass('tree-item-reused').attr('title', config.wsMain.itemsReused.title || 'Reused');
+    }
+
+};
+
