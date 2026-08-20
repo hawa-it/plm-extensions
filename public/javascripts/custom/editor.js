@@ -218,3 +218,31 @@ insertMatchingBOMTreeNode = function(elemEditor, elemPrevious) {
 
 };
 
+// storeNewBOMEdgeId (framework/utils.js) unconditionally does response.data.split(...) for
+// every '/bom-add' response, assuming success (a string link). On a failed add - e.g.
+// error.bom.duplicate, where response.data is the error array instead - this throws, which
+// aborts the rest of the elements loop (leaving their 'link' pending class stuck) and skips
+// the editBOMLinks() recursion that follows it. The stuck item then gets retried and fails
+// with the same "Item already exists" error on every subsequent save, even after being fixed
+// or removed. Full replacement (not a wrap) since the fix is inside the existing loop, not
+// addable before/after it.
+storeNewBOMEdgeId = function(action, elements, responses) {
+
+    let index = 0;
+
+    for(let element of elements) {
+
+        let response = responses[index++];
+
+        if((response.url === '/bom-add') && !response.error) {
+            const edgeId = response.data.split('/bom-items/')[1];
+            element.attr('data-parent', response.params.linkParent);
+            element.attr('data-edgeid', edgeId);
+        }
+
+        element.removeClass(action.className);
+
+    }
+
+};
+
