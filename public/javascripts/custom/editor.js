@@ -208,9 +208,10 @@ insertMatchingBOMTreeNode = function(elemEditor, elemPrevious) {
 
     const requirementId = elemEditor.find('.editor-item-id').first().html();
 
-    if(!isBlank(requirementId)) {
-        elemTreeItem.find('.tree-column-title').prepend(requirementId + ' - ');
-    }
+    $('<span></span>')
+        .addClass('tree-column-title-id')
+        .html(isBlank(requirementId) ? '' : (requirementId + ' - '))
+        .prependTo(elemTreeItem.find('.tree-column-title'));
 
     if(elemEditor.hasClass('reused')) {
         elemTreeItem.addClass('tree-item-reused').attr('title', config.wsMain.itemsReused.title || 'Reused');
@@ -297,6 +298,8 @@ function setReuseCopyOption(elemTop, link) {
     const wasPendingReuse = elemTop.hasClass('pending-reuse');
     const elemIdBox       = elemTop.find('.editor-item-id');
     const originalId      = elemIdBox.html();
+    const elemTreeId      = $('#tree-tbody').find('.id-' + elemTop.attr('data-id')).find('.tree-column-title-id');
+    const originalTreeId  = elemTreeId.html();
 
     const elemSelect = $('<select></select>')
         .addClass('editor-template-action')
@@ -320,6 +323,7 @@ function setReuseCopyOption(elemTop, link) {
             elemTop.removeClass('reused');
             elemTop.find('.editor-item-reuse').remove();
             elemIdBox.html('(new)');
+            elemTreeId.html('(new) - ');
 
         } else {
 
@@ -327,6 +331,7 @@ function setReuseCopyOption(elemTop, link) {
             elemTop.toggleClass('pending-reuse', wasPendingReuse);
             setEditorItemReused(elemTop);
             elemIdBox.html(originalId);
+            elemTreeId.html(originalTreeId);
 
         }
 
@@ -367,6 +372,15 @@ storeNewItemLinks = function(action, elements, responses) {
             }
 
             elemIdBox.html(requirementId);
+
+            const elemTreeId = $('#tree-tbody').find('.id-' + element.attr('data-id')).find('.tree-column-title-id');
+
+            if(elemTreeId.length === 0) {
+                $('<span></span>').addClass('tree-column-title-id').html(requirementId + ' - ')
+                    .prependTo($('#tree-tbody').find('.id-' + element.attr('data-id')).find('.tree-column-title'));
+            } else {
+                elemTreeId.html(requirementId + ' - ');
+            }
 
         });
 
