@@ -19,3 +19,6 @@
 .tree-item-reused > td.tree-color {
     background : var(--color-green-600);
 }
+.pin-drag-handle {
+    cursor : grab;
+}

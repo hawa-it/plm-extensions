@@ -246,3 +246,39 @@ storeNewBOMEdgeId = function(action, elements, responses) {
 
 };
 
+// Adds a drag handle to pinned items so they can be dragged into the Content Editor (reused)
+// the same way library search results are - dropped onto a "Click to insert next" strip,
+// handled by the existing onEditorDrop. Only the small handle icon is made draggable, not the
+// whole pin card, since the card also hosts live-editable title/description fields (see
+// togglePin/pinUpdateEditor in the core file) that a fully draggable container would interfere
+// with (a click-and-drag gesture to select text would be read as starting a native drag).
+const baseTogglePin = togglePin;
+
+togglePin = function(elemClicked) {
+
+    const elemEditor = elemClicked.closest('.editor-item');
+    const willPin     = !elemEditor.hasClass('pinned');
+
+    baseTogglePin(elemClicked);
+
+    if(willPin) {
+
+        const id      = elemEditor.attr('data-id');
+        const elemPin = $('#pins-content').find('.pin.id-' + id);
+
+        elemPin.addClass('content-item');
+
+        $('<div></div>').prependTo(elemPin.find('.editor-item-actions'))
+            .addClass('button')
+            .addClass('icon')
+            .addClass('icon-swap')
+            .addClass('pin-drag-handle')
+            .attr('title', 'Drag to insert this item elsewhere in the Content Editor')
+            .attr('draggable', 'true')
+            .attr('ondragstart', 'onDragStart(event)')
+            .attr('ondragend', 'onAddDragEnd(event)');
+
+    }
+
+};
+
