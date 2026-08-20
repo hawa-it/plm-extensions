@@ -295,6 +295,8 @@ function setReuseCopyOption(elemTop, link) {
     elemTop.attr('data-original-link', link);
 
     const wasPendingReuse = elemTop.hasClass('pending-reuse');
+    const elemIdBox       = elemTop.find('.editor-item-id');
+    const originalId      = elemIdBox.html();
 
     const elemSelect = $('<select></select>')
         .addClass('editor-template-action')
@@ -317,16 +319,58 @@ function setReuseCopyOption(elemTop, link) {
             elemTop.removeClass('pending-reuse');
             elemTop.removeClass('reused');
             elemTop.find('.editor-item-reuse').remove();
+            elemIdBox.html('(new)');
 
         } else {
 
             elemTop.attr('data-link', elemTop.attr('data-original-link'));
             elemTop.toggleClass('pending-reuse', wasPendingReuse);
             setEditorItemReused(elemTop);
+            elemIdBox.html(originalId);
 
         }
 
     });
 
 }
+
+// storeNewItemLinks (framework/utils.js) only stores the new item's link after creation
+// (createNewItems' success path - covers both "Copy" and genuinely new rows), it never
+// refreshes what's displayed. A "Copy" row shows the source item's ID until then (cleared to
+// "(new)" by setReuseCopyOption above), and a brand-new row never shows an ID at all. Fetch
+// and fill in the real one for each newly linked element, targeted rather than a full editor
+// refresh (see the reverted editBOMLinks/openEditor attempt earlier).
+const baseStoreNewItemLinks = storeNewItemLinks;
+
+storeNewItemLinks = function(action, elements, responses) {
+
+    baseStoreNewItemLinks(action, elements, responses);
+
+    for(let element of elements) {
+
+        const link = element.attr('data-link');
+
+        if(isBlank(link)) continue;
+
+        $.get('/plm/details', { link : link }, function(response) {
+
+            if(response.error) return;
+
+            const requirementId = getSectionFieldValue(response.data.sections, 'ID', '');
+
+            if(isBlank(requirementId)) return;
+
+            let elemIdBox = element.find('.editor-item-id');
+
+            if(elemIdBox.length === 0) {
+                elemIdBox = $('<div></div>').addClass('editor-item-id').insertAfter(element.find('.editor-item-number'));
+            }
+
+            elemIdBox.html(requirementId);
+
+        });
+
+    }
+
+};
 
