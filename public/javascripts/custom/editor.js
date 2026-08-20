@@ -192,22 +192,3 @@ function syncReusedStatus() {
 
 }
 
-// After a full save, the tree/content editor still shows the data held locally from before
-// the save - e.g. a newly reused item is missing fields like ID that onEditorDrop's manually
-// built data object never included (unlike the generic BOM-view-driven data used for the
-// initial load), and its REUSED value at that point is only a provisional guess, not yet
-// confirmed from the server. Re-opening the editor re-fetches everything fresh, same as what
-// a manual page refresh currently achieves. editBOMLinks() is the last step of the save chain
-// (saveChanges -> createRootItem -> createNewItems -> editExistingItems -> removeBOMItems ->
-// editBOMLinks), and its terminal call is the one where there is nothing left pending.
-const baseEditBOMLinks = editBOMLinks;
-
-editBOMLinks = function(action) {
-
-    const isFinalStep = ($(action.selector + '.' + action.className).length === 0);
-
-    baseEditBOMLinks(action);
-
-    if(isFinalStep) openEditor();
-
-};
