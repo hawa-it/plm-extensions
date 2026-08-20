@@ -207,7 +207,7 @@ function setUIEvents() {
                     printResponseErrorMessagesToConsole(response);
 
                     if(response.error) {
-                        showErrorMessage('Error', response.data.message);
+                        showErrorMessage('Error', response.message);
                         $('#overlay').hide();
                         return;
                     }
@@ -2448,7 +2448,7 @@ function createNewItems(action) {
             for(let response of responses) {
                 if(response.error) {
                     hasError = true;
-                    showErrorMessage('Error', response.data.message);
+                    showErrorMessage('Error', response.message);
                     endSaveProcessing();
                 }
             }
@@ -2525,7 +2525,7 @@ function editExistingItems(action) {
 
         Promise.all(requests).then(function(responses) {
             for(let response of responses) {
-                if(response.error) showErrorMessage('Error', response.data.message);
+                if(response.error) showErrorMessage('Error', response.message);
             }
             editExistingItems(action);
         });
@@ -2644,7 +2644,7 @@ function editBOMLinks(action) {
 
             for(let response of responses) {
                 if(response.error) {
-                    showErrorMessage('Error', response.data.message);
+                    showErrorMessage('Error', response.message);
                     endSaveProcessing();
                 }
             }
