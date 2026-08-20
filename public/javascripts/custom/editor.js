@@ -282,3 +282,51 @@ togglePin = function(elemClicked) {
 
 };
 
+// Called from onEditorDrop (apps/editor.js) right after a dragged library/pin item is
+// inserted, offering the same Reuse/Copy choice template mode already has per row (see
+// .template-action there) - just simplified to two options and reusing its existing
+// action-reuse/action-clone styling. "Reuse" is the default (today's behaviour: link to the
+// same item). Switching to "Copy" clears data-link, which is enough for the existing
+// saveChanges() classification to treat the row as a brand-new item and route it through
+// createNewItems() instead of the link/reuse flow - the same mechanism template mode's own
+// Clone option already relies on, no new save-time logic needed.
+function setReuseCopyOption(elemTop, link) {
+
+    elemTop.attr('data-original-link', link);
+
+    const wasPendingReuse = elemTop.hasClass('pending-reuse');
+
+    const elemSelect = $('<select></select>')
+        .addClass('editor-template-action')
+        .addClass('action-reuse')
+        .attr('title', 'Reuse links to the same item; Copy creates an independent duplicate')
+        .appendTo(elemTop.find('.editor-item-header'));
+
+    elemSelect.append('<option value="reuse">Reuse</option>');
+    elemSelect.append('<option value="copy">Copy</option>');
+
+    elemSelect.on('change', function() {
+
+        const isCopy = ($(this).val() === 'copy');
+
+        $(this).removeClass('action-reuse').removeClass('action-clone').addClass(isCopy ? 'action-clone' : 'action-reuse');
+
+        if(isCopy) {
+
+            elemTop.attr('data-link', '');
+            elemTop.removeClass('pending-reuse');
+            elemTop.removeClass('reused');
+            elemTop.find('.editor-item-reuse').remove();
+
+        } else {
+
+            elemTop.attr('data-link', elemTop.attr('data-original-link'));
+            elemTop.toggleClass('pending-reuse', wasPendingReuse);
+            setEditorItemReused(elemTop);
+
+        }
+
+    });
+
+}
+

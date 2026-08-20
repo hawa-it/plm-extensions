@@ -2218,6 +2218,8 @@ function onEditorDrop(e) {
 
         }
 
+        setReuseCopyOption(elemTop, link);
+
         // setChanged(getParent(elemTop));
         insertMatchingBOMTreeNode(elemTop, elemPrevious);
         setNumbersAndLevels();
