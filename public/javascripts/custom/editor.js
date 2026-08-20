@@ -66,3 +66,128 @@ setAddExistingPanel = function() {
     } else baseSetAddExistingPanel();
 
 };
+
+// Marks reused items (same REUSED field the Content Editor already checks) with a color
+// accent in the Navigator tree, so multi-use requirements are visible without opening them.
+const baseAfterBOMCompletion = afterBOMCompletion;
+
+afterBOMCompletion = function(id, data) {
+
+    baseAfterBOMCompletion(id, data);
+
+    markReusedItemsInNavigator();
+
+};
+
+function markReusedItemsInNavigator() {
+
+    $('#tree').find('.tree-item-reused').removeClass('tree-item-reused').removeAttr('title');
+
+    for(let index = 1; index < bomPartsList.length; index++) {
+
+        let bomPart  = bomPartsList[index];
+        let isReused = !isBlank(bomPart.details) && (bomPart.details[config.wsMain.itemsReused.fieldId] == config.wsMain.itemsReused.value);
+
+        if(isReused) {
+            $('#tree').find('.tree-item').eq(index - 1)
+                .addClass('tree-item-reused')
+                .attr('title', config.wsMain.itemsReused.title || 'Reused');
+        }
+
+    }
+
+}
+
+// "Sync Reused" button: REUSED is only ever set going forward by this app's own drag-and-drop
+// reuse flow (see onEditorDrop / editExistingItems), so it won't reflect items that ended up
+// linked in multiple places some other way. This lets the user manually reconcile REUSED
+// against Fusion Manage's actual where-used count for every item in the open structure -
+// deliberately not done automatically on every load, since that would mean one extra request
+// per item (this structure alone has dozens).
+$(document).ready(function() {
+
+    $('<div></div>')
+        .attr('id', 'button-sync-reused')
+        .addClass('button')
+        .html('Sync Reused')
+        .insertBefore('#header-avatar')
+        .click(function() {
+            syncReusedStatus();
+        });
+
+});
+
+function syncReusedStatus() {
+
+    const elemButton = $('#button-sync-reused');
+
+    if(elemButton.hasClass('disabled')) return;
+
+    const items     = bomPartsList.slice(1).filter(function(bomPart) { return !isBlank(bomPart.link); });
+    const batchSize = 5;
+
+    let index        = 0;
+    let countUpdated = 0;
+
+    if(items.length === 0) { showSuccessMessage('Sync Reused', 'No items to check.'); return; }
+
+    elemButton.addClass('disabled').html('Syncing...');
+
+    function processBatch() {
+
+        if(index >= items.length) {
+
+            markReusedItemsInNavigator();
+            elemButton.removeClass('disabled').html('Sync Reused');
+            showSuccessMessage('Sync Reused', countUpdated + ' of ' + items.length + ' item(s) updated.');
+            return;
+
+        }
+
+        const batch = items.slice(index, index + batchSize);
+        index += batch.length;
+
+        const requests = batch.map(function(bomPart) {
+            return $.get('/plm/details', { link : bomPart.link });
+        });
+
+        Promise.all(requests).then(function(responses) {
+
+            const updateRequests = [];
+
+            for(let i = 0; i < responses.length; i++) {
+
+                const response = responses[i];
+                const bomPart  = batch[i];
+
+                if(response.error) continue;
+
+                const isReusedActual = (response.data.whereUsed.count.value > 1);
+                const isReusedField  = (bomPart.details[config.wsMain.itemsReused.fieldId] == config.wsMain.itemsReused.value);
+
+                if(isReusedActual !== isReusedField) {
+
+                    const newValue = isReusedActual ? config.wsMain.itemsReused.value : '';
+
+                    updateRequests.push($.post('/plm/edit', {
+                        link     : bomPart.link,
+                        sections : config.wsMain.sections,
+                        fields   : [{ fieldId : config.wsMain.itemsReused.fieldId, value : newValue }]
+                    }));
+
+                    bomPart.details[config.wsMain.itemsReused.fieldId] = newValue;
+                    countUpdated++;
+
+                }
+
+            }
+
+            Promise.all(updateRequests).then(processBatch);
+
+        });
+
+    }
+
+    processBatch();
+
+}

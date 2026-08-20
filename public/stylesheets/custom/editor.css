@@ -16,3 +16,6 @@
     background   : var(--color-hover-image) !important;
     border-color : var(--color-hover-border);
 }
+.tree-item-reused > td.tree-color {
+    background : var(--color-green-600);
+}
