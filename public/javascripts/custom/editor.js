@@ -69,9 +69,10 @@ setAddExistingPanel = function() {
 
 // Marks reused items (same REUSED field the Content Editor already checks) with a color
 // accent in the Navigator tree, so multi-use requirements are visible without opening them.
-// Also mirrors the Related Specification info (set by setRelatedSpecificationInfo below) into
-// the Navigator header - it has to happen here rather than where the header one is inserted,
-// since the Navigator panel (#tree-header) doesn't exist yet at that point in the load sequence.
+// Also appends the Related Specification info (set by setRelatedSpecificationInfo below) into
+// the header title line - it has to happen here rather than where it's first determined, since
+// openEditor() overwrites #header-subtitle's content with .html(...) afterwards, which would
+// wipe out an earlier insertion.
 const baseAfterBOMCompletion = afterBOMCompletion;
 
 afterBOMCompletion = function(id, data) {
@@ -82,15 +83,18 @@ afterBOMCompletion = function(id, data) {
 
     if((id === 'tree') && !isBlank(relatedSpecificationInfo)) {
 
-        $('#tree-related-specification').remove();
+        $('#header-subtitle').find('.related-specification').remove();
 
-        const elemInfo = $('<div></div>')
-            .attr('id', 'tree-related-specification')
-            .html('Related Specification: ' + relatedSpecificationInfo.title)
-            .appendTo('#tree-header');
+        const elemInfo = $('<span></span>')
+            .addClass('related-specification')
+            .html(' / ' + relatedSpecificationInfo.title)
+            .appendTo('#header-subtitle');
 
         if(!isBlank(relatedSpecificationInfo.link)) {
-            elemInfo.addClass('link').click(function() { openItemByLink(relatedSpecificationInfo.link); });
+            elemInfo.addClass('link').click(function(e) {
+                e.stopPropagation();
+                openItemByLink(relatedSpecificationInfo.link);
+            });
         }
 
     }
@@ -408,30 +412,19 @@ storeNewItemLinks = function(action, elements, responses) {
 
 // Called from apps/editor.js right after links.root is resolved for a sub-item open (see the
 // fix above it), using the sections already fetched for that same request - no extra call.
-// Surfaces the RELATED SPECIFICATION field (PARENT_SPECIFICATION) so the user can see which
+// Records the RELATED SPECIFICATION field (PARENT_SPECIFICATION) so the user can see which
 // top-level node the currently open structure belongs to, since opening from deep inside a
-// structure no longer makes that obvious just from the header title alone.
+// structure no longer makes that obvious just from the header title alone. Only stores the
+// value here; the header title doesn't exist yet at this point in the load sequence, so it's
+// rendered later by the afterBOMCompletion wrap above once openEditor() has set it.
 let relatedSpecificationInfo = null;
 
 function setRelatedSpecificationInfo(sections) {
 
-    $('#header-related-specification').remove();
-
     const title = getSectionFieldValue(sections, 'PARENT_SPECIFICATION', '', 'title');
     const link  = getSectionFieldValue(sections, 'PARENT_SPECIFICATION', '', 'link');
 
-    if(isBlank(title)) { relatedSpecificationInfo = null; return; }
-
-    relatedSpecificationInfo = { title : title, link : link };
-
-    const elemInfo = $('<div></div>')
-        .attr('id', 'header-related-specification')
-        .html('Related Specification: ' + title)
-        .insertAfter('#header-subtitle');
-
-    if(!isBlank(link)) {
-        elemInfo.addClass('link').click(function() { openItemByLink(link); });
-    }
+    relatedSpecificationInfo = isBlank(title) ? null : { title : title, link : link };
 
 }
 
