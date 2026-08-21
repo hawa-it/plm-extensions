@@ -388,3 +388,28 @@ storeNewItemLinks = function(action, elements, responses) {
 
 };
 
+// Called from apps/editor.js right after links.root is resolved for a sub-item open (see the
+// fix above it), using the sections already fetched for that same request - no extra call.
+// Surfaces the RELATED SPECIFICATION field (PARENT_SPECIFICATION) so the user can see which
+// top-level node the currently open structure belongs to, since opening from deep inside a
+// structure no longer makes that obvious just from the header title alone.
+function setRelatedSpecificationInfo(sections) {
+
+    $('#header-related-specification').remove();
+
+    const title = getSectionFieldValue(sections, 'PARENT_SPECIFICATION', '', 'title');
+    const link  = getSectionFieldValue(sections, 'PARENT_SPECIFICATION', '', 'link');
+
+    if(isBlank(title)) return;
+
+    const elemInfo = $('<div></div>')
+        .attr('id', 'header-related-specification')
+        .html('Related Specification: ' + title)
+        .insertAfter('#header-subtitle');
+
+    if(!isBlank(link)) {
+        elemInfo.addClass('link').click(function() { openItemByLink(link); });
+    }
+
+}
+

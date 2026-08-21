@@ -128,6 +128,7 @@ $(document).ready(function() {
             config.wsContext.sections = responses[3].data;
         } else if(!isBlank(urlParameters.link)) {
             links.root = (!isBlank(responses[2]) && !isBlank(responses[2].data.root)) ? responses[2].data.root.link : urlParameters.link;
+            if(!isBlank(responses[2])) setRelatedSpecificationInfo(responses[2].data.sections);
         } else {
             links.root = urlParameters.link;
         }

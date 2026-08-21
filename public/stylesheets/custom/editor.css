@@ -22,3 +22,12 @@
 .pin-drag-handle {
     cursor : grab;
 }
+#header-related-specification {
+    font-size  : 12px;
+    opacity    : 0.7;
+    margin-top : 2px;
+}
+#header-related-specification.link {
+    cursor         : pointer;
+    text-decoration: underline;
+}
