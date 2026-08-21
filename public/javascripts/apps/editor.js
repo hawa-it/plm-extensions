@@ -69,6 +69,13 @@ $(document).ready(function() {
             requests.push($.get('/plm/details',  { link : urlParameters.link }));
             requests.push($.get('/plm/sections', { link : urlParameters.link, useCache : true }));
             links.context = urlParameters.link;
+        } else {
+            // Opened directly from within the Requirements workspace itself (e.g. a sub-item's
+            // own "Open Requirement Editor" button), so urlParameters.link points at the
+            // clicked item, not necessarily the top-level structure. Its own item details carry
+            // a "root" reference to the actual structure root (for a root item this points at
+            // itself), which links.root gets resolved to below instead of the clicked item.
+            requests.push($.get('/plm/details', { link : urlParameters.link }));
         }
     }
 
@@ -119,6 +126,8 @@ $(document).ready(function() {
             $('#start-descriptor').html(headerSubtitle);
             $('#start-name').val(newTitle);
             config.wsContext.sections = responses[3].data;
+        } else if(!isBlank(urlParameters.link)) {
+            links.root = (!isBlank(responses[2]) && !isBlank(responses[2].data.root)) ? responses[2].data.root.link : urlParameters.link;
         } else {
             links.root = urlParameters.link;
         }
