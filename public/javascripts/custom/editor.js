@@ -69,6 +69,9 @@ setAddExistingPanel = function() {
 
 // Marks reused items (same REUSED field the Content Editor already checks) with a color
 // accent in the Navigator tree, so multi-use requirements are visible without opening them.
+// Also mirrors the Related Specification info (set by setRelatedSpecificationInfo below) into
+// the Navigator header - it has to happen here rather than where the header one is inserted,
+// since the Navigator panel (#tree-header) doesn't exist yet at that point in the load sequence.
 const baseAfterBOMCompletion = afterBOMCompletion;
 
 afterBOMCompletion = function(id, data) {
@@ -76,6 +79,21 @@ afterBOMCompletion = function(id, data) {
     baseAfterBOMCompletion(id, data);
 
     markReusedItemsInNavigator();
+
+    if((id === 'tree') && !isBlank(relatedSpecificationInfo)) {
+
+        $('#tree-related-specification').remove();
+
+        const elemInfo = $('<div></div>')
+            .attr('id', 'tree-related-specification')
+            .html('Related Specification: ' + relatedSpecificationInfo.title)
+            .appendTo('#tree-header');
+
+        if(!isBlank(relatedSpecificationInfo.link)) {
+            elemInfo.addClass('link').click(function() { openItemByLink(relatedSpecificationInfo.link); });
+        }
+
+    }
 
 };
 
@@ -393,6 +411,8 @@ storeNewItemLinks = function(action, elements, responses) {
 // Surfaces the RELATED SPECIFICATION field (PARENT_SPECIFICATION) so the user can see which
 // top-level node the currently open structure belongs to, since opening from deep inside a
 // structure no longer makes that obvious just from the header title alone.
+let relatedSpecificationInfo = null;
+
 function setRelatedSpecificationInfo(sections) {
 
     $('#header-related-specification').remove();
@@ -400,7 +420,9 @@ function setRelatedSpecificationInfo(sections) {
     const title = getSectionFieldValue(sections, 'PARENT_SPECIFICATION', '', 'title');
     const link  = getSectionFieldValue(sections, 'PARENT_SPECIFICATION', '', 'link');
 
-    if(isBlank(title)) return;
+    if(isBlank(title)) { relatedSpecificationInfo = null; return; }
+
+    relatedSpecificationInfo = { title : title, link : link };
 
     const elemInfo = $('<div></div>')
         .attr('id', 'header-related-specification')
