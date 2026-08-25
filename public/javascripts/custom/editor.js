@@ -458,3 +458,53 @@ function setRelatedSpecificationInfo(sections) {
 
 }
 
+// Client-side mirror of lib_validateReqLevelHierarchy() in Fusion Manage
+// (LIBRARY Scripts/REQ - Validate Requirement.js), which today only runs on the
+// SUBMIT_FOR_REVIEW workflow transition of the Requirement Approval - too late to catch a
+// wrongly nested item while still editing. Runs the same rank check on every save instead, so
+// the same violation ("Component" ranked below its "Stakeholder"/"Product" parent) is caught
+// immediately, blocking the save with the same message rather than duplicating the check
+// only at approval time.
+const baseSaveChanges = saveChanges;
+
+saveChanges = function() {
+
+    if(!isBlank(config.wsMain.reqLevelRank)) {
+
+        const violations = [];
+
+        $('#editor-content').children('.editor-item').not('.deleted').each(function() {
+
+            const elemChild  = $(this);
+            const elemParent = getParent(elemChild);
+
+            if(elemParent === null) return;
+
+            const childLevel  = elemChild.find('.field-id-REQ_LEVEL .picklist-input').first().val();
+            const parentLevel = elemParent.find('.field-id-REQ_LEVEL .picklist-input').first().val();
+
+            const childRank  = config.wsMain.reqLevelRank[childLevel];
+            const parentRank = config.wsMain.reqLevelRank[parentLevel];
+
+            if(isBlank(childRank) || isBlank(parentRank)) return;
+
+            if(childRank < parentRank) {
+                violations.push(
+                    '"' + elemChild.find('.editor-item-title').val() + '" (' + childLevel + ') darf nicht unterhalb von "' +
+                    elemParent.find('.editor-item-title').val() + '" (' + parentLevel + ') stehen.'
+                );
+            }
+
+        });
+
+        if(violations.length > 0) {
+            showErrorMessage('REQ Level Hierarchy', violations.join('<br>'));
+            return;
+        }
+
+    }
+
+    baseSaveChanges();
+
+};
+

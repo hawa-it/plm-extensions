@@ -122,7 +122,12 @@ exports.applications = {
                 newChildCategoryChoices : [ // Offered as a REQ CATEGORY dropdown on new child requirements; first entry is the default
                     { label : 'Project', link : '/api/v3/lookups/CUSTOM_LOOKUP_REQUIREMENT_TYPE_LEVEL/options/1' },
                     { label : 'Catalog', link : '/api/v3/lookups/CUSTOM_LOOKUP_REQUIREMENT_TYPE_LEVEL/options/3' }
-                ]
+                ],
+                reqLevelRank : { // Mirrors lib_validateReqLevelHierarchy() in Fusion Manage (REQ - Validate Requirement.js):
+                    'Stakeholder Requirement' : 1, // rank must never decrease going down the BOM tree
+                    'Product Requirement'     : 2,
+                    'Component Requirement'   : 3
+                }
             },
             wsContexts : [{
                 workspace : 'products',
