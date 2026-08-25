@@ -515,14 +515,21 @@ saveChanges = function() {
 // editExistingItems() (apps/editor.js) skips the item entirely on save - the individual field
 // itself does get marked .field-editable.changed, but it's never picked up. This mirrors the
 // exact click targets contents/item.js already uses to mark the field itself changed.
-$(document).on('click',
-    '.editor-item-advanced .picklist-option, ' +
-    '.editor-item-advanced .checkbox, ' +
-    '.editor-item-advanced .radio-option, ' +
-    '.editor-item-advanced .picklist-selected-item-remove, ' +
-    '.editor-item-advanced .picklist-actions .icon-cancel',
-    function() {
-        setChanged($(this).closest('.editor-item'));
-    }
-);
+// A plain jQuery delegated listener on 'click' (bubble phase) does not work here: the
+// picklist-option handler in contents/item.js calls e.stopPropagation() before doing its work,
+// so the click never bubbles up to document. Using the DOM capture phase (the `true` third
+// argument) runs this listener on the way down, before that stopPropagation() takes effect.
+document.addEventListener('click', function(e) {
+
+    const elemTarget = $(e.target).closest(
+        '.editor-item-advanced .picklist-option, ' +
+        '.editor-item-advanced .checkbox, ' +
+        '.editor-item-advanced .radio-option, ' +
+        '.editor-item-advanced .picklist-selected-item-remove, ' +
+        '.editor-item-advanced .picklist-actions .icon-cancel'
+    );
+
+    if(elemTarget.length > 0) setChanged(elemTarget.closest('.editor-item'));
+
+}, true);
 
