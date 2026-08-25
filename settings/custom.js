@@ -118,6 +118,10 @@ exports.applications = {
                 ],
                 newChildDefaultValues : [
                     [ 'REQUIREMENT_TYPE', { link : '/api/v3/lookups/CUSTOM_LOOKUP_REQUIREMENT_TYPE_LEVEL/options/1' } ], // Project (new child requirement)
+                ],
+                newChildCategoryChoices : [ // Offered as a REQ CATEGORY dropdown on new child requirements; first entry is the default
+                    { label : 'Project', link : '/api/v3/lookups/CUSTOM_LOOKUP_REQUIREMENT_TYPE_LEVEL/options/1' },
+                    { label : 'Catalog', link : '/api/v3/lookups/CUSTOM_LOOKUP_REQUIREMENT_TYPE_LEVEL/options/3' }
                 ]
             },
             wsContexts : [{

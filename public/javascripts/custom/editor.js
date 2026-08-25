@@ -17,9 +17,39 @@ insertContentEditorElement = function(elemPrevious, link, number, revision, pare
             .insertAfter(elemTop.find('.editor-item-number'));
     }
 
+    // A genuinely new, blank child requirement - "+Click to insert next" always calls this
+    // with link and data both null (unlike reused/copied/tree-populated rows, which always
+    // carry one or the other). Offer a REQ CATEGORY choice here since createNewItems()
+    // otherwise always applies the same fixed default (see the core file change next to it).
+    if(isBlank(link) && isBlank(data)) {
+        setRequirementCategoryOption(elemTop);
+    }
+
     return elemTop;
 
 };
+
+function setRequirementCategoryOption(elemTop) {
+
+    if(isBlank(config.wsMain.newChildCategoryChoices)) return;
+
+    const elemSelect = $('<select></select>')
+        .addClass('editor-template-action')
+        .addClass('action-reuse')
+        .attr('title', 'REQ CATEGORY for this new requirement')
+        .appendTo(elemTop.find('.editor-item-header'));
+
+    for(let choice of config.wsMain.newChildCategoryChoices) {
+        elemSelect.append($('<option></option>').attr('value', choice.link).html(choice.label));
+    }
+
+    elemTop.attr('data-req-category-link', elemSelect.val());
+
+    elemSelect.on('change', function() {
+        elemTop.attr('data-req-category-link', $(this).val());
+    });
+
+}
 
 // Adds a "This Structure" tab to Add From Library, so nodes already part of the currently
 // open structure can be browsed and reused (dragged) elsewhere within the same structure -

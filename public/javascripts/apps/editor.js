@@ -2435,7 +2435,9 @@ function createNewItems(action) {
                 params.fields.push({ fieldId : 'TITLE', value : elemItem.find('.editor-item-title').val() });
                 params.fields.push({ fieldId : 'DESCRIPTION', value : elemItem.find('.rte-input').html() });
 
-                if(!isBlank(config.wsMain.newChildDefaultValues)) {
+                if(!isBlank(elemItem.attr('data-req-category-link'))) {
+                    params.fields.push({ fieldId : 'REQUIREMENT_TYPE', value : { link : elemItem.attr('data-req-category-link') } });
+                } else if(!isBlank(config.wsMain.newChildDefaultValues)) {
                     for(let defaultValue of config.wsMain.newChildDefaultValues) {
                         params.fields.push({ fieldId : defaultValue[0], value : defaultValue[1] });
                     }
