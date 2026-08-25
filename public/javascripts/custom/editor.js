@@ -508,3 +508,21 @@ saveChanges = function() {
 
 };
 
+// Advanced fields (insertAdvancedFields, apps/editor.js) only mark the row as changed via a
+// 'keyup' listener - fine for text/number fields, but Single/Multiple Selection, Checkbox and
+// Radio Button controls are driven by mouse clicks (selectPicklistValue etc. in
+// contents/item.js), which never fire 'keyup'. Without the row-level .changed class,
+// editExistingItems() (apps/editor.js) skips the item entirely on save - the individual field
+// itself does get marked .field-editable.changed, but it's never picked up. This mirrors the
+// exact click targets contents/item.js already uses to mark the field itself changed.
+$(document).on('click',
+    '.editor-item-advanced .picklist-option, ' +
+    '.editor-item-advanced .checkbox, ' +
+    '.editor-item-advanced .radio-option, ' +
+    '.editor-item-advanced .picklist-selected-item-remove, ' +
+    '.editor-item-advanced .picklist-actions .icon-cancel',
+    function() {
+        setChanged($(this).closest('.editor-item'));
+    }
+);
+
