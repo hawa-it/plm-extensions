@@ -29,7 +29,7 @@ insertContentEditorElement = function(elemPrevious, link, number, revision, pare
 
 };
 
-function setRequirementCategoryOption(elemTop) {
+function setRequirementCategoryOption(elemTop, originalCategoryLink) {
 
     if(isBlank(config.wsMain.newChildCategoryChoices)) return;
 
@@ -43,6 +43,15 @@ function setRequirementCategoryOption(elemTop) {
     for(let choice of config.wsMain.newChildCategoryChoices) {
         elemSelect.append($('<option></option>').attr('value', choice.link).html(choice.label));
     }
+
+    // When copying an existing item (setReuseCopyOption below), default to its actual REQ
+    // CATEGORY rather than always the first configured choice - but only if that value is one
+    // of the choices actually offered here (e.g. a copied Specification has no match, so it
+    // falls back to the normal default).
+    const hasMatch = !isBlank(originalCategoryLink) && config.wsMain.newChildCategoryChoices.some(function(choice) {
+        return choice.link === originalCategoryLink;
+    });
+    if(hasMatch) elemSelect.val(originalCategoryLink);
 
     elemTop.attr('data-req-category-link', elemSelect.val());
 
@@ -384,7 +393,16 @@ function setReuseCopyOption(elemTop, link) {
             elemIdBox.html('(new)');
             elemTreeId.html('(new) - ');
 
-            if(elemTop.find('.req-category-select').length === 0) setRequirementCategoryOption(elemTop);
+            if(elemTop.find('.req-category-select').length === 0) {
+                $.get('/plm/details', { link : link }, function(response) {
+                    // Guards against a fast Copy -> Reuse -> Copy toggle before this resolves,
+                    // and against a duplicate select if that happened more than once.
+                    if(elemSelect.val() !== 'copy') return;
+                    if(elemTop.find('.req-category-select').length > 0) return;
+                    const originalCategoryLink = getSectionFieldValue(response.data.sections, 'REQUIREMENT_TYPE', '');
+                    setRequirementCategoryOption(elemTop, originalCategoryLink);
+                });
+            }
 
         } else {
 
