@@ -399,6 +399,11 @@ function setReuseCopyOption(elemTop, link) {
                     // and against a duplicate select if that happened more than once.
                     if(elemSelect.val() !== 'copy') return;
                     if(elemTop.find('.req-category-select').length > 0) return;
+                    if(response.error) {
+                        showErrorMessage('Error', response.message);
+                        setRequirementCategoryOption(elemTop);
+                        return;
+                    }
                     const originalCategoryLink = getSectionFieldValue(response.data.sections, 'REQUIREMENT_TYPE', '');
                     setRequirementCategoryOption(elemTop, originalCategoryLink);
                 });

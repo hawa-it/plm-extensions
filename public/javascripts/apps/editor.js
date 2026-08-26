@@ -2200,8 +2200,13 @@ function onEditorDrop(e) {
     $('#overlay').show();
     
     $.get('/plm/details', { link : link }, function(response) {
-        
+
         $('#overlay').hide();
+
+        if(response.error) {
+            showErrorMessage('Error', response.message);
+            return;
+        }
 
         const revision = (response.data.versionId === 'w') ? 'WIP' : response.data.versionId;
 
