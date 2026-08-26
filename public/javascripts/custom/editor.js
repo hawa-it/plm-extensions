@@ -36,6 +36,7 @@ function setRequirementCategoryOption(elemTop) {
     const elemSelect = $('<select></select>')
         .addClass('editor-template-action')
         .addClass('action-reuse')
+        .addClass('req-category-select')
         .attr('title', 'REQ CATEGORY for this new requirement')
         .appendTo(elemTop.find('.editor-item-header'));
 
@@ -343,6 +344,12 @@ togglePin = function(elemClicked) {
 // saveChanges() classification to treat the row as a brand-new item and route it through
 // createNewItems() instead of the link/reuse flow - the same mechanism template mode's own
 // Clone option already relies on, no new save-time logic needed.
+//
+// A "Copy" is a brand-new item, so it needs the same REQ CATEGORY choice a genuinely new
+// child row gets (setRequirementCategoryOption) - without it, createNewItems() (apps/editor.js)
+// always fell back to the fixed newChildDefaultValues default (Project), ignoring the source
+// item's actual type. Switching back to "Reuse" removes it again, since the original type is
+// kept in that case.
 function setReuseCopyOption(elemTop, link) {
 
     elemTop.attr('data-original-link', link);
@@ -377,6 +384,8 @@ function setReuseCopyOption(elemTop, link) {
             elemIdBox.html('(new)');
             elemTreeId.html('(new) - ');
 
+            if(elemTop.find('.req-category-select').length === 0) setRequirementCategoryOption(elemTop);
+
         } else {
 
             elemTop.attr('data-link', elemTop.attr('data-original-link'));
@@ -384,6 +393,9 @@ function setReuseCopyOption(elemTop, link) {
             setEditorItemReused(elemTop);
             elemIdBox.html(originalId);
             elemTreeId.html(originalTreeId);
+
+            elemTop.find('.req-category-select').remove();
+            elemTop.removeAttr('data-req-category-link');
 
         }
 
