@@ -2212,7 +2212,12 @@ function onEditorDrop(e) {
         }
 
         for(let advancedField of config.wsMain.advancedFields) {
-            data[advancedField.fieldId] = getSectionFieldValue(response.data.sections, advancedField.fieldId, '');
+            // 'object' is required so Single/Multiple Selection fields resolve to their full
+            // { link, title } value here - without it, getSectionFieldValue() (framework/utils.js)
+            // defaults to returning just the link, which then renders as a raw /api/... path
+            // until the page is reloaded and the item is re-rendered from the BOM-loaded data
+            // instead. Scalar fields (text, number, paragraph) ignore this parameter.
+            data[advancedField.fieldId] = getSectionFieldValue(response.data.sections, advancedField.fieldId, '', 'object');
         }
 
         data[config.wsMain.itemsLocked.fieldId] = getSectionFieldValue(response.data.sections, config.wsMain.itemsLocked.fieldId, '', 'title');
