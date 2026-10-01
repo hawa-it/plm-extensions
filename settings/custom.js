@@ -145,6 +145,9 @@ exports.applications = {
                 insertWorkspaceSearch : {
                     searchLatestOnly   : false, // Most requirements are still Working, not yet released
                     searchReleasedOnly : false
+                },
+                insertWorkspaceViews : {
+                    limit : 100 // Default is 25: the Add From Library list only showed the first 25 of 48 records
                 }
             }
         }
