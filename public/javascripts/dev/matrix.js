@@ -31,6 +31,7 @@ $(document).ready(async function() {
         $('#header-subtitle').html(responses[0].data.title);
 
         links.tree               = getSectionFieldValue(responses[0].data.sections, profile.context.fieldIdTree, '', 'link');
+        if(Array.isArray(links.tree)) links.tree = (links.tree.length > 0) ? links.tree[0].link : '';
         wsConfig.contextSections = responses[1].data;
         
         let additionalRequests = [];
