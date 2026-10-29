@@ -118,7 +118,7 @@ async function searchColumnItems(descriptor) {
     paramsSearch.filter.push({
         field      : profile.columns.search.fieldIdContext,
         type       : 0,
-        comparator : 'is',
+        comparator : profile.columns.search.comparator || 'is',
         value      : descriptor
     });
 

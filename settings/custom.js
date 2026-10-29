@@ -291,6 +291,7 @@ exports.applications = {
                 search : { // Validierungen (Workspace 507), deren RELATED_SPECIFICATION auf die Wurzel zeigt
                     workspaceId       : 507,
                     fieldIdContext    : 'RELATED_SPECIFICATION',
+                    comparator        : 'starts-with', // Fusion speichert den Titel mit Revision, z.B. 'REQS-00012 - Junior Automatic REV:w'
                     additionalFilters : []
                 },
                 sortDirection : 'descending',
