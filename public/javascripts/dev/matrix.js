@@ -32,6 +32,8 @@ $(document).ready(async function() {
 
         links.tree               = getSectionFieldValue(responses[0].data.sections, profile.context.fieldIdTree, '', 'link');
         if(Array.isArray(links.tree)) links.tree = (links.tree.length > 0) ? links.tree[0].link : '';
+        let contextTitle = responses[0].data.title;
+        if(isBlank(profile.context.fieldIdTree)) { links.tree = responses[0].data.root.link; contextTitle = responses[0].data.root.title; }
         wsConfig.contextSections = responses[1].data;
         
         let additionalRequests = [];
@@ -51,7 +53,7 @@ $(document).ready(async function() {
         }
 
         if((valueColumns.length === 0) && (!profile.usedInContext)) {
-            valueColumns = await searchColumnItems(responses[0].data.title);
+            valueColumns = await searchColumnItems(contextTitle);
         } else {
             for(let valueColumn of valueColumns) {
                 valueColumn.dmsId = String(valueColumn.link.split('/')[6]).padStart(20, '0');
