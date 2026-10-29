@@ -268,7 +268,92 @@ exports.applications = {
         //     workspaceId : 308
         // }]
     },
-    matrix         : {},
+    matrix         : {
+        'hawa-requirements' : { // Aufruf: /matrix?wsId=835&dmsId=<Spezifikation oder Unterartikel>&profile=hawa-requirements
+            labels : {
+                applicationTitle : 'Requirements Validation Dashboard',
+                buttonCreateNew : {
+                    label : 'New Requirement Validation',
+                    title : 'Click to create new Requirement Validation process'
+                },
+                latestColumnTitle : 'Latest Result'
+            },
+            context : {
+                fieldIdTree    : '', // Leer: Baum = Wurzel (root) des Kontextartikels, siehe dev/matrix.js
+                fieldIdColumns : ''  // Leer: Spalten werden über columns.search gefunden
+            },
+            columns : {
+                fieldIds : {
+                    title    : 'ID',
+                    subtitle : 'TARGET_DATE_2', // Target Date Execution
+                    sort     : 'TARGET_DATE_2'
+                },
+                search : { // Validierungen (Workspace 507), deren RELATED_SPECIFICATION auf die Wurzel zeigt
+                    workspaceId       : 507,
+                    fieldIdContext    : 'RELATED_SPECIFICATION',
+                    additionalFilters : []
+                },
+                sortDirection : 'descending',
+                grid : {
+                    fieldIdLink   : 'BASE_REQUIREMENT',
+                    fieldIdLabel  : 'RESULT',
+                    defaults      : [
+                        { fieldId : 'RESULT', value : '/api/v3/lookups/CUSTOM_LOOKUP_REQUIREMENT_TEST_RESULT/options/1' } // Pending
+                    ],
+                    fieldMapping : [ // Quellen müssen in der BOM-Ansicht von panels.insertBOM enthalten sein
+                        { grid : 'TEST_PROCEDURE'  , source : 'TEST_PROCEDURE'   },
+                        { grid : 'EXPECTED_RESULT' , source : 'EXPECTED_RESULT'  },
+                        { grid : 'SUCCESS_CRITERIA', source : 'SUCCESS_CRITERIA' }
+                    ]
+                }
+            },
+            statusDefinition : { // value = Titel in CUSTOM_LOOKUP_REQUIREMENT_TEST_RESULT
+                failure : { type : 'failure', className : 'failure', value : 'Failed'   },
+                missing : { type : 'missing', className : 'missing', value : 'Missing'  },
+                pending : { type : 'pending', className : 'pending', value : 'Pending'  },
+                success : { type : 'success', className : 'success', value : 'Success'  },
+                partial : { type : 'partial', className : 'partial', value : 'Conditional Success' }
+            },
+            panels : {
+                insertBOM            : {
+                    headerLabel       : 'descriptor',
+                    placeholder       : 'Find Requirement',
+                    bomViewName       : 'Validation', // Enthält TEST_PROCEDURE, EXPECTED_RESULT, SUCCESS_CRITERIA
+                    fieldsIn          : ['Descriptor', 'Revision'],
+                    contentSize       : 'xs',
+                    multiSelect       : true,
+                    openSelectedInPLM : true,
+                    search            : true,
+                    toggles           : true,
+                    treePath          : true
+                },
+                insertDetails        : {
+                    headerLabel    : 'descriptor',
+                    expandSections : ['Requirement'],
+                    bookmark       : true,
+                    toggles        : true
+                },
+                insertItemSummary    : {
+                    bookmark     : true,
+                    hideSubtitle : true,
+                    openInPLM    : true,
+                    reload       : true
+                },
+                insertGridRowDetails : {
+                    headerLabel : 'descriptor',
+                    fieldsEx    : [ 'Status', 'Step' ],
+                    narrowPanel : true,
+                    openInPLM   : true,
+                    reload      : true
+                },
+                insertCreate         : {
+                    headerLabel  : 'New Requirement Validation',
+                    sectionsIn   : ['Summary'],
+                    hideSections : true
+                }
+            }
+        }
+    },
     mbom           : {
     workspaceEBOM : {
         workspaceId : 79,
