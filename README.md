@@ -14,7 +14,7 @@ Disclaimer: In any case all source code of this solution is of "work in progress
 ## Setup Instructions
 Pefrorm the steps listed below to run this server on your local system for testing purposes. For an advanced setup using Google Cloud, see this video: https://youtu.be/9EtlCDzmWWE
 <ol>
-<li>Download and unzip this package from Github</li>
+<li>Download this Github repository (click Code > Download ZIP) and unzip it afterwards</li>
 <li>Create an application at https://aps.autodesk.com of type "Desktop, Mobile, Single-Page App" and set its callback URL to http://localhost:8080/callback (the APS APIs being used are free of charge).</li>
 <li>Whitelist this application's clientID in your tenant's General Settings</li>
 <li>Using a text-editor, open file environment.js and provide the following information: tenant and clientId</li>
@@ -66,6 +66,18 @@ If you used the UX extensions in the past with a single settings.js file - witho
 </ol>
 
 
+## Developer Documentation
+The applications in this package are meant to be adjusted, extended and reused. If you intend to modify the code, configure it beyond the standard settings or build your own applications on top of this framework, start with the documents below. In addition, the running server itself provides a live developer guide at <b>/docs</b>, an interactive panel configurator at <b>/studio</b> and a components gallery at <b>/gallery</b>.
+
+| Document | Contents |
+| -- | -- |
+| <a href="https://github.com/dickmans/plm-extensions/tree/main/claude/ARCHITECTURE.md">claude/ARCHITECTURE.md</a> | How the server is put together: startup and settings merge, the route layers, the /plm wrapper and its response format, authentication, the client-side globals, response caching and the directory map |
+| <a href="https://github.com/dickmans/plm-extensions/tree/main/claude/CONFIGURATION.md">claude/CONFIGURATION.md</a> | The configuration model behind the setup instructions above: which file to edit, how the merge works, the settings conventions and a checklist for onboarding a new tenant |
+| <a href="https://github.com/dickmans/plm-extensions/tree/main/claude/PANELS.md">claude/PANELS.md</a> | The reusable UI building blocks (the insertXxx panel functions): the catalogue, how to mount them, how their options are resolved and how to extend them |
+| <a href="https://github.com/dickmans/plm-extensions/tree/main/claude/ADDING-APPLICATIONS.md">claude/ADDING-APPLICATIONS.md</a> | Step by step reference for scaffolding a new application on this server |
+| <a href="https://github.com/dickmans/plm-extensions/tree/main/CONTRIBUTING.md">CONTRIBUTING.md</a> | Coding conventions for JavaScript, Pug and CSS, how to verify a change and what not to commit |
+
+
 ## Optional Chrome Extension
 Accessibility of the UX extensions can be further improved by installing the Chrome Extension contained in folder <a href="https://github.com/dickmans/plm-extensions/tree/main/chrome" target="_blank">/chrome</a>. This Chrome Extension can be use with Google Chrome and Microsoft Edge only and must be installed on each client. 
 
@@ -81,7 +93,7 @@ The following extensions are included in this package. Each application can be a
 
 | Screenshots | Applications |
 | -- | -- |
-| <img src="public/images/app-portal.jpg" width="600"> | **PLM Portal**<br/>Provides quick access to latest product data in PLM using a very basic frontend for casual users, working well on tablets. See video at https://youtu.be/tM8why6ybAU. |
+| <img src="public/images/app-portal.jpg" width="600"> | **PLM Portal**<br/>Provides quick access to latest product data in PLM using a very basic frontend for casual users, working well on tablets. See video at https://youtu.be/xSsV0A1iMLs. |
 | <img src="public/images/app-product-catalog.png" width="600"> | **Product Portfolio Catalog**<br/>The sales team can browse the Product Portfolio by Product Categories and Product Lines and retrieve latest product data including technical specification, documentation and Bill of Materials. See video at (https://youtu.be/hroRMjZzueQ). |
 | <img src="public/images/app-workspace-navigator.png" width="600"> | **Workspace Navigator**<br/>All contributors and decison makers now can manage multiple records easily; mass edit & compare properties based on the user's workspace views, bookmarks & recently viewed records. See video at https://youtu.be/jHBkAuEh32g. |
 | <img src="public/images/app-mobile-client.png" width="600"> | **Mobile Client**<br/>Have PLM with you all the time in your pocket. Visualize product data, enrich data, manage documents, perform workflow actions and trigger new processes whenever needed. |
@@ -95,8 +107,9 @@ The following extensions are included in this package. Each application can be a
 | <img src="public/images/app-sbom-editor.png" width="600"> | **Service BOM Editor**<br/>Users can define Spare Parts and Service Kits easily based on an Engineering BOM and define dedicated Service Offerings on top. See video at https://youtu.be/zVnsrQyO-1o. |
 | <img src="public/images/app-variant-manager.png" width="600"> | **Variants Manager**<br/>Engineers and Product Managers can define variants of an existing product design. This helps creating BOM variants based on color, material or other properties with ease. See video at https://youtu.be/v6ZZN3Xo-BM. |
 | <img src="public/images/app-instances.png" width="600"> | **BOM Instance Editor**<br/>Manage attributes of each item instance in your Bill of Materials with visual assistance. |
-| <img src="public/images/app-abom.png" width="600"> | **Asset BOM Editor**<br/>Create unique copies of a generic BOM to manage the lifecycle of individual items of an Asset. |
+| <img src="public/images/app-abom.png" width="600"> | **As-Built BOM Editor**<br/>Create unique copies of a generic BOM to manage the lifecycle of individual items of an Asset. |
 | <img src="public/images/app-class-browser.png" width="600"> | **Classification Browser**<br/>Engineers can use item classification data to easily browse for similar components. This helps increasing reuse of existing items and thus reducing development efforts. See video at https://youtu.be/uOyj52kFLlE.|
+| <img src="public/images/app-editor.png" width="600"> | **Specification Editor**<br/>Define a product specification based on structured requirements with ease, enabling precise goals definition for your product development teams. See video at https://youtu.be/hW_XPat_Zgw. |
 | <img src="public/images/app-design-review.png" width="600"> | **Design Reviews Portal**<br/>This portal can involve customers in the review process. Driven by Design Review processes in PLM, it provides feedback & file sharing capabilities. Markups can be used to create corrective Design Review Tasks. See video at https://youtu.be/AU--qJIMmlE. |
 | <img src="public/images/app-impact-analysis.png" width="600"> | **Change Impact Analysis**<br/>Change managers & and approvers can reveal insights about the impact of changes using this dashboard. While navigating the affected items, impact on BOM, files and related items can be reviewed before approval. See video at https://youtu.be/6A9ZNCxqRKg. |
 
@@ -113,7 +126,16 @@ Reduce deployment and administration efforts with the following utilities addres
 | -- | -- |
 | **Data Manager**<br/>When existing workspaces with data get modified or when data gets imported, administrators often have to cleanup and adjust the data afterwards. With this utlity, such changes can be performed in batch to improve data quatliy. See video at https://youtu.be/hL4UblHbXw0.| <img src="public/images/admin-data.png" width="600"> |
 | **Tenant Insights**<br/>Administrators can track user activity and data modifications of a tenant using this graphic dashboard. It uses the standard system log entries and requires system admin privileges to run. See video at https://youtu.be/WZXGfDKGRHY. | <img src="public/images/admin-insights.png" width="600"> |
-| **Workspace Comparison**<br/>Deploy changes across multiple tenants with confidence with this automated comparison of selected workspaces. See video at https://youtu.be/llQtsclH-L0. | <img src="public/images/admin-workspace-comparison.png" width="600"> |
+| **Workspace Comparison**<br/>Deploy changes across multiple tenants with confidence with this automated comparison of selected workspaces. See video at https://youtu.be/m6bT6zMB0YY. | <img src="public/images/admin-comparison.png" width="600"> |
 | **Administration Shortcuts**<br/>Use this dashboard to quickly navigate to tenant administration capabilities including workspace configuration, picklist setup, script editing and role definition. See video at https://youtu.be/D_qFX90CGAI. | <img src="public/images/admin-shortcuts.png" width="600"> |
 | **Outstanding Work Report**<br/>Review the outstanding work lists of other users and take action if needed to keep the processing going. See video at https://youtu.be/zUIfiiAVwVQ | <img src="public/images/admin-outstanding-work.png" width="600"> |
 | **User Settings Manager**<br/>Set default settings for your tenant users to provide a better user experience. Share workspace views, configure the dashboard charts and set the color theme to drive user adoption. See video at https://youtu.be/hJjxoovwbS8. | <img src="public/images/admin-users.png" width="600"> |
+
+### Server Monitoring ###
+The **Server Monitoring** page (`/monitoring`) gives administrators a single-screen overview of the running server. Administrators can review server health, manage storage consumption and edit server configuration settings in this dedicated dashboard.
+
+<img src="public/images/docs/monitoring-1.png" width="600"> 
+<br/>
+<br/>
+
+Access to this monitoring dashboard requires three things at once: a valid PLM login, membership in the tenant's <code>Administration [SYSTEM]</code> group and the monitoring secret defined in the environments file. All three are enforced on every API call the page makes, not just when the page loads.

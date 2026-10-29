@@ -8,12 +8,19 @@ const ExcelJS       = require('exceljs/dist/es5');
 const FormData      = require('form-data');
 const { Console }   = require('console');
 const pathUploads   = 'uploads/';
+const { resolveStoragePath } = require('./storage');
 const urlGraphQL    = 'https://developer.api.autodesk.com/mfg/v3/graphql/public';
 
 router.use(fileUpload());
 
 let indexRequest = 0;
 let sharedCaches = {};
+
+function clearSharedCaches() {
+    let count = Object.keys(sharedCaches).length;
+    sharedCaches = {};
+    return count;
+}
 
 
 function getCustomHeaders(req) {
@@ -25,6 +32,8 @@ function getCustomHeaders(req) {
         'token'         : req.session.headers.token,
         'Authorization' : req.session.headers.Authorization       
     }
+
+    if(req.session.headers.hasOwnProperty('X-user-id')) headers['X-user-id'] = req.session.headers['X-user-id'];
 
     return headers;
 }
@@ -127,6 +136,8 @@ function downloadFileToServer(rootFolder, subFolder, itemFolder, itemTitle, item
             itemPath += itemFolder;
         }
     }
+
+    if(resolveStoragePath(rootFolder, subFolder, itemFolder || '', fileName) === null) return Promise.resolve({ success : false });
 
     createServerFolderPath(itemPath, clearExistingFolder);
 
@@ -2087,6 +2098,7 @@ router.get('/image-cache', function(req, res) {
     console.log('  req.query.imageId   = ' + req.query.imageId);
     console.log('  req.query.imageLink = ' + req.query.imageLink);
     console.log('  req.query.link      = ' + req.query.link);
+    console.log('  req.query.fileName  = ' + req.query.fileName);
     console.log();
    
     let wsId      = req.query.wsId      || '';
@@ -2094,51 +2106,86 @@ router.get('/image-cache', function(req, res) {
     let fieldId   = req.query.fieldId   || '';
     let imageId   = req.query.imageId   || '';
     let imageLink = req.query.imageLink || '';
-
+    let link      = req.query.link || '';
+    let fileName  = req.query.fileName  || '';
+    
     if(typeof req.query.link !== 'undefined') {
         wsId  = (wsId  === '') ? req.query.link.split('/')[4] : wsId;
         dmsId = (dmsId === '') ? req.query.link.split('/')[6] : dmsId;
     }
 
-    if(imageLink === '') {
+    if(typeof req.query.imageLink !== 'undefined') {
+        wsId    = (   wsId === '') ? req.query.imageLink.split('/')[4]  : wsId;
+        dmsId   = (  dmsId === '') ? req.query.imageLink.split('/')[6]  : dmsId;
+        fieldId = (fieldId === '') ? req.query.imageLink.split('/')[8]  : fieldId;
+        imageId = (imageId === '') ? req.query.imageLink.split('/')[10] : imageId;
+    }    
 
-        imageLink = '/api/v2/workspaces/' + wsId + '/items/' + dmsId + '/field-values/' + fieldId + '/image/' + imageId;
-
-    } else {
-
-        let split = imageLink.split('/');
-
-        wsId    = split[4];
-        dmsId   = split[6];
-        fieldId = split[8];
-        imageId = split[10];
-
+    if(link === '') {
+        link = '/api/v3/workspaces/' + wsId + '/items/' + dmsId;
     }
-        
-    let url      = req.app.locals.tenantLink + imageLink;
-    let fileName = wsId + '-' + dmsId + '-' + fieldId + '-' + imageId + '.jpg';
+    
+    if(fileName === '') {
+        if(imageId !== '') {
+            fileName = wsId + '-' + dmsId + '-' + fieldId + '-' + imageId + '.jpg';
+        }
+    }
+
+    if(resolveStoragePath('cache', fileName) === null) return res.status(400).json({ error : true, message : 'Invalid file name' });
 
     fs.stat('storage/cache/' + fileName, function(err, stat) {
 
         if(err === null) {
-            
+
             sendResponse(req, res, { data : { url : 'storage/cache/' + fileName } }, false);
 
         } else if(err.code == 'ENOENT') {
 
-            axios.get(url, { 
-                responseType     : 'arraybuffer',
-                responseEncoding : 'binary',
-                headers : {
-                    'Authorization' : req.session.headers['Authorization'],
-                    'Accept'        : 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
+            if(!imageLink && !imageId) {
+
+                let url = getTenantLink(req) + link;
+
+                axios.get(url, {
+                    headers : req.session.headers
+                }).then(function(response) {
+                    for(let section of response.data.sections) {
+                        for(let field of section.fields) {
+                            if(field.type.title === 'Image') {
+                                if(field.value !== null) {
+                                    imageLink = field.value.link;
+                                }
+                            }
+                        }
+                    }
+
+                    if(imageLink === '') {
+                        sendResponse(req, res, {}, true);  
+                    } else {
+                        downloadImageToCache(req, res, imageLink, fileName);
+                    }
+
+                });
+
+            } else {
+
+                if(imageLink === '') {
+
+                    imageLink = '/api/v2/workspaces/' + wsId + '/items/' + dmsId + '/field-values/' + fieldId + '/image/' + imageId;
+
+                } else {
+
+                    let split = imageLink.split('/');
+
+                    wsId    = split[4];
+                    dmsId   = split[6];
+                    fieldId = split[8];
+                    imageId = split[10];
+
                 }
-            }).then(function (response) {
-                fs.appendFileSync('storage/cache/' + fileName, response.data);
-                sendResponse(req, res, { data : { url : '/storage/cache/' + fileName }  }, false);
-            }).catch(function (error) {
-                sendResponse(req, res, error.response, true);   
-            });
+
+                downloadImageToCache(req, res, imageLink, fileName);
+
+            }
 
         } else {
             console.log('Some other error: ', err.code);
@@ -2148,6 +2195,25 @@ router.get('/image-cache', function(req, res) {
     });
    
 });
+function downloadImageToCache(req, res, imageLink, fileName) {
+
+    let url = getTenantLink(req) + imageLink;
+
+    axios.get(url, { 
+        responseType     : 'arraybuffer',
+        responseEncoding : 'binary',
+        headers          : {
+            'Authorization' : req.session.headers['Authorization'],
+            'Accept'        : 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
+        }
+    }).then(function (response) {
+        fs.appendFileSync('storage/cache/' + fileName, response.data);
+        sendResponse(req, res, { data : { url : '/storage/cache/' + fileName }  }, false);
+    }).catch(function (error) {
+        sendResponse(req, res, error.response, true);   
+    });        
+
+}
 
 
 /* ----- UPLOAD ITEM IMAGE ----- */
@@ -3035,6 +3101,8 @@ router.post('/export-attachments', function(req, res, next) {
     let headers = getCustomHeaders(req);
         headers.Accept = 'application/vnd.autodesk.plm.attachments.bulk+json';
 
+    if(resolveStoragePath(rootFolder, subFolder) === null) return res.status(400).json({ error : true, message : 'Invalid rootFolder or subFolder' });
+
     if(subFolder !== '') {
         if(clearFolder) {
             createServerFolderPath('storage/' + rootFolder + '/' + subFolder, true);
@@ -3123,6 +3191,190 @@ router.post('/export-attachments', function(req, res, next) {
 });
 
 
+/* ----- NEW FILES UPLOAD FOR DND ----- */
+router.post('/upload-file', async (req, res) => {
+   
+    console.log(' ');
+    console.log('  /upload-file');
+    console.log(' --------------------------------------------');  
+    console.log('  req.headers.link           = ' + req.headers.link);
+    console.log('  req.headers["x-file-name"] = ' + req.headers["x-file-name"]);
+    console.log('  req.headers["x-file-size"] = ' + req.headers["x-file-size"]);
+    console.log('  req.headers["x-file-id"]   = ' + req.headers["x-file-id"]);
+    console.log('  req.headers["x-folder-id"] = ' + req.headers["x-folder-id"]);
+    console.log();
+
+    const link            = req.headers.link || "";
+    const url             = getTenantLink(req) + link;
+    const encodedFileName = req.headers["x-file-name"] || "";
+    const fileSizeHeader  = req.headers["x-file-size"] || "";    
+    const fileName        = decodeURIComponent(encodedFileName);
+    const fileSize        = Number(fileSizeHeader);
+    const fileId          = req.headers['x-file-id']|| '';
+    const folderId        = req.headers['x-folder-id']|| '';
+
+    const result = await uploadFileToPLM({
+        headers : req.session.headers,
+        url, 
+        fileName,
+        fileSize,
+        fileId,
+        folderId,
+        contentType: req.headers['content-type'] || 'application/octet-stream',
+        stream: req
+    });
+
+    sendResponse(req, res, { 'data' : result }, false);
+   
+});
+async function uploadFileToPLM({headers, url, fileName, fileSize, fileId, folderId, contentType, stream}) {
+
+    let attachment;
+
+    // STEP 1 : Ask Fusion Manage for an attachment and signed upload URL.
+    if(fileId === '') {
+        
+        attachment = await createPLMAttachment({
+            headers,
+            url,
+            fileName,
+            fileSize
+        });
+
+    } else {
+
+        attachment = await createPLMAttachmentVersion({
+            headers,
+            url,
+            fileName,
+            fileSize,
+            fileId
+        });
+
+    }
+
+    const attachmentId  = attachment.id;
+    const uploadUrl     = attachment.url;
+    const uploadHeaders = attachment.extraHeaders;
+
+    if (!attachmentId || !uploadUrl) {
+        throw new Error(
+            'Fusion Manage did not return the expected attachment ID / upload URL.'
+        );
+    }
+
+    // STEP 2 : Stream the browser's file directly into the signed storage URL.
+    await uploadBinaryToSignedUrl({
+        uploadUrl,
+        uploadHeaders,
+        stream,
+        contentType,
+        fileSize
+    });
+
+    // STEP 3 : Tell Fusion Manage the upload is complete.
+    return await checkInPLMAttachment(headers, url, attachmentId);
+
+}
+async function createPLMAttachment({headers, url, fileName, fileSize}) {
+
+    const response = await fetch(url + '/attachments', {
+        method  : 'POST',
+        headers : headers,
+        body    : JSON.stringify({
+            description  : 'File Upload by UX Extensions',
+            folder       : null,
+            name         : fileName,
+            resourceName : fileName,
+            size         : fileSize
+        })
+    });
+
+    if (!response.ok) {
+        const body = await response.text();
+        throw new Error(
+            'Fusion Manage attachment creation failed: ' +
+            '${response.status} ${body}'
+        );
+    }
+
+    return response.json();
+
+}
+async function createPLMAttachmentVersion({headers, url, fileName, fileSize, fileId}) {
+
+    const response = await fetch(url + '/attachments/' + fileId, {
+        method  : 'POST',
+        headers : headers,
+        body    : JSON.stringify({
+            description  : 'File Upload by UX Extensions',
+            folder       : null,
+            name         : fileName,
+            resourceName : fileName,
+            size         : fileSize
+        })
+    });
+
+    if (!response.ok) {
+        const body = await response.text();
+        throw new Error(
+            'Fusion Manage attachment version creation failed: ' +
+            '${response.status} ${body}'
+        );
+    }
+
+    return response.json();
+
+}
+async function uploadBinaryToSignedUrl({uploadUrl, uploadHeaders, stream, contentType, fileSize}) {
+
+    const response = await fetch(uploadUrl, {
+        method  : 'PUT',
+        body    : stream,
+        duplex  : 'half',   // Required by Node's fetch implementation when streaming a request body.
+        headers : {
+            ...uploadHeaders,
+            "Content-Type": contentType,
+            "Content-Length": String(fileSize)
+        }
+    });
+
+    if (!response.ok) {
+        const body = await response.text();
+        throw new Error(
+            `Binary upload failed: ` +
+            `${response.status} ${body}`
+        );
+    }
+}
+async function checkInPLMAttachment(headers, url, attachmentId) {
+
+    const response = await fetch(url + '/attachments/' + attachmentId, {
+        method: "PATCH",
+        headers: {
+            ...headers,
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            status: {
+                name: "CheckIn"
+            }
+        })
+    });
+
+    if (!response.ok) {
+        const body = await response.text();
+        throw new Error(
+            `Fusion Manage check-in failed: ` +
+            `${response.status} ${body}`
+        );
+    }
+
+    return response.json();
+}
+
+
 /* ----- ATTACHMENT UPLOAD ----- */
 router.post('/upload/:wsId/:dmsId', function(req, res) {
    
@@ -3131,6 +3383,7 @@ router.post('/upload/:wsId/:dmsId', function(req, res) {
     console.log(' --------------------------------------------');  
     console.log('  req.params.wsId           = ' + req.params.wsId);
     console.log('  req.params.dmsId          = ' + req.params.dmsId);
+    console.log('  req.params.link           = ' + req.params.link);
     console.log('  req.params.folderName     = ' + req.params.folderName);
     console.log('  req.params.updateExisting = ' + req.params.updateExisting);
     console.log();
@@ -3140,6 +3393,7 @@ router.post('/upload/:wsId/:dmsId', function(req, res) {
     //    return res.status(400).send('No files were uploaded.');
 
     let files          = [];
+    let link           = req.params.link || '/api/v3/workspaces/' + req.params.wsId + '/items/' + req.params.dmsId;
     let folderName     = (typeof req.params.folderName     === 'undefined') ?   '' : req.params.folderName;
     let updateExisting = (typeof req.params.updateExisting === 'undefined') ? true : (req.params.updateExisting == 'true');
 
@@ -3157,31 +3411,31 @@ router.post('/upload/:wsId/:dmsId', function(req, res) {
 
         console.log('   > Moved files to folder uploads');
            
-        getAttachments(req, function(attachmentsList) {
-            processFiles(req, res, attachmentsList, folderName, files, updateExisting);
+        getAttachments(req, link, function(attachmentsList) {
+            processFiles(req, res, link, attachmentsList, folderName, files, updateExisting);
         });
        
     });
    
 });
-function processFiles(req, res, attachmentsList, folderName, files, updateExisting) {
+function processFiles(req, res, link, attachmentsList, folderName, files, updateExisting) {
     
     if(files.length === 0) {
         sendResponse(req, res, { 'data' : 'success' }, false);
     } else {
-        parseAttachments(req, pathUploads + files[0].name, files[0].name, attachmentsList, folderName, updateExisting, function() {
+        parseAttachments(req, link, pathUploads + files[0].name, files[0].name, attachmentsList, folderName, updateExisting, function() {
             fs.unlinkSync(pathUploads + files[0].name);
             files.splice(0, 1);
-            processFiles(req, res, attachmentsList, folderName, files);
+            processFiles(req, res, link, attachmentsList, folderName, files);
         });
     }
 
 }
-function getAttachments(req, callback) {
+function getAttachments(req, link, callback) {
    
     console.log('   > Getting list of existing attachments');
 
-    let url = req.app.locals.tenantLink + '/api/v3/workspaces/' + req.params.wsId + '/items/' + req.params.dmsId + '/attachments?asc=name';
+    let url = req.app.locals.tenantLink + link + '/attachments?asc=name';
    
     let headers = getCustomHeaders(req);
         headers['Accept'] = 'application/vnd.autodesk.plm.attachments.bulk+json';
@@ -3196,7 +3450,7 @@ function getAttachments(req, callback) {
     });  
    
 }
-function parseAttachments(req, path, fileName, attachmentsList, folderName, updateExisting, callback) {
+function parseAttachments(req, link, path, fileName, attachmentsList, folderName, updateExisting, callback) {
    
     console.log('   > Checking list of attachments');
    
@@ -3225,32 +3479,32 @@ function parseAttachments(req, path, fileName, attachmentsList, folderName, upda
 
     if(fileId !== '') {
         if(updateExisting) {
-            createVersion(req, folderId, fileId, path, fileName, function() {
+            createVersion(req, link, folderId, fileId, path, fileName, function() {
                 callback({ action : 'version', message : 'Version created' });
             });
         } else callback({ action : 'exists', message : 'No action, file exits' });
     } else if(folderName === '') {
-        createFile(req, null, path, fileName, function() {
+        createFile(req, link, null, path, fileName, function() {
             callback({ action : 'new', message : 'New file uploaded '});
         });
     } else if(folderId === '') {
-        createFolder(req, folderName, function(data) {
-            createFile(req, {'id':data}, path, fileName, function() {
+        createFolder(req, link, folderName, function(data) {
+            createFile(req, link, {'id':data}, path, fileName, function() {
                 callback({ action : 'new folder', message : 'Uploaded new file to new folder' });
             });
         });
     } else {
-        createFile(req, folderId, path, fileName, function() {
+        createFile(req, link, folderId, path, fileName, function() {
             callback({ action : 'new file in folder', message : 'Uploaded new file to existing folder' });
         });
     }
    
 }
-function createFolder(req, folderName, callback) {
+function createFolder(req, link, folderName, callback) {
    
    console.log('   > Creating folder ' + folderName);
        
-   let url = req.app.locals.tenantLink + '/api/v3/workspaces/' + req.params.wsId + '/items/' + req.params.dmsId + '/folders';
+   let url = req.app.locals.tenantLink + link + '/folders';
    
    axios.post(url, {
        'folderName' : folderName 
@@ -3268,12 +3522,12 @@ function createFolder(req, folderName, callback) {
    }); 
    
 }
-function createFile(req, folderId, path, fileName, callback) {
+function createFile(req, link, folderId, path, fileName, callback) {
    
     console.log('   > Creating file record');
 
     let stats = fs.statSync(path);
-    let url   = req.app.locals.tenantLink + '/api/v3/workspaces/' + req.params.wsId + '/items/' + req.params.dmsId + '/attachments';
+    let url   = req.app.locals.tenantLink + link + '/attachments';
    
     req.session.headers.Accept = 'application/json';
     
@@ -3294,7 +3548,7 @@ function createFile(req, folderId, path, fileName, callback) {
        headers : req.session.headers
     }).then(function (response) {
         uploadFile(req, path, response.data, function(fileId) {
-            setStatus(req, fileId, function() {
+            setStatus(req, link, fileId, function() {
                 callback();
             });
         });          
@@ -3303,12 +3557,12 @@ function createFile(req, folderId, path, fileName, callback) {
     }); 
    
 }
-function createVersion(req, folderId, fileId, path, fileName, callback) {
+function createVersion(req, link, folderId, fileId, path, fileName, callback) {
    
    console.log('   > Creating new version as file exists already');
    
    let stats   = fs.statSync(path);
-   let url     = req.app.locals.tenantLink + '/api/v3/workspaces/' + req.params.wsId + '/items/' + req.params.dmsId + '/attachments/' + fileId;
+   let url     = req.app.locals.tenantLink + link + '/attachments/' + fileId;
    
    if(folderId === '') folderId = null;
    
@@ -3324,7 +3578,7 @@ function createVersion(req, folderId, fileId, path, fileName, callback) {
        headers : req.session.headers
    }).then(function (response) {
         uploadFile(req, path, response.data, function(fileId) {
-            setStatus(req, fileId, function() {
+            setStatus(req, link, fileId, function() {
                 callback();
             });
         });
@@ -3348,11 +3602,11 @@ function uploadFile(req, path, fileData, callback) {
     }); 
    
 }
-function setStatus(req, fileId, callback) {
+function setStatus(req, link, fileId, callback) {
    
     console.log('   > Setting Status in PLM');
    
-    let url = req.app.locals.tenantLink + '/api/v3/workspaces/' + req.params.wsId + '/items/' + req.params.dmsId + '/attachments/' + fileId;
+    let url = req.app.locals.tenantLink + link + '/attachments/' + fileId;
    
     axios.patch(url, {
        status : {
@@ -3390,6 +3644,8 @@ router.post('/upload-screenshot', function(req, res) {
     let data      = req.body.image.value.replace(/^data:image\/\w+;base64,/, '');
     let stream    = new Buffer.from(data, 'base64');
     let path      = 'storage/uploads';
+
+    if(resolveStoragePath('uploads', fileName) === null) return res.status(400).json({ error : true, message : 'Invalid file name' });
 
     createServerFolderPath(path, false);
 
@@ -3468,6 +3724,13 @@ router.post('/import-attachment', function(req, res) {
     let pathFailure    = (typeof req.body.pathFailure    === 'undefined') ? '__failed'  : req.body.pathFailure;
     let pathSuccess    = (typeof req.body.pathSuccess    === 'undefined') ? '__success' : req.body.pathSuccess;
     let pathSkipped    = (typeof req.body.pathSkipped    === 'undefined') ? '__skipped' : req.body.pathSkipped;
+
+    if(   resolveStoragePath(req.body.path, folderName, fileName) === null
+       || resolveStoragePath(req.body.path, pathFailure ) === null
+       || resolveStoragePath(req.body.path, pathSuccess ) === null
+       || resolveStoragePath(req.body.path, pathSkipped ) === null) {
+        return res.status(400).json({ error : true, message : 'Invalid path' });
+    }
 
     pathFailure = 'storage/' + req.body.path + '/' + pathFailure;
     pathSuccess = 'storage/' + req.body.path + '/' + pathSuccess;
@@ -3603,8 +3866,9 @@ router.post('/import-attachment', function(req, res) {
 function importAttachment(req, res, folderName, pathFile, pathSuccess, pathSkipped, fileName, attachmentsFolder, updateExisting, onSuccess) {
 
     let pathRoot = 'storage/' + req.body.path;
+    let link     = req.params.link || '/api/v3/workspaces/' + req.params.wsId + '/items/' + req.params.dmsId;
     
-    getAttachments(req, function(attachmentsList) {
+    getAttachments(req, link, function(attachmentsList) {
 
         parseAttachments(req, pathFile, fileName, attachmentsList, attachmentsFolder, updateExisting, function(response) {
 
@@ -3788,7 +4052,7 @@ router.get('/get-viewable', function(req, res, next) {
 
         let headers = getCustomHeaders(req);
             headers.Accept = 'application/vnd.autodesk.plm.attachment.viewable+json';
-        
+
         axios.get(url, {
             headers : headers
         }).then(function(response) {
@@ -4234,6 +4498,8 @@ router.get('/bom', function(req, res, next) {
 
                 sortArray(responses[0].data.edges, 'itemNumber', '');
                 sortArray(responses[0].data.edges, 'depth', '');
+
+                responses[0].data.bomPartsList = [];
 
                 if(responses.length > 1) {
 
@@ -5080,7 +5346,7 @@ router.get('/mow', function(req, res, next) {
     console.log(' ');
     console.log('  /mow');
     console.log(' --------------------------------------------'); 
-    console.log('  req.query.userId       = ' + req.query.userId);     
+    console.log('  req.query.userId = ' + req.query.userId);     
     console.log('  ');
 
     let url      = req.app.locals.tenantLink + '/api/v3/users/@me/outstanding-work';
@@ -5191,7 +5457,7 @@ router.get('/recent', function(req, res, next) {
     console.log(' --------------------------------------------');  
     console.log('  req.query.requestor = ' + req.query.requestor);    
     console.log('  ');
-    
+
     let url = req.app.locals.tenantLink + '/api/v3/users/@me/recently-viewed';
     
     axios.get(url, {
@@ -6649,18 +6915,17 @@ router.get('/workspaces', async function(req, res, next) {
     console.log('  req.query.useCache = ' + req.query.useCache);
     console.log();
 
-    let [url, headers] = await prepareRequest(req, res);
+    if(notCached(req, res)) {
 
-    if(headers !== null) {    
-
-        let offset = (typeof req.query.offset === 'undefined') ?     0 : req.query.offset;
-        let limit  = (typeof req.query.limit  === 'undefined') ?   250 : req.query.limit;
-        let bulk   = (typeof req.query.bulk   === 'undefined') ? false : (req.query.bulk == 'true');
-        
+        let headers = getCustomHeaders(req);
+        let offset  = req.query.offset || 0;
+        let limit   = req.query.offset  || 250;
+        let bulk    = (typeof req.query.bulk   === 'undefined') ? false : (req.query.bulk == 'true');
+            
         if(bulk) headers.Accept = 'application/vnd.autodesk.plm.workspaces.bulk+json';
 
-        url += '/api/v3/workspaces?offset=' + offset + '&limit=' + limit;
-        
+        let url  = getTenantLink(req) + '/api/v3/workspaces?offset=' + offset + '&limit=' + limit;
+
         axios.get(url, {
             headers : headers
         }).then(function(response) {
@@ -7295,8 +7560,19 @@ router.get('/me', function(req, res, next) {
         axios.get(url, {
             headers : req.session.headers
         }).then(function(response) {
+            
             response.data.fullName = response.data.lastName + ', ' + response.data.firstName;
+
+            req.session.userInfo = {
+                fullName    : response.data.fullName,
+                displayName : response.data.displayName,
+                email       : response.data.email
+            };
+            
+            req.session.save();
+
             sendResponse(req, res, response, false);
+
         }).catch(function(error) {
             sendResponse(req, res, error.response, true);
         });
@@ -8187,3 +8463,4 @@ function getWorkspaceTypeLabel(workspace) {
 
 
 module.exports = router;
+module.exports.clearSharedCaches = clearSharedCaches;

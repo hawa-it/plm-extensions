@@ -106,7 +106,7 @@ function initViewer(id, link, viewables, params) {
     viewerInstance.link               = link;
     viewerInstance.viewable           = null;
     viewerInstance.viewables          = viewables;
-    viewerInstance.features           = params.features;
+    viewerInstance.features           = getViewerFeatures(params);
     viewerInstance.dataInstances      = [],
     viewerInstance.hiddenInstances    = [],
     viewerInstance.disableSelectEvent = false;
@@ -137,7 +137,7 @@ function initViewer(id, link, viewables, params) {
     if(!isBlank(params.lightPreset       )) viewerInstance.settings.lightPreset        = params.lightPreset;        else if(!isBlank(common.viewer.lightPreset       )) viewerInstance.settings.lightPreset        = common.viewer.lightPreset;
     if(!isBlank(params.cacheInstances    )) viewerInstance.settings.cacheInstances     = params.cacheInstances;     else if(!isBlank(common.viewer.cacheInstances    )) viewerInstance.settings.cacheInstances     = common.viewer.cacheInstances;
     if(!isBlank(params.cacheBoundingBoxes)) viewerInstance.settings.cacheBoundingBoxes = params.cacheBoundingBoxes; else if(!isBlank(common.viewer.cacheBoundingBoxes)) viewerInstance.settings.cacheBoundingBoxes = common.viewer.cacheBoundingBoxes;
-    
+
     $('#' + id).addClass('no-viewer-cube');
     $('#' + id + '-processing'      ).removeClass('hidden');
     $('#' + id + '-message'         ).addClass('hidden');
@@ -147,6 +147,16 @@ function initViewer(id, link, viewables, params) {
     viewerInstance.viewable = getPrimaryViewable(viewables);
 
     convertViewable(viewerInstance, params, 1);
+
+}
+function getViewerFeatures(params) {
+
+    let features = common.viewer.standardFeatures;
+    let keys     = Object.keys(params.features);
+
+    for(let key of keys) features[key] = params.features[key];
+
+    return features;
 
 }
 function getPrimaryViewable(viewables) {
@@ -280,9 +290,16 @@ function launchViewer(viewerInstance, params) {
         });
     
     } else {
+
+        // Disable custom viewer extensions
+        const extensionListViews = viewerInstance.viewer.getExtension("componentsListViews");
+        if (extensionListViews)    viewerInstance.viewer.unloadExtension("componentsListViews");
+        const extensionTags      = viewerInstance.viewer.getExtension("PartNumberTags");
+        if (extensionTags)       viewerInstance.viewer.unloadExtension("PartNumberTags");
         
         viewerLeaveMarkupMode({ id : viewerInstance.id });
         viewerUnloadAllModels({ id : viewerInstance.id });
+        viewerCloseFileBrowser(viewerInstance);
         $('#' + viewerInstance.id).show();
         loadViewableInViewer(viewerInstance)
 
@@ -361,7 +378,9 @@ function onDocumentLoadFailure() {
     console.error('Failed launching viewer');
 }
 function initViewerDone(id) {
+    
     $('#' + id + '-progress').addClass('hidden');
+
 }
 function onViewerToolbarCreated(event) {  
     event.target.toolbar.setVisible(false); 
@@ -448,6 +467,19 @@ function setViewerFeatures(viewerInstance) {
 
                 viewerAddMarkupControls(viewerInstance); 
             
+            } else if(feature === 'tags') {
+
+                viewerInstance.viewer.loadExtension('PartNumberTags');
+
+            } else if(feature === 'listViews') {
+
+                viewerInstance.viewer.loadExtension('componentsListViews',  {
+                    partNumberProperty    : "Part Number",
+                    componentNameProperty : "Name",
+                    hideOriginalModel     : true,
+                    switchToOrthographic  : true
+                });
+
             } else if(feature === 'selectFile') {
 
                 selectFiles = viewerInstance.features[feature]; 
@@ -530,6 +562,8 @@ function setViewerInstanceData(viewerInstance) {
 
         extendViewerInstanceData(viewerInstance);
         onViewerLoadingDone     (viewerInstance);
+
+        settings[viewerInstance.id].afterCompletion(viewerInstance.id);
 
     });
 
@@ -666,7 +700,10 @@ function getViewerInstanceRunning(id, requires3D) {
     if(!viewerInstance.startupCompleted) return [ null, null, false ];
     if(typeof viewerInstance.viewer === 'undefined') return [ null, null, false ];
     
-    let proceed = (requires3D) ?  (!viewerInstance.viewer.model.is2d()) : true;
+    const hasModel  = (viewerInstance.viewer.model !== null);
+    const isDrawing = (!hasModel) ? false : viewerInstance.viewer.model.is2d();
+
+    let proceed = (requires3D) ? !isDrawing : true;
 
     return [ viewerInstance, viewerInstance.viewer, proceed ];
 
@@ -707,10 +744,11 @@ function getRootViewerInstance(elemClicked) {
 // File Browser
 function insertFileBrowser(viewerInstance) {
 
-    let elemFileBrowser = $('#' + viewerInstance.id + '-file-browser');
+    let elemFileBrowser = $('#' + viewerInstance.id + '-viewer-file-browser');
     let elemFileToolbar = $('#' + viewerInstance.id + '-customFileBrowserToolbar');
+    let elemFilesList   = $('#' + viewerInstance.id + '-viewer-file-browser-list');
 
-    if(viewerInstance.viewables.length > 1) {
+    if(viewerInstance.viewables.length > 0) {
 
         if(elemFileToolbar.length === 0) {
 
@@ -755,12 +793,18 @@ function insertFileBrowser(viewerInstance) {
                     $(this).closest('.viewer-file-browser').hide();
                 });
            
-            let elemFilesList = $('<div></div>').appendTo(elemFileBrowserPanel)
+            elemFilesList = $('<div></div>').appendTo(elemFileBrowserPanel)
                 .addClass('tiles')    
                 .addClass('list')    
                 .addClass('xl')    
                 .addClass('viewer-file-browser-list')    
                 .attr('id', viewerInstance.id + '-viewer-file-browser-list');
+
+        }
+
+        if(elemFilesList.length > 0) {
+
+            elemFilesList.children().remove();
 
             for(let viewerFile of viewerInstance.viewables) {
 
@@ -807,8 +851,8 @@ function insertFileBrowser(viewerInstance) {
                 $('<div></div>').appendTo(elemFileDetails)
                     .html('Date : ' + creationDate.toLocaleString());
 
-            }
-
+            }    
+            
         }
 
     } else if(elemFileToolbar.length > 0) elemFileToolbar.hide();
@@ -858,6 +902,11 @@ function viewerSwitchFile(elemClicked) {
     //     }, onDocumentLoadFailure);
             
     // }
+
+}
+function viewerCloseFileBrowser(viewerInstance) {
+
+    $('#' + viewerInstance.id + '-viewer-file-browser').hide();
 
 }
 
@@ -1010,6 +1059,8 @@ function onViewerSelectionChangedDone(viewerInstance, partNumbers, event) {}
 // Select / deselect items in the viewer
 function viewerSelectModel(partNumber, params) {
 
+    if(typeof partNumber === 'undefined') return;
+
     viewerSelectModels([partNumber], params);
 
 }
@@ -1031,7 +1082,9 @@ function viewerSelectModels(partNumbers, params) {
     let resetColors = params.resetColors ?? true;  // Reset colors of all componente before highlighting the partNumber(s)
     let keepHidden  = params.keepHidden  ?? true;  // Keep selectively hidden components hidden
     let usePath     = params.usePath     ?? false; // If list of paths is provided instead of part numbers
-    let color       = colorModelSelected; 
+    let color       = colorModelSelected;
+
+    if(!common.viewer.cachInstances) usePath = false;
 
     if(viewerInstance.hasOwnProperty('highlight')) highlight = viewerInstance.highlight;
 
@@ -1055,6 +1108,7 @@ function viewerSelectModels(partNumbers, params) {
         let instanceNumber =  (usePath) ? dataInstance.path : dataInstance.partNumber;
 
         for(let partNumber of partNumbers) {
+            partNumber = partNumber.split('|').pop();
             if(instanceNumber === partNumber) {
                 dbIds.push(dataInstance.dbId);
                 viewer.show(dataInstance.dbId);
@@ -2526,13 +2580,13 @@ function viewerSaveItemMarkup(viewerId) {
 
     $('#overlay').show();
 
-    viewerCaptureScreenshot('viewer', fieldId, function() {
+    viewerCaptureScreenshot(viewerId, fieldId, function() {
 
         let elemMarkupImage = $('#' + fieldId);
 
         let params = { 
-            link      : linkItem,
-            image     : {
+            link  : linkItem,
+            image : {
                 fieldId : fieldId,
                 value   : elemMarkupImage[0].toDataURL('image/jpg')
             }
@@ -2572,26 +2626,126 @@ function viewerCaptureScreenshot(viewerId, canvasId, callback) {
             var screenshot  = new Image();
             var imageWidth  = viewer.container.clientWidth;
             var imageHeight = viewer.container.clientHeight;
+            var noMarkup    = ((typeof viewerInstance.markup === 'undefined') || ($('#' + viewerId + '-markup-toolbar').hasClass('hidden')));
+
+            // screenshot.onload = function () {
+                    
+            //     let canvas        = document.getElementById(canvasId);
+            //         canvas.width  = viewer.container.clientWidth;
+            //         canvas.height = viewer.container.clientHeight;
+
+            //     let context = canvas.getContext('2d');
+            //         context.clearRect(0, 0, canvas.width, canvas.height);
+            //         context.drawImage(screenshot, 0, 0, canvas.width, canvas.height); 
+                  
+            //     if(noMarkup) {
+            //         callback();
+            //     } else {   
+            //         viewerInstance.markup.renderToCanvas(context, function() {
+            //             callback();
+            //         });
+            //     }
+                    
+            // }
 
             screenshot.onload = function () {
-                    
-                let canvas        = document.getElementById(canvasId);
-                    canvas.width  = viewer.container.clientWidth;
-                    canvas.height = viewer.container.clientHeight;
 
-                let context = canvas.getContext('2d');
-                    context.clearRect(0, 0, canvas.width, canvas.height);
-                    context.drawImage(screenshot, 0, 0, canvas.width, canvas.height); 
-                    
-                if(!$('#' + viewerId + '-markup-toolbar').hasClass('hidden')) {
-                    viewerInstance.markup.renderToCanvas(context, function() {
-                        callback();
-                    });
+                /* Contains AI generated code */
+
+                let canvas =
+                    document.getElementById(
+                        canvasId
+                    );
+
+                canvas.width =
+                    viewer.container.clientWidth;
+
+                canvas.height =
+                    viewer.container.clientHeight;
+
+                let context =
+                    canvas.getContext('2d');
+
+                context.clearRect(
+                    0,
+                    0,
+                    canvas.width,
+                    canvas.height
+                );
+
+                /*
+                * 1. APS/WebGL scene
+                */
+                context.drawImage(
+                    screenshot,
+                    0,
+                    0,
+                    canvas.width,
+                    canvas.height
+                );
+
+
+                /*
+                * 3. PartNumberTags
+                *
+                * Defined here so it can be called either
+                * directly or after Markups has finished.
+                */
+                const renderPartNumberTags =
+                    function () {
+
+                        const partNumberTags =
+                            viewer.getExtension(
+                                'PartNumberTags'
+                            );
+
+                        if (
+                            partNumberTags &&
+                            typeof partNumberTags
+                                .renderToCanvas ===
+                                'function'
+                        ) {
+
+                            partNumberTags
+                                .renderToCanvas(
+                                    context,
+                                    function () {
+                                        callback();
+                                    }
+                                );
+
+                        } else {
+
+                            callback();
+                        }
+                    };
+
+
+                /*
+                * 2. Autodesk Markups
+                */
+                if (noMarkup) {
+
+                    renderPartNumberTags();
+
                 } else {
-                    callback();
+
+                    viewerInstance.markup
+                        .renderToCanvas(
+                            context,
+                            function () {
+
+                                /*
+                                * Markups first, tags last,
+                                * matching their visual
+                                * stacking in the Viewer.
+                                */
+                                renderPartNumberTags();
+                            }
+                        );
                 }
-                    
-            }
+            };
+
             viewer.getScreenShot(imageWidth, imageHeight, function (blobURL) {
                 screenshot.src = blobURL;
             });

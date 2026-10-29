@@ -281,8 +281,6 @@ function insertWorkspaceViews(wsId, params) {
 
     genPanelElements(id);
 
-    console.log(settings[id]);
-
     settings[id].wsId = wsId;
     settings[id].load = function() { changeWorkspaceView(id);     }
     settings[id].next = function() { insertWorkspaceViewData(id); }
@@ -575,6 +573,12 @@ function insertWorkspaceSearch(wsId, params) {
         }
     }
 
+    if(settings[id].tileRevision) {
+        if(!settings[id].searchReturnFields.includes('LC_RELEASE_LETTER')) {
+            settings[id].searchReturnFields.push('LC_RELEASE_LETTER');
+        }
+    }
+
     if(settings[id].stateColors.length > 0) {
         if(!settings[id].searchReturnFields.includes('WF_CURRENT_STATE')) {
             settings[id].searchReturnFields.push('WF_CURRENT_STATE');
@@ -616,7 +620,11 @@ function insertWorkspaceSearch(wsId, params) {
             insertWorkspaceSearchData(id, false);
         });
 
-    if(!isBlank(settings[id].searchButtonIcon)) elemButton.addClass('with-icon').addClass(settings[id].searchButtonIcon);
+    if(!isBlank(settings[id].searchButtonIcon)) {
+        elemButton.addClass(settings[id].searchButtonIcon);
+        if(isBlank(settings[id].searchButtonLabel)) elemButton.addClass('icon'); else elemButton.addClass('with-icon');
+    }
+  
 
     insertWorkspaceSearchDone(id);
 
@@ -720,7 +728,8 @@ function insertWorkspaceSearchData(id, isNext) {
                 link : '/api/v3/workspaces/' + settings[id].wsId + '/items/' + row.dmsId
             })
 
-            contentItem.filters = [];
+            contentItem.filters  = [];
+            contentItem.revision = 'w';
 
             if(settings[id].filterByStatus) {
                 stateName = row.data.WF_CURRENT_STATE.displayValue;
@@ -753,6 +762,7 @@ function insertWorkspaceSearchData(id, isNext) {
                 if(field.key === settings[id].groupBy         ) contentItem.group      = field.fieldData.value;
                 if(field.key === 'DESCRIPTOR'                 ) contentItem.descriptor = field.fieldData.value;
                 if(field.key === 'WF_CURRENT_STATE'           ) contentItem.status     = field.fieldData.value;
+                if(field.key === 'LC_RELEASE_LETTER'          ) contentItem.revision   = field.fieldData.value;
 
                 if(typeof settings[id].tileTitle == 'string') {
                     if(field.key === settings[id].tileTitle) contentItem.title = field.fieldData.value;
@@ -833,13 +843,9 @@ function insertWorkspaceSearchData(id, isNext) {
         sortArray(listStates, 0);
         setPanelFilterOptions(id, 'status', listStates);
         finishPanelContentUpdate(id, items);
-        $('#' + id + '-search-content-input').focus();
+        setPanelPaginationControls(id, responses[0].data.totalResultCount);
 
-        // The v1 /plm/search response carries no total count, so derive the
-        // pagination state from the page fill: a full page implies there may be more.
-        let pageRows = responses[0].data.row.length;
-        let shown    = $('#' + id + '-content').find('.content-item').length;
-        setPanelPaginationControls(id, (pageRows >= settings[id].limit) ? shown + 1 : shown);
+        $('#' + id + '-search-content-input').focus();
 
         if(!isNext) {
             if(settings[id].autoClick) {
@@ -880,6 +886,7 @@ function insertSearch(params) {
         })
         .keypress(function(e) {
             if(e.which == 13) {
+                resetSearch(id, false);
                 settings[id].mode = 'initial';
                 insertSearchData(id, false);
             }
@@ -921,6 +928,9 @@ function resetSearch(id, resetInput) {
     $('#' + id + '-processing').hide();
     $('#' + id + '-no-data'   ).hide();
     $('#' + id + '-search-content-button').removeClass('disabled');
+
+    settings[id].page   = 1;
+    settings[id].offset = 0;
 
 }
 function insertSearchData(id, isNext) {
@@ -1367,11 +1377,10 @@ function insertResultsDataDone(id, data) {}
 // Insert tasks in defined status with acknowledgement actions
 function insertNewTasks(wsId, filters, params) {
 
-    if(isBlank(params)) params = {};
-    
-    const id = isBlank(params.id) ? 'new-tasks' : params.id;
-
-    getPanelSettings('insertNewTasks', id, params);
+    const id = getPanelSettings('insertNewTasks', params, {
+        wsId    : wsId,
+        filters : filters
+    });
 
     settings[id].layout = 'list';
 
@@ -1390,7 +1399,7 @@ function insertNewTasksData(id) {
         wsId      : settings[id].wsId,
         filter    : settings[id].filters,
         fields    : [],
-        pageSize  : settings[id].pageSize,
+        pageSize  : settings[id].limit,
         sort      : settings[id].sortBy,
         timestamp : settings[id].timestamp,
         useCache  : settings[id].useCache
@@ -2110,5 +2119,139 @@ function tasksManagerUpdateProgressBarsOfAllTasks(id) {
         tasksManagerSetLinearGradient(elemTimeline, '60', progress, 'yellow', '--color-surface-level-2');
 
     });
+
+}
+
+
+
+// Combine multiple browsing panels in a single view
+function insertBrowser(params) {
+
+    if(isBlank(params)) params = {};
+
+    const id = params.id || 'browser';
+
+    params.browserLayout   = 'tabs';
+    params.browserContents = params.browserContents || [];
+    params.dragable        = params.dragable  || false;
+    params.itemPanel       = params.itemPanel || null;
+
+    let elemBrowser = $('#' + id);
+    
+    elemBrowser.html('').addClass('browser-top').show();
+        
+    let elemBrowserTabs = $('<div></div>').appendTo(elemBrowser)
+        .attr('id', id + '-tabs')
+        .addClass('tabs')
+        .addClass('browser-tabs');
+
+    let elemBrowserContents = $('<div></div>').appendTo(elemBrowser)
+        .attr('id', id + '-contents')
+        .addClass('browser-contents');
+
+    let index        = 1;
+    let surfaceLevel = getSurfaceLevel(elemBrowser);
+
+    for(let browserContent of params.browserContents) {
+
+        let elemTab = $('<div></div>').appendTo(elemBrowserTabs)
+            .click(function() {
+                clickBrowserTab($(this));
+            });
+
+        if(!isBlank(browserContent.icon    )) elemTab.addClass('with-icon').addClass(browserContent.icon);
+        if( isBlank(browserContent.settings)) browserContent.settings = {};
+
+        if(params.itemPanel !== null) {
+
+            switch(params.itemPanel.type) {
+
+                case 'details':
+                case 'insertDetails':
+                    browserContent.settings.onClickItem = function(elemClicked) { insertDetails(elemClicked.attr('data-link'), params.itemPanel.settings); };
+                    break;
+
+                case 'summary':
+                case 'insertSummary':
+                case 'insertItemSummary':
+                    browserContent.settings.onClickItem = function(elemClicked) { insertItemSummary(elemClicked.attr('data-link'), params.itemPanel.settings); };
+                    break;
+
+            }
+            
+        }
+
+        if(params.dragable) {
+            browserContent.settings.afterCompletion = function(id, data) { 
+                $('#' + id).find('.content-item').each(function() {
+                    $(this).attr('draggable', 'true')
+                        // .attr('ondragstart', params.ondragstart)
+                        // .attr('ondragend', params.ondragend);
+                        .attr('ondragstart', 'dragStartHandler(event)')
+                        .attr('ondragend', 'dragEndHandler(event)');
+                });
+            }
+        }
+
+        browserContent.settings.id            = browserContent.settings.id || 'browser-tab-' + index++;
+        browserContent.settings.hideHeader    = true;
+        browserContent.settings.singleToolbar = 'actions';
+
+        $('<div></div>').appendTo(elemBrowserContents)
+            .attr('id', browserContent.settings.id)
+            .addClass('browser-content')
+            .addClass(surfaceLevel);
+            
+        insertBrowserContent(browserContent);
+
+        elemTab.html(settings[browserContent.settings.id].headerLabel);
+
+    }
+
+    elemBrowserTabs.children().first().click();
+
+}
+function insertBrowserContent(browserContent) {
+
+    switch(browserContent.type) {
+
+        case 'bookmarks':
+        case 'insertBookmarks':
+            insertBookmarks(browserContent.settings);
+            break;
+
+        case 'recents':
+        case 'insertRecentItems':
+            insertRecentItems(browserContent.settings)
+            break;
+
+        // case 'results':
+        //     insertResults(tab.wsId, tab.filters, tab.settings);
+        //     break;
+
+        case 'workspaceSearch':
+        case 'insertWorkspaceSearch':
+            browserContent.settings.hideHeader = true;
+            insertWorkspaceSearch(browserContent.wsId, browserContent.settings)
+            break;
+
+        case 'views':
+        case 'workspaceViews':
+        case 'insertWorkspaceViews':
+            insertWorkspaceViews(browserContent.wsId, browserContent.settings);
+            break;
+
+    }
+
+}
+function clickBrowserTab(elemTab) {
+
+    elemTab.addClass('selected');
+    elemTab.siblings().removeClass('selected');
+
+    let elemContents = elemTab.parent().next().children();
+
+    elemContents.each(function() { $(this).addClass('hidden') });
+    elemTab.parent().next().children(':eq(' + elemTab.index() + ')').removeClass('hidden');
 
 }

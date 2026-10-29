@@ -266,7 +266,7 @@ function clickWorkspaceItem(elemClicked, e) {
     insertBOM(links.baseBOM, {
         bomViewName : config.configurator.workspaceBase.bomView,
         collapsed   : true,
-        hideDetails : true,
+        hideTableColumns : true,
         selectItems : {
             fieldId : config.configurator.fieldIdConfigurationType,
             values : [
@@ -354,10 +354,10 @@ function insertResultsDone(id) {
                 showCreateForm(config.configurator.workspaceVariant.workspaceId, {
                     headerLabel : 'Create New Variant',
                     sectionsIn : config.configurator.workspaceVariant.createSectionsIn,
-                    fieldValues : [{
-                        fieldId      : 'PRODUCT_LINE',
-                        value        : links.baseItem,
-                        displayValue : $('#header-subtitle').html()
+                    createFieldValues : [{
+                        fieldId       : 'PRODUCT_LINE',
+                        value         : links.baseItem,
+                        displayValue  : $('#header-subtitle').html()
                 }]
                 });
             });
@@ -405,7 +405,7 @@ function openEditor() {
 
     // insertBOM(links.baseBOM, {
     //     bomViewName : config.configurator.workspaceBase.bomView,
-    //     hideDetails : true,
+    //     hideTableColumns : true,
     //     selectItems : {
     //         fieldId : config.configurator.fieldIdConfigurationType,
     //         values : [

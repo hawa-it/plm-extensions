@@ -3,6 +3,8 @@ let dataItemVersions      = [];
 let links                 = {};
 let bomFinishedLoading    = {};
 let syncScrollBOM         = '';
+let comparisonKey         = 'data-level-path';
+let comparisonSplitBy     = '.';
 
 const idViewerLeft   = 'viewerLeft';
 const idViewerRight  = 'viewerRight';
@@ -19,7 +21,7 @@ const classNames     = {
     placeholder       : 'bom-comparison-placeholder'
 }
 
-let paramsDetailsLeft, paramsDetailsRight, paramsBOMRight;
+let paramsDetailsLeft, paramsDetailsRight, paramsBOMLeft, paramsBOMRight;
 
 
 $(document).ready(function() {
@@ -27,13 +29,22 @@ $(document).ready(function() {
     appendOverlay();
     setUIEvents();
 
-    let compareWith = urlParameters.comparewith  || '';
+    let compareBy   = urlParameters.compareby   || 'number';
+    let compareWith = urlParameters.comparewith || '';
     let compareSelf = (compareWith === 'self') ? true : (compareWith === urlParameters.dmsid);
     let requests    = [ 
         $.get('/plm/details', { link : urlParameters.link }),
         $.get('/plm/versions'  , { link : urlParameters.link }) 
     ];
-    
+
+    compareBy = compareBy.toLowerCase();
+
+    if(compareBy === 'partnumber') {
+        comparisonKey     = 'data-number-path';
+        comparisonSplitBy = '|';
+        $('#compare-by-number').addClass('toggle-off').removeClass('toggle-on');
+    } else $('#compare-by-number').removeClass('toggle-off').addClass('toggle-on');
+
     getFeatureSettings('bomcompare', requests, function(responses) {
 
         dataItemVersions         = responses[1];
@@ -61,12 +72,13 @@ $(document).ready(function() {
         paramsDetailsRight    = config.panels.insertDetailsRight;
         paramsDetailsRight.id = idDetailsRight;  
        
-        paramsBOMRight                  = config.panels.insertBOMRight;
-        paramsBOMRight.id               = idBOMRight;
-        paramsBOMRight.collapseContents = true;
-        paramsBOMRight.onClickItem      = function(elemClicked) { clickBOMItem(elemClicked, 'Right'); };
-        paramsBOMRight.afterCompletion  = function(id) { bomFinishedLoading.right = true; afterBOMCompletion(id, idBOMLeft); };   
-        
+        paramsBOMRight                      = config.panels.insertBOMRight;
+        paramsBOMRight.id                   = idBOMRight;
+        paramsBOMRight.collapseContents     = true;
+        paramsBOMRight.treeSortByPartNumber = (compareBy === 'partnumber');
+        paramsBOMRight.onClickItem          = function(elemClicked) { clickBOMItem(elemClicked, 'Right'); };
+        paramsBOMRight.afterCompletion      = function(id) { bomFinishedLoading.right = true; afterBOMCompletion(id, idBOMLeft); };
+
         insertViewer(urlParameters.link, {
             id            : idViewerLeft,
             viewerId      : 0,
@@ -75,11 +87,12 @@ $(document).ready(function() {
             features      : config.viewerFeatures
         });
         
-        let paramsBOMLeft = config.panels.insertBOMLeft;
-            paramsBOMLeft.id               = idBOMLeft;
-            paramsBOMLeft.collapseContents = true;
-            paramsBOMLeft.onClickItem      = function(elemClicked) { clickBOMItem(elemClicked, 'Left'); };
-            paramsBOMLeft.afterCompletion  = function(id) { bomFinishedLoading.left = true; afterBOMCompletion(id, idBOMRight); };
+        paramsBOMLeft = config.panels.insertBOMLeft;
+        paramsBOMLeft.id                   = idBOMLeft;
+        paramsBOMLeft.collapseContents     = true;
+        paramsBOMLeft.treeSortByPartNumber = (compareBy === 'partnumber');
+        paramsBOMLeft.onClickItem          = function(elemClicked) { clickBOMItem(elemClicked, 'Left'); };
+        paramsBOMLeft.afterCompletion      = function(id) { bomFinishedLoading.left = true; afterBOMCompletion(id, idBOMRight); };
 
         insertBOM(urlParameters.link, paramsBOMLeft);  
 
@@ -118,6 +131,25 @@ $(document).ready(function() {
 
 function setUIEvents() {
 
+    $('#compare-selected').click(function() {
+
+        let elemLeft  = $('#' + idBOMLeft  + '-content').find('.content-item.selected');
+        let elemRight = $('#' + idBOMRight + '-content').find('.content-item.selected');
+
+        if(elemLeft.length  === 0) return;
+        if(elemRight.length === 0) return;
+
+        let dmsIdLeft  =  elemLeft.attr('data-link').split('/').pop();
+        let dmsIdRight = elemRight.attr('data-link').split('/').pop();
+        let url        = document.location.href;
+
+        url = updateURLParameter(url, 'dmsid',       dmsIdLeft,  false);
+        url = updateURLParameter(url, 'compareWith', dmsIdRight, false);
+
+        window.open(url);
+
+
+    });
     $('#toggle-sync-viewers').click(function() {
         $(this).toggleClass('toggle-on').toggleClass('toggle-off');
         viewersSyncDisabled = $(this).hasClass('toggle-off');
@@ -169,6 +201,11 @@ function setUIEvents() {
             viewerResetColors({ id : idViewerLeft });
             viewerResetColors({ id : idViewerRight });  
         } else applyViewerColors();
+    });
+
+    $('#compare-by-number').click(function() {
+        $(this).toggleClass('toggle-on').toggleClass('toggle-off');
+        toggleComparisonMode();
     });
 
 }
@@ -240,8 +277,15 @@ function compareBOMs() {
 }
 function compareBOMRow(elemSource, elemTarget) {
 
-    let levelSource = elemSource.attr('data-level-path');
-    let levelTarget = elemTarget.attr('data-level-path');
+    let levelSource = elemSource.attr(comparisonKey);
+    let levelTarget = elemTarget.attr(comparisonKey);
+
+    if(comparisonSplitBy === '|') {
+
+        levelSource = levelSource.slice(levelSource.indexOf(comparisonSplitBy) + 1);
+        levelTarget = levelTarget.slice(levelTarget.indexOf(comparisonSplitBy) + 1);
+
+    }
 
     if(levelSource === levelTarget) {
         if(elemSource.attr('data-root-link') === elemTarget.attr('data-root-link')) {
@@ -357,18 +401,17 @@ function getLowerLevel(levelSource, levelTarget) {
     if(typeof levelSource === 'undefined') return 'target';
     if(typeof levelTarget === 'undefined') return 'source';
         
-    let levelsSource = levelSource.split('.');
-    let levelsTarget = levelTarget.split('.');
+    let levelsSource = levelSource.split(comparisonSplitBy);
+    let levelsTarget = levelTarget.split(comparisonSplitBy);
 
     for(let index in levelsSource) {
 
         if(levelsTarget.length > index) {
             
-            let source = Number(levelsSource[index]);
-            let target = Number(levelsTarget[index]);
+            const levelComparison = compareValues(levelsSource[index], levelsTarget[index]);
 
-            if(source < target) return 'source';
-            if(target < source) return 'target';
+            if(levelComparison ===  1) return 'target';
+            if(levelComparison === -1) return 'source';
             
         }
     }
@@ -397,7 +440,6 @@ function insertBOMComparisonPlaceholder(elemReference, elemBefore, elemAfter) {
     if(elemBefore !== null) elemPlaceholder.insertBefore(elemBefore); else elemPlaceholder.insertAfter(elemAfter);
 
 }
-
 
 
 // After comparison, set UI events to sync BOM interactions
@@ -467,6 +509,7 @@ function clickBOMItem(elemClicked, side) {
     const idBOMOther = (side === 'Left') ? idBOMRight : idBOMLeft;
     const fitLeft    = (side === 'Left')  || (!syncView);
     const fitRight   = (side === 'Right') || (!syncView);
+    const usePaths   = common.viewer.cacheInstances || false;
 
     $('.tree-item').removeClass('selected');
 
@@ -475,8 +518,8 @@ function clickBOMItem(elemClicked, side) {
         let elemOther = $('#' + idBOMOther).find('.content-item:eq(' + index + ')');
         let linkLeft  = link;
         let linkRight = link;
-        let pathLeft  = elemClicked.attr('data-number-path');
-        let pathRight = elemClicked.attr('data-number-path');
+        let pathLeft  = (usePaths) ? elemClicked.attr('data-number-path') : elemClicked.attr('data-part-number');
+        let pathRight = (usePaths) ? elemClicked.attr('data-number-path') : elemClicked.attr('data-part-number');
 
         elemClicked.addClass('selected');
 
@@ -484,33 +527,44 @@ function clickBOMItem(elemClicked, side) {
 
             viewerSelectModel(pathLeft, {
                 id      : idViewerLeft,
-                usePath : true
+                usePath : usePaths
             });   
 
         } else {
 
             if(side === 'Left') {
                 linkRight = elemOther.attr('data-link');
-                pathRight = elemOther.attr('data-number-path');
+                pathRight = (usePaths) ? elemOther.attr('data-number-path') : elemOther.attr('data-part-number');
             } else {
                 linkLeft = elemOther.attr('data-link');
-                pathLeft = elemOther.attr('data-number-path');
+                pathLeft = (usePaths) ? elemOther.attr('data-number-path') : elemOther.attr('data-part-number');
             }
 
-
             elemOther.addClass('selected');
+            treeUpdatePath(elemOther);
 
-            viewerSelectModel(pathLeft, {
-                id        : idViewerLeft,
-                fitToView : fitLeft,
-                usePath   : true,
-            });
+            if(typeof pathLeft === 'undefined') {
+                viewerHideAll({ id : idViewerLeft });
+            } else {
+                viewerSelectModel(pathLeft, {
+                    id        : idViewerLeft,
+                    fitToView : fitLeft,
+                    usePath   : usePaths,
+                });
+            }
 
-            viewerSelectModel(pathRight, {
-                id        : idViewerRight,
-                fitToView : fitRight,
-                usePath   : true,
-            });
+            if(typeof pathRight === 'undefined') {
+                viewerHideAll({ id : idViewerRight });
+            } else {
+                viewerSelectModel(pathRight, {
+                    id        : idViewerRight,
+                    fitToView : fitRight,
+                    usePath   : usePaths,
+                });
+                if(typeof pathLeft !== 'undefined') {
+                    $('#compare-selected').removeClass('hidden');
+                }
+            }
 
             insertDetails(linkLeft , paramsDetailsLeft);
             insertDetails(linkRight, paramsDetailsRight);
@@ -518,10 +572,12 @@ function clickBOMItem(elemClicked, side) {
         }
 
     } else {
+        $('#compare-selected').addClass('hidden');
         insertDetails(links.left , paramsDetailsLeft);
         insertDetails(links.right, paramsDetailsRight);
         viewerResetSelection({ id : idViewerLeft  });
         viewerResetSelection({ id : idViewerRight });
+        applyViewerColors();
     }
 
 }
@@ -719,5 +775,50 @@ function applyViewerColors() {
         color       : colors.vectors.red,
         resetColors : false
     });
+
+}
+
+
+// Toggle comparison mode (number or part number)
+function toggleComparisonMode() {
+
+    const elemToggle = $('#compare-by-number');
+
+    if(elemToggle.hasClass('toggle-on')) {
+        compareBy         = 'number';
+        comparisonKey     = 'data-level-path';
+        comparisonSplitBy = '.';
+        paramsBOMLeft.treeSortByPartNumber  = false;
+        paramsBOMRight.treeSortByPartNumber = false;
+    } else {
+        compareBy         = 'partnumber';
+        comparisonKey     = 'data-number-path';
+        comparisonSplitBy = '|';
+        paramsBOMLeft.treeSortByPartNumber  = true;
+        paramsBOMRight.treeSortByPartNumber = true;
+    }
+
+    redrawBOM(idBOMLeft,  idViewerLeft );
+    redrawBOM(idBOMRight, idViewerRight);
+
+    compareBOMs();
+    setBOMComparisonEvents();
+
+}
+function redrawBOM(idBOM, idViewer) {
+
+    if(compareBy === 'partnumber') {
+        sortArray(settings[idBOM].bomPartsList, 'path');
+    } else {
+        sortArray(settings[idBOM].bomPartsList, 'numberPath', 'level');
+    }
+
+    let elemTableLeft = $('#' + idBOM + '-table');
+        elemTableLeft.html('');
+
+    genBOMHeaders(idBOM, elemTableLeft);  
+    genBOMRows(idBOM, elemTableLeft, settings[idBOM].bomPartsList);
+
+    viewerResetSelection({ id : idViewer });
 
 }

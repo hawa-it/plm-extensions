@@ -121,7 +121,9 @@ const registry = {
                     'dragable', 'onDragStart', 'onDragEnd',
                     'dropable', 'onDragEnter', 'onDragOver', 'onDragLeave', 'onDrop',
                     'groupBy', 'groupLayout',
+                    'limit',
                     'openOnDblClick',
+                    'pagination',
                     'searchInFields', 'searchReturnFields', 'searchForExactMatch', 'searchInputLabel', 'searchButtonIcon', 'searchButtonLabel', 'searchBaseFilters', 'searchLogicClause', 'sortBy', 'stateColors',
                     'searchLatestOnly', 'searchReleasedOnly', 'searchWorkingOnly', 'hideWorking'
                 ],
@@ -191,52 +193,53 @@ const registry = {
                     'searchReturnFields', 'stateColors',
                     'searchLatestOnly', 'searchReleasedOnly', 'searchWorkingOnly', 'hideWorking'                    
                 ],
-                excluded    : [ 'openInPLM' ]
-            // },{ // insertNewTasks
-            //     id          : 'insertNewTasks',
-            //     description : "Displays the tasks assigned to the current user awaiting acknowledgement / acceptance",
-            //     usage       : "Use on a personal landing or home screen so each user immediately sees the workflow tasks waiting on them. Typical cases: a 'My Work' dashboard, or the first tab of a role-based home page. Enable the due-date, status and workspace filters when users juggle many tasks across processes.",
-            //     inputs      : [{
-            //         id          : 'wsId',
-            //         title       : 'Workspace ID',
-            //         description : 'Workspace ID of items to display',
-            //         default     : '211',
-            //         type        : 'string',
-            //         required    : true
-            //     },{
-            //         id          : 'filters',
-            //         title       : 'Filters',
-            //         description : 'List of filters to apply when retrieving new tasks list',
-            //         default     : [{"field" : "TITLE","type" : "0","comparator" : "contains" ,"value" : "r"}],
-            //         type        : 'textarea',
-            //         required    : true
-            //     }],
-            //     defaults    : {
-            //         headerLabel : 'New Tasks',
-            //         layout      : 'list',
-            //         contentSize : 'm',
-            //         transitions : [
-            //             { id : 'ACCEPT'       , icon : 'icon-check'      , class : ''       , title : 'Accept Task'  }, 
-            //             { id : 'SET_ON_HOLD_1', icon : 'icon-undo'       , class : 'red'    , title : 'Return Task'  },
-            //             { id : 'FINISH_3'     , icon : 'icon-flag-finish', class : 'default', title : 'Set Complete' } 
-            //         ]
-            //     },
-
-            //     filters     : [ ],
-            //     fieldIDs    : [
-            //         { key : 'root'         , default : 'PROJECT_NUMBER'         , description : 'Parent element used for grouping' },
-            //         { key : 'id'           , default : 'ID'                     , description : 'Unique identifier / number of each task' },
-            //         { key : 'title'        , default : 'TITLE'                  , description : 'Title field of tasks' },
-            //         { key : 'description'  , default : 'DESCRIPTION'            , description : 'Task Description' },
-            //         { key : 'priority'     , default : 'PRIORITY'               , description : 'Task Priority' },
-            //         { key : 'start'        , default : 'PLANNED_START_DATE'     , description : 'Target Start Date' },
-            //         { key : 'end'          , default : 'PLANNED_COMPLETION_DATE', description : 'Target End Date' },
-            //         { key : 'duration'     , default : 'PLANNED_DURATION'       , description : 'Target Duration' },
-            //         { key : 'plannedEffort', default : 'PLANNED_EFFORT'         , description : 'Planned total effort' },
-            //         { key : 'weeklyEffort' , default : 'EFFORT_BY_WEEK'         , description : 'Planned weekly effort' },
-            //     ],
-            //     additional : [ 'pageSize', 'sortBy', 'tileImage', 'transitions' ],
-            //     excluded   : [ 'layout' ] 
+                excluded    : [ ]
+            },{ // insertNewTasks
+                id          : 'insertNewTasks',
+                description : "Displays the tasks assigned to the current user awaiting acknowledgement / acceptance",
+                usage       : "Use on a personal landing or home screen so each user immediately sees the workflow tasks waiting on them. Typical cases: a 'My Work' dashboard, or the first tab of a role-based home page. Enable the due-date, status and workspace filters when users juggle many tasks across processes.",
+                className   : 'new-tasks',
+                inputs      : [{
+                    id          : 'wsId',
+                    title       : 'Workspace ID',
+                    description : 'Workspace ID of items to display',
+                    default     : '211',
+                    type        : 'string',
+                    required    : true
+                },{
+                    id          : 'filters',
+                    title       : 'Filters',
+                    description : 'List of filters to apply when retrieving new tasks list',
+                    default     : [{"field" : "WF_CURRENT_STATE","type" : "1","comparator" : "status-is" ,"value" : "Requested"}],
+                    type        : 'textarea',
+                    required    : true
+                }],
+                defaults    : {
+                    id          : 'new-tasks',
+                    headerLabel : 'New Tasks',
+                    layout      : 'list',
+                    contentSize : 'm',
+                    transitions : [
+                        { id : 'ACCEPT'       , icon : 'icon-check'      , class : ''       , title : 'Accept Task'  }, 
+                        { id : 'SET_ON_HOLD_1', icon : 'icon-undo'       , class : 'red'    , title : 'Return Task'  },
+                        { id : 'FINISH_3'     , icon : 'icon-flag-finish', class : 'default', title : 'Set Complete' } 
+                    ]
+                },
+                filters     : [ ],
+                fieldIDs    : [
+                    { key : 'root'         , default : 'PROJECT_NUMBER'         , description : 'Parent element used for grouping' },
+                    { key : 'id'           , default : 'ID'                     , description : 'Unique identifier / number of each task' },
+                    { key : 'title'        , default : 'TITLE'                  , description : 'Title field of tasks' },
+                    { key : 'description'  , default : 'DESCRIPTION'            , description : 'Task Description' },
+                    { key : 'priority'     , default : 'PRIORITY'               , description : 'Task Priority' },
+                    { key : 'start'        , default : 'PLANNED_START_DATE'     , description : 'Target Start Date' },
+                    { key : 'end'          , default : 'PLANNED_COMPLETION_DATE', description : 'Target End Date' },
+                    { key : 'duration'     , default : 'PLANNED_DURATION'       , description : 'Target Duration' },
+                    { key : 'plannedEffort', default : 'PLANNED_EFFORT'         , description : 'Planned total effort' },
+                    { key : 'weeklyEffort' , default : 'EFFORT_BY_WEEK'         , description : 'Planned weekly effort' },
+                ],
+                additional : [ 'limit', 'sortBy', 'tileImage', 'transitions' ],
+                excluded   : [ 'layout', 'openInPLM' ] 
             // },{ // insertTasksManager
             //     id          : 'insertTasksManager',
             //     description : "Displays the tasks assigned to the current user with advanced controls for effort and progress management",
@@ -257,6 +260,7 @@ const registry = {
             //         required    : true
             //     }],
             //     defaults    : {
+            //         id          : 'tasks-manager',
             //         headerLabel : 'Tasks Manager',
             //         layout      : 'list',
             //         contentSize : 'custom',
@@ -322,17 +326,20 @@ const registry = {
                     picklistShortcuts : true,
                     createButtonLabel : 'Create'
                 },
+                data       : [ 'fieldsEx', 'fieldsIn', 'workspacesIn', 'workspacesEx' ],                  
                 additional : [
                     'cancelButton', 'cancelButtonIcon', 'cancelButtonLabel', 'cancelButtonTitle',
-                    'contextItem', 'contextItemField', 'createContextItemFields',
-                    'contextItems', 'contextItemsField',
                     'createButtonIcon', 'createButtonLabel', 'createButtonTitle',
+                    'contextPanelId',
+                    'createContextItem', 'createContextItemField', 'createContextItemFields',
+                    'createContextItems', 'createContextItemsField',                     
+                    'createFieldValues',
                     'getDetails',
                     'hideReadOnly', 'hideSections',
                     'requiredFieldsOnly',
                     'sectionsIn', 'sectionsEx',
                     'toggles',
-                    'viewerImageFields'
+                    'createViewerImageFields', 'createPerformTransition'
                 ]
             }
         ],
@@ -425,7 +432,8 @@ const registry = {
                     'includeVaultFiles', 'includeRelatedFiles',
                     'splitFileName',
                     'uploadScreenshot', 'uploadScreenshotLabel'
-                ]
+                ],
+                excluded : [ 'openSelectedInPLM' ]
             },{ // insertGrid
                 id          : 'insertGrid',
                 description : "Shows an item's grid as an editable table. Supports inline editing, adding / cloning and removing rows",
@@ -435,7 +443,7 @@ const registry = {
                     id          : 'link',
                     title       : 'link',
                     description : 'API link of the item for which the Grid tab should be displayed',
-                    default     : '/api/v3/workspaces/84/items/22131',
+                    default     : '/api/v3/workspaces/84/items/16911',
                     type        : 'string',
                     required    : true
                 }],
@@ -449,8 +457,11 @@ const registry = {
                 additional : [
                     'attributes', 'autoSave', 
                     'bookmark',
-                    'disconnectButtonIcon', 'disconnectButtonLabel',                    
+                    'disconnectButtonIcon', 'disconnectButtonLabel', 
+                    'dragable', 'onDragStart', 'onDragEnd',
+                    'dropable', 'onDragEnter', 'onDragOver', 'onDragLeave', 'onDrop',                                       
                     'editable',
+                    'groupBy',
                     'hideButtonLabels', 'hideButtonCreate', 'hideButtonClone', 'hideButtonDisconnect',
                     'rotate',
                     'picklistLimit', 'picklistShortcuts',
@@ -458,6 +469,27 @@ const registry = {
                     'toggles'
                 ],
                 excluded   : [ 'layout' ]
+            },{ // insertGridRowDetails
+                id          : 'insertGridRowDetails',
+                description : "Shows an item's grid row as an editable form.",
+                usage       : "Use to manage all details of a grow row in a style matching the item details tab",
+                className   : 'grid-row',
+                inputs      : [{
+                    id          : 'link',
+                    title       : 'link',
+                    description : 'API link of the item grid row for which the details should be displayed',
+                    default     : '/api/v3/workspaces/144/items/16557/views/13/rows/36',
+                    type        : 'string',
+                    required    : true
+                }],
+                defaults : {
+                    id          : 'grid-row',
+                    headerLabel : 'Grid Row'
+                },
+                data       : [ 'fieldsEx', 'fieldsIn' ],
+                filters    : [ ],
+                additional : [ 'narrowPanel' ],
+                excluded   : [ 'openSelectedInPLM' ]
             },{ // insertBOM
                 id          : 'insertBOM',
                 description : "Shows the multi-level Bill of Materials tree of an item, with quantities and BOM-view selection. Optionally supports file download, drag-and-drop and selecting rows in a connected viewer.",
@@ -490,12 +522,13 @@ const registry = {
                     'bomViewSelector', 
                     'downloadFiles', 'downloadFormats', 'downloadRequests', 'downloadPatterns',
                     'dragable', 'onDragStart', 'onDragEnd',
-                    'dropable', 'onDragEnter', 'onDragOver', 'onDragLeave', 'onDrop',,
+                    'dropable', 'onDragEnter', 'onDragOver', 'onDragLeave', 'onDrop',
                     'editable', 'endItemFieldId', 'endItemFieldValue', 
                     'goThere',
-                    'hideDescriptor', 'hideDescriptorRev', 'hideTreeNumber', 'hideTreeHeader', 'hideTreeColumns', 
+                    'hideDescriptor', 'hideDescriptorRev', 'hideChildren', 'hideItems', 'hideTreeNumber', 'hideTreeHeader', 'hideTreeColumns', 
+                    'multiSelect',
                     'saveButtonLabel', 'selectUnique',
-                    'toggles', 'treePath', 'treePathTitle', 'treeShowQuantity', 'treeShowRestricted',
+                    'toggles', 'treePath', 'treePathTitle', 'treeShowQuantity', 'treeShowRestricted', 'treeSortByPartNumber',
                     'viewerSelection'
                 ],
                 excluded : [ 'layout' ]
@@ -519,12 +552,17 @@ const registry = {
                 },                
                 data : [
                     'bomViewName', 'bomViewId', 
-                    'depth',
+                    'depth',                  
                     'fieldsEx', 'fieldsIn',
                     'revisionBias',
                     'selectItems'
                 ],
-                additional : [ 'hideParentNodes', 'viewerSelection' ]
+                additional : [ 
+                    'dragable', 'onDragStart', 'onDragEnd',
+                    'dropable', 'onDragEnter', 'onDragOver', 'onDragLeave', 'onDrop',  
+                    'hideParentNodes', 
+                    'viewerSelection' 
+                ]
             },{ // insertFlatBOM
                 id          : 'insertFlatBOM',
                 description : "Shows the fully flattened BOM of an item - every part with its rolled-up total quantity - as a single list rather than a tree.",
@@ -683,15 +721,14 @@ const registry = {
                 data       : [ 'fieldsEx', 'fieldsIn', 'workspacesIn', 'workspacesEx' ],                
                 filters    : [ 'filterByStatus', 'filterByWorkspace' ],                
                 additional : [ 
+                    'editable',
+                    'createId', 'createWorkspaceId', 'createWorkspaceIds', 'createWorkspaceNames',
                     'createButtonIcon', 'createButtonLabel', 'createButtonTitle',
-                    'createWorkspaceId', 'createWorkspaceIds', 'createHeaderLabel',
-                    // 'createContextItem', 'createContextItemField', 'createContextItemFields',
-                    // 'createContextItems', 'createContextItemsField', 
-                    'contextItem', 'contextItemField', 'createContextItemFields',
-                    'contextItems', 'contextItemsField',                    
-                    'createConnectAffectedItem',
-                    'createHideSections', 'createSectionsIn', 'createSectionsEx',
-                    'editable' 
+                    'createHeaderLabel', 'createHideSections', 'createSectionsIn', 'createSectionsEx', 'createFieldsIn', 'createFieldsEx',
+                    'createContextItem', 'createContextItemField', 'createContextItemFields',
+                    'createContextItems', 'createContextItemsField',
+                    'createFieldValues',
+                    'createViewerImageFields', 'createPerformTransition', 'createConnectAffectedItem', 
                 ]
             },{ // insertProject
                 id          : 'insertProject',
@@ -1017,7 +1054,8 @@ const registry = {
                     hideSections   : true
                 },
                 additional : [
-                    'bookmark',
+                    'bookmark', 
+                    'editable',
                     'hideLabels', 'hideReadOnly', 'hideSections',
                     'requiredFieldsOnly', 'saveButtonLabel'
                 ],
@@ -1247,7 +1285,7 @@ const registry = {
                 description : 'Content Layout',
                 default     : 'list',
                 type        : 'select',
-                list        : ['table', 'list', 'grid']
+                list        : ['table', 'list', 'grid', 'row']
             },            
             contentSize : {
                 title       : 'Content Size',
@@ -1274,12 +1312,12 @@ const registry = {
                 default     : false,
                 type        : 'boolean'
             },
-            // transitions : {
-            //     title       : 'Transition Actions',
-            //     description : "Adds actions buttons for each transition defined",
-            //     default     : {},
-            //     type        : 'textarea'
-            // },            
+            transitions : {
+                title       : 'Transition Actions',
+                description : "Adds actions buttons for each transition defined",
+                default     : {},
+                type        : 'textarea'
+            }    
         },
 
         table : {
@@ -1288,6 +1326,12 @@ const registry = {
                 description : "When true, table header cells are displayed in layout 'table'",
                 default     : true,
                 type        : 'boolean'
+            },            
+            hideTableColumns : {
+                title        : 'Hide Table Columns',
+                description  : 'Hides all table columns except the descriptor / first column (use for navigation trees)',
+                default      : false,
+                type         : 'boolean'
             },            
             tableColumnsLimit : {
                 title       : 'Table Columns Limit',
@@ -1311,10 +1355,10 @@ const registry = {
 
         tiles : {
             tileIcon : {
-                title : 'Tile Icon',
+                title       : 'Tile Icon',
                 description : 'The icon to be displayed for entries if no image is available and if setting number is disabled',
-                default : 'icon-product',
-                type : 'string'
+                default     : 'icon-product',
+                type        : 'string'
             },            
             tileImage : {
                 title       : 'Tile Image',
@@ -1346,6 +1390,12 @@ const registry = {
                 default     : '[]',
                 type        : 'textarea'
             },
+            tileRevision : {
+                title       : 'Tile Revision',
+                description : "When enabled, revision of each item will be displayed in tile",
+                default     : false,
+                type        : 'boolean'
+            },
         },
 
 
@@ -1370,12 +1420,6 @@ const registry = {
         //     cloneable : {
         //         title       : 'Cloneable',
         //         description : "Enables action button to clone existing item",
-        //         default     : false,
-        //         type        : 'boolean'
-        //     },
-        //     multiSelect : {
-        //         title       : 'Multi Select',
-        //         description : 'Allows users to select multiple items in the panel and adds select-all/none toolbar buttons',
         //         default     : false,
         //         type        : 'boolean'
         //     },
@@ -1410,12 +1454,6 @@ const registry = {
         //     //     default     : '[]',
         //     //     type        : 'textarea'
         //     // },
-        //     performTransition : {
-        //         title       : 'Perform Transition',
-        //         description : 'Internal ID of a workflow transition to be performed right after item creation',
-        //         default     : '',
-        //         type        : 'string'
-        //     },
 
 
         // insertWorkflowActions exclusive
@@ -1636,7 +1674,7 @@ const registry = {
             createButtonIcon : {
                 title       : 'Create Button Icon',
                 description : 'Icon class for the Create button in the panel',
-                default     : 'icon-create',
+                default     : '',
                 type        : 'string'
             },
             createButtonLabel : {
@@ -1650,60 +1688,6 @@ const registry = {
                 description : 'Title for Create Cancel button in the panel',
                 default     : 'Submit and create item',
                 type        : 'string'
-            },               
-            createWorkspaceId : {
-                title       : 'Create Workspace ID',
-                description : 'Items will be created in the defined Workspace',
-                default     : '',
-                type        : 'string'
-            },
-            createWorkspaceIds : {
-                title       : 'Create Workspace IDs',
-                description : 'Items will be created in (one of) the selected workspaces',
-                default     : [],
-                type        : 'array'
-            },
-            createHeaderLabel : {
-                title       : 'Create Header Label',
-                description : 'Label of the item creation dialog',
-                default     : 'Create New Item',
-                type        : 'string'
-            },
-            contextItem : {
-                title       : 'Context Item',
-                description : 'API link of item being used for linking picklist field(s)',
-                default     : '',
-                type        : 'string'
-            },
-            contextItemField : {
-                title       : 'Context Item Field',
-                description : 'Field ID of linking picklist storing the contextItem link',
-                default     : '',
-                type        : 'string'               
-            },
-            createContextItemFields : {
-                title       : 'Context Item Fields',
-                description : 'List of Field IDs of linking picklists storing the contextItem link',
-                default     : [],
-                type        : 'array'               
-            },
-            contextItems : {
-                title       : 'Context Items',
-                description : 'List of API links of items being used for linking picklist field',
-                default     : [],
-                type        : 'array'               
-            },
-            contextItemsField : {
-                title       : 'Context Items Field',
-                description : 'Field ID of multi linking picklist storing the contextItems links',
-                default     : '',
-                type        : 'string'               
-            },            
-            viewerImageFields : {
-                title       : 'Viewer Image Fields',
-                description : 'List of fields to be used for storing the viewer snapshot',
-                default     : [],
-                type        : 'array'               
             },
             cancelButton : {
                 title       : 'Cancel Button',
@@ -1728,7 +1712,31 @@ const registry = {
                 description : 'Title for the Cancel button in the panel',
                 default     : 'Cancel creation',
                 type        : 'string'
+            }, 
+            contextPanelId : {
+                title       : 'Context Panel ID',
+                description : 'ID of panel which invoked the create dialog (can be used used for post processing after item creation)',
+                default     : '',
+                type        : 'string'
+            },                             
+            createWorkspaceId : {
+                title       : 'Create Workspace ID',
+                description : 'Items will be created in the defined Workspace',
+                default     : '',
+                type        : 'string'
             },
+            createWorkspaceIds : {
+                title       : 'Create Workspace IDs',
+                description : 'Items will be created in (one of) the selected workspaces',
+                default     : [],
+                type        : 'array'
+            },
+            createHeaderLabel : {
+                title       : 'Create Header Label',
+                description : 'Label of the item creation dialog',
+                default     : 'Create New Item',
+                type        : 'string'
+            },      
             createHideSections : {
                 title       : 'Create Hide Sections',
                 description : 'Hide sections in create dialog',
@@ -1746,10 +1754,70 @@ const registry = {
                 description : 'Sections to be hidden in create dialog (comma-separated list of section titles)',
                 default     : '',
                 type        : 'array'
-            },              
+            },
+            createFieldsIn : {
+                title       : 'Create Fields Included',
+                description : 'Fields to be shown in create dialog (comma-separated list of Field IDs)',
+                default     : [],
+                type        : 'array'
+            },  
+            createFieldsEx : {
+                title       : 'Create Fields Excluded',
+                description : 'Fiels to be hidden in create dialog (comma-separated list of Field IDs)',
+                default     : [],
+                type        : 'array'
+            },
+            createFieldValues : {
+                title       : 'Create Field Values',
+                description : 'List of defined values to be set at item creation (provide array of elements with fieldId, value and displayValue property)',
+                default     : [],
+                type        : 'array'
+            },
+            createContextItem : {
+                title       : 'Create Context Item',
+                description : 'API link of item being used for linking picklist field(s)',
+                default     : '',
+                type        : 'string'
+            },
+            createContextItemField : {
+                title       : 'Create Context Item Field',
+                description : 'Field ID of linking picklist storing the contextItem link',
+                default     : '',
+                type        : 'string'               
+            },
+            createContextItemFields : {
+                title       : 'Create Context Item Fields',
+                description : 'List of Field IDs of linking picklists storing the contextItem link',
+                default     : [],
+                type        : 'array'               
+            },
+            createContextItems : {
+                title       : 'Create Context Items',
+                description : 'List of API links of items being used for linking picklist field',
+                default     : [],
+                type        : 'array'               
+            },
+            createContextItemsField : {
+                title       : 'Create Context Items Field',
+                description : 'Field ID of multi linking picklist storing the contextItems links',
+                default     : '',
+                type        : 'string'               
+            },
+            createViewerImageFields : {
+                title       : 'Create  Viewer Image Fields',
+                description : 'List of fields to be used for storing the viewer snapshot',
+                default     : [],
+                type        : 'array'               
+            },
+            createPerformTransition : {
+                title       : 'Create Perform Transition',
+                description : 'Internal ID of a workflow transition to be performed right after item creation',
+                default     : '',
+                type        : 'string'
+            },
             createConnectAffectedItem : {
-                title       : 'Link Affected Item',
-                description : 'Links the current item as Affected Item to new process',
+                title       : 'Create Connect Affected Item',
+                description : 'Links the current item as Affected Item to new processes',
                 default     : false,
                 type        : 'boolean'               
             },
@@ -1917,18 +1985,6 @@ const registry = {
                 description : 'Adds drop down with available BOM views',
                 default     : false,
                 type        : 'boolean',
-            },                
-            endItemFieldId : {
-                title       : 'End Item Field ID',
-                description : 'Prevents expansion of end items, recognized by given field ID and matching "End Item Field Value"',
-                default     : '',
-                type        : 'string'
-            },
-            endItemFieldValue : {
-                title       : 'End Item Field Value',
-                description : 'Prevents expansion of end items, recognized by defined value and field set with "End Item Field ID"',
-                default     : '',
-                type        : 'string'
             },
             goThere : {
                 title       : 'Go There',
@@ -1965,7 +2021,19 @@ const registry = {
                 description : "Hides revision in descriptor column",
                 default     : false,
                 type        : 'boolean'
-            },    
+            },
+            hideChildren : {
+                title       : 'Hide Children',
+                description : "Array with filter definitions to select items whose children must not be displayed in the tree. Provide an optional className to add a defined css class to the given tree items [{ fieldId : 'END_ITEM', value : 'true', className : 'hidden-children' }]",
+                default     : '',
+                type        : 'array'
+            },        
+            hideItems : {
+                title       : 'Hide Items',
+                description : "Array with filter definitions to select items being hidden from the tree [{ fieldId : 'IGNORE_IN_MBOM', value : 'true' }]",
+                default     : '',
+                type        : 'array'
+            },            
             selectUnique : {
                 title       : 'Select Unique',
                 description : 'When selecting BOM rows, deduplicate by item link',
@@ -1981,6 +2049,12 @@ const registry = {
             treeShowRestricted : {
                 title       : 'Show Restricted',
                 description : 'Show restricted (access-controlled) BOM rows',
+                default     : false,
+                type        : 'boolean'
+            },            
+            treeSortByPartNumber : {
+                title       : 'Sort By Part Number',
+                description : 'If tree should be sorted by Part Number instead number set this to true',
                 default     : false,
                 type        : 'boolean'
             },            
@@ -2123,7 +2197,7 @@ const registry = {
                 type        : 'array'
             },
             summaryLayout : {
-                title       : 'Layout',
+                title       : 'Summary Layout',
                 description : 'Item Summary Layout',
                 default     : 'dashboard',
                 type        : 'select',
@@ -2319,6 +2393,12 @@ const registry = {
                 default     : false,
                 type        : 'boolean'
             },
+            multiSelect : {
+                title       : 'Multi Select',
+                description : 'Allows users to select multiple items in the panel and adds select-all/none toolbar buttons',
+                default     : false,
+                type        : 'boolean'
+            },            
             disconnectButtonIcon : {
                 title       : 'Disconnect Button Icon',
                 description : 'Icon class for the Disconnect/Remove button',
@@ -2362,13 +2442,7 @@ const registry = {
                 description : 'Display only icons on buttons; labels become tooltips',
                 default     : false,
                 type        : 'boolean'
-            },            
-            hideDetails : {
-                title       : 'Hide Detail Columns',
-                description : 'Hide all table columns except the descriptor (use for navigation trees)',
-                default     : false,
-                type        : 'boolean'
-            },   
+            },               
             hideParentNodes : {
                 title       : 'Hide Parent Nodes',
                 description : 'When true, hides tree parent nodes and shows leaf items only (flat list)',
@@ -2564,7 +2638,7 @@ function getPanelSettings(name, params, inputs) {
 
     const panelType = getRegistryPanelType(name);
     const link      = inputs.link || '';
-    const id        = params.id || panelType.defaults.id;
+    const id        = params.id || panelType.defaults.id;
 
     settings[id]                 = getRegistryPanelSettings(params, panelType, link);
     settings[id].load            = function() { window[name + 'Data'](id); }
@@ -2572,6 +2646,9 @@ function getPanelSettings(name, params, inputs) {
     settings[id].afterCompletion = params.afterCompletion || function(id) { }
     settings[id].onClickItem     = params.onClickItem     || function(elemClicked) { }
     settings[id].onDblClickItem  = params.onDblClickItem  || null;
+    settings[id].afterSave       = params.afterSave       || null;
+
+    if(settings[id].contentSizes.length > 0) settings[id].contentSize = settings[id].contentSizes[0];
 
     for(let input of panelType.inputs) {
 
@@ -2640,7 +2717,15 @@ function getPanelFieldIDs(panelSettings, params, panelType) {
     panelSettings.fieldIDs = {};
 
     for(let fieldId of panelType.fieldIDs) {
-        panelSettings.fieldIDs[fieldId.key] = params.fieldIDs[fieldId.key] || fieldId.default;
+
+        panelSettings.fieldIDs[fieldId.key] = fieldId.default;
+
+        if(typeof params.fieldIDs !== 'undefined') {
+            if(params.hasOwnProperty(fieldId.key)) {
+                panelSettings.fieldIDs[fieldId.key] = params.fieldIDs[fieldId.key]
+            }
+        }
+
     }
 
 }

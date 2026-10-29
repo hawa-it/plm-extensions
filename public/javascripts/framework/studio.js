@@ -47,8 +47,14 @@ function setUIEvents() {
         $('body').toggleClass('no-json');
         $(this).toggleClass('toggle-on').toggleClass('toggle-off');
     });
-    $('#toggle-layout').click(function() {
-        $('body').toggleClass('wide');
+
+    $('#settings-search-input').keyup(function(e) {
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        filterPanelOptions();
+        
     });
 
     $('#settings-fold').click(function() {
@@ -169,6 +175,8 @@ function selectPanelType(elemClicked) {
         }
     }
 
+    filterPanelOptions();
+
 }
 function setPanelTypeInputsAndOptions(panelType) {
 
@@ -243,7 +251,7 @@ function setPanelTypeInputsAndOptions(panelType) {
     insertPanelOptions(panelType, registry.panelAdditionalOptions.sections , 'Item Details Sections & Fields', panelType.additional);
     insertPanelOptions(panelType, registry.panelAdditionalOptions.files    , 'Attachment Options'            , panelType.additional);    
     insertPanelOptions(panelType, registry.panelAdditionalOptions.grid     , 'Grid Options'                  , panelType.additional);    
-    insertPanelOptions(panelType, registry.panelAdditionalOptions.tree     , 'Tree Options'                  , panelType.additional);
+    insertPanelOptions(panelType, registry.panelAdditionalOptions.tree     , 'Tree Display Options'          , panelType.additional);
     insertPanelOptions(panelType, registry.panelAdditionalOptions.history  , 'Workflow History Options'      , panelType.additional);
     insertPanelOptions(panelType, registry.panelAdditionalOptions.summary  , 'Item Summary Options'          , panelType.additional);       
     insertPanelOptions(panelType, registry.panelAdditionalOptions.dnd      , 'Drag & Drop Features'          , panelType.additional);    
@@ -437,6 +445,20 @@ function insertCommonOptionControl(className, key, commonOption, defaultValue) {
         .html(commonOption.description);
 
 }
+function filterPanelOptions() {
+
+    let value = $('#settings-search-input').val().toLowerCase();
+
+    if(value === '') $('.panel-option').removeClass('hidden');
+
+    else {
+        $('.panel-option').each(function() {
+            let title = $(this).children('.panel-option-title').html().toLowerCase();
+            if(title.indexOf(value) < 0) $(this).addClass('hidden'); else $(this).removeClass('hidden');
+        });
+    }
+
+}
 
 
 function runPanel() {
@@ -552,7 +574,3 @@ function setJSONString() {
     $('#json-string').html(JSON.stringify(params, undefined, 4));
 
 }
-
-
- //   { "state":"Sales", "color":"#009c00" }
- //   { "state":"Sales", "color":"#009c00" }, { "state":"Sales", "color":"#009c00" }

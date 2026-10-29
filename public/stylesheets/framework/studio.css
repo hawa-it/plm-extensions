@@ -58,9 +58,6 @@ body.no-descriptions {
 body.no-json .panel { right : 0px; }
 body.no-json #json  { right : calc(-1px - var(--width-json) - (2 * var(--border-h))); }
 
-body.wide #settings { right : 0px; bottom : 50%; }
-body.wide .panel    { top : 50%; left : calc(var(--width-library) + (2 * var(--border-h))); }
-
 
 
 /* LIBRARY */
@@ -159,6 +156,22 @@ body.wide .panel    { top : 50%; left : calc(var(--width-library) + (2 * var(--b
     display : flex;
     gap     : 4px;
     right   : 14px;
+}
+#settings-search {
+    max-width : 150px;
+    min-width : 150px;
+    width     : 150px;
+}
+#settings #settings-search-input {
+    height      : 22px;
+    line-height : 22px;
+    padding     : 0px;
+    max-width   : 100px;
+    min-width   : 100px;
+    width       : 100px;
+}
+#settings #settings-search-input:hover {
+    background : var(--color-surface-level-5);
 }
 #settings-description,
 #settings-usage {

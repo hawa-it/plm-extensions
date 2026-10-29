@@ -111,31 +111,35 @@ body.dark-theme #console-toggle:hover { background : var(--color-surface-level-4
     flex-direction : column;
     gap            : 12px;
     line-height    : 18px;
+    opacity        : 0.7;
     padding-right  : var(--panel-border-width-h);
     width          : var(--width-comparison-text);
 }
 #comparison-options {
-    display                 : grid;
-    flex-grow               : 1;
-    height                  : calc( var(--height-comparison-controls) - 30px) !important;
-    grid-template-columns   : 110px 1fr 1fr;
-    column-gap              : 12px;
-    row-gap                 : 2px;
-    padding                 : 22px 32px !important;
+    display               : grid;
+    flex-grow             : 1;
+    height                : calc( var(--height-comparison-controls) - 22px) !important;
+    grid-template-columns : 110px 1fr 1fr;
+    column-gap            : 12px;
+    row-gap               : 5px;
+    padding               : 18px 32px 18px !important;
     /* padding-left          : 12px; */
     /* padding-right         : 32px; */
 }
 #comparison-buttons {
-    align-content   : space-evenly;
-    display         : grid;
-    gap             : 2px;
-    height          : calc(var(--height-comparison-controls) - 22px) !important;
-    padding         : 18px 36px !important;
-    white-space     : normal;
-    width           : var(--width-buttons);
+    align-content : space-evenly;
+    display       : grid;
+    gap           : 2px;
+    height        : calc(var(--height-comparison-controls) - 22px) !important;
+    padding       : 18px 36px !important;
+    white-space   : normal;
+    width         : var(--width-buttons);
 }
 #comparison-options .header {
-    line-height : 38px;
+    height : 26px;
+    max-height : 26px;
+    min-height : 26px;
+    line-height : 22px;
     padding-top : 0px;
     text-align  : center;
     overflow    : hidden;
@@ -143,20 +147,30 @@ body.dark-theme #console-toggle:hover { background : var(--color-surface-level-4
     text-overflow : ellipsis;
 }
 #comparison-options .label {
-    line-height : 38px;
+    line-height : 37px;
     text-align  : right;
 }
 #comparison-options input {
-    background      : var(--color-surface-level-3);
-    /* border-color    : var(--color-surface-level-3); */
-    height          : 22px;
-    text-align      : center;
-    width           : calc(100% - 16px);
+    background   : var(--color-surface-level-3);
+    border-color : var(--color-blue-500);
+    height       : 20px;
+    text-align   : center;
+    width        : calc(100% - 16px);
 }
 #comparison-options select {
-    height : 38px;
+    height : 36px;
     width  : 100%;
-
+}
+#comparison-options  > .hint {
+    font-size     : 12px;
+    grid-column   : 2 / 4;
+    height        : 30px;
+    line-height   : 32px;
+    opacity       : 0.7;
+    overflow      : hidden;
+    text-align    : center;
+    text-overflow : ellipsis;
+    white-space   : nowrap;
 }
 #comparison-stop {
     background   : var(--color-status-red);
@@ -409,6 +423,7 @@ td.exists > div.target::before { content : '\e5ca'; }
 td.exists > div.icon-compare {
     font-size   : 20px;
     line-height : 24px;
+    min-height  : 24px;
     height      : 24px;
     max-width   : 24px;
     min-width   : 24px;
@@ -530,7 +545,7 @@ td.exists > div.icon-compare {
         width         : 330px;
         padding-right : var(--panel-border-width-h);
     }
-    #comparison-options { padding : 22px 18px !important; }
+    #comparison-options { padding : 18px 18px 18px !important; }
     #comparison-buttons { padding : 18px 18px !important; }
     
     #comparison-results  { top : 240px; }
