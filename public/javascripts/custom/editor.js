@@ -845,8 +845,79 @@ function renderDashboard() {
 
     // LATEST_VALIDATION_RESULT is only written when a validation process gets closed (see
     // config.dashboard), so validations still running are not reflected - said in the title.
+    const validationGroups = getDashboardGroups(parts, fieldIds.validation, config.dashboard.validationResults || [], '(not validated)');
+
     insertDashboardBarChart(elemCharts, 'dashboard-chart-validation', 'Latest Validation Result (closed validations only)', 'Validation', fieldIds.validation,
-        getDashboardGroups(parts, fieldIds.validation, config.dashboard.validationResults || [], '(not validated)'));
+        validationGroups, validationGroups.map(function(group) { return getValidationColor(group.value); }));
+
+    insertDashboardChapterChart(elemCharts, parts, validationGroups);
+
+}
+
+// Colors for the result values written by "REQ - Requirement Validations WF Actions.js";
+// any other value gets the neutral bar color.
+function getValidationColor(value) {
+
+    const style = getComputedStyle(document.body);
+    const names = { 'Success' : '--color-status-green', 'Conditional Success' : '--color-status-yellow', 'Failed' : '--color-status-red', '' : '--color-surface-level-4' };
+
+    return style.getPropertyValue(names[value] || '--color-blue-500').trim();
+
+}
+
+// Validation progress per chapter (first level of the structure), one stacked bar each. The
+// process description names this gap explicitly: there is no overview for project managers
+// (5.8) and results do not cascade up the structure automatically (5.9).
+function insertDashboardChapterChart(elemParent, parts, validationGroups) {
+
+    const fieldId   = config.dashboard.fieldIds.validation;
+    const inScope   = new Set(parts);
+    let   chapters  = [];
+    let   chapterOf = new Map();
+    let   current   = null;
+
+    // Rows come in tree order, so every row belongs to the last first-level row before it
+    for(let part of dashboardData.parts) {
+        if(part.level === 1) {
+            current = { part : part, counts : validationGroups.map(function() { return 0; }) };
+            chapters.push(current);
+        }
+        if(current !== null) chapterOf.set(part, current);
+    }
+
+    for(let part of parts) {
+        const chapter = chapterOf.get(part);
+        const value   = part.details[fieldId];
+        const index   = validationGroups.findIndex(function(group) { return isBlank(value) ? (group.value === '') : (group.value === value); });
+        if(!isBlank(chapter) && (index >= 0)) chapter.counts[index]++;
+    }
+
+    chapters = chapters.filter(function(chapter) { return chapter.counts.some(function(count) { return count > 0; }); });
+
+    if(chapters.length === 0) return;
+
+    const labels = chapters.map(function(chapter) {
+        const details = chapter.part.details;
+        return [ details.ID, details.TITLE ].filter(function(value) { return !isBlank(value); }).join(' ') || chapter.part.title;
+    });
+
+    insertDashboardStackedChart(elemParent, 'dashboard-chart-chapters', 'Validation Progress per Chapter', labels,
+        validationGroups.map(function(group, indexGroup) {
+            return {
+                label : group.label,
+                color : getValidationColor(group.value),
+                data  : chapters.map(function(chapter) { return chapter.counts[indexGroup]; })
+            };
+        }),
+        function(indexLabel, indexGroup) {
+            const chapter = chapters[indexLabel];
+            const group   = validationGroups[indexGroup];
+            applyDashboardFilter(labels[indexLabel] + ': ' + group.label, function(part) {
+                const value = part.details[fieldId];
+                return (chapterOf.get(part) === chapter) && inScope.has(part) && ((group.value === '') ? isBlank(value) : (value === group.value));
+            });
+        }
+    );
 
 }
 
@@ -894,7 +965,7 @@ function loadChartLibrary(callback) {
         .fail(function() { showErrorMessage('Dashboard', 'Chart library could not be loaded.'); });
 
 }
-function insertDashboardBarChart(elemParent, id, title, fieldLabel, fieldId, groups) {
+function insertDashboardChartBox(elemParent, id, title, height) {
 
     const elemChart = $('<div></div>').appendTo(elemParent)
         .addClass('dashboard-chart')
@@ -908,8 +979,57 @@ function insertDashboardBarChart(elemParent, id, title, fieldLabel, fieldId, gro
 
     $('<div></div>').appendTo(elemChart)
         .addClass('dashboard-chart-canvas')
-        .css('height', (40 + (groups.length * 36)) + 'px')
+        .css('height', height + 'px')
         .append(elemCanvas);
+
+    return elemCanvas;
+
+}
+function insertDashboardStackedChart(elemParent, id, title, labels, datasets, onClickSegment) {
+
+    const elemCanvas = insertDashboardChartBox(elemParent, id, title, 70 + (labels.length * 36));
+
+    loadChartLibrary(function() {
+
+        if(!isBlank(dashboardCharts[id])) dashboardCharts[id].destroy();
+
+        const style     = getComputedStyle(document.body);
+        const colorFont = style.getPropertyValue('--color-font').trim();
+        const colorGrid = style.getPropertyValue('--color-surface-level-4').trim();
+
+        dashboardCharts[id] = new Chart(elemCanvas.get(0), {
+            type : 'bar',
+            data : {
+                labels   : labels,
+                datasets : datasets.map(function(dataset) {
+                    return { label : dataset.label, data : dataset.data, backgroundColor : dataset.color };
+                })
+            },
+            options : {
+                indexAxis           : 'y',
+                maintainAspectRatio : false,
+                animation           : false,
+                plugins             : { legend : { position : 'bottom', labels : { color : colorFont } } },
+                onHover             : function(e, elements) {
+                    e.native.target.style.cursor = (elements.length > 0) ? 'pointer' : 'default';
+                },
+                onClick             : function(e, elements) {
+                    if(elements.length === 0) return;
+                    onClickSegment(elements[0].index, elements[0].datasetIndex);
+                },
+                scales              : {
+                    x : { stacked : true, beginAtZero : true, ticks : { precision : 0, color : colorFont }, grid : { color : colorGrid } },
+                    y : { stacked : true, ticks : { color : colorFont }, grid : { display : false } }
+                }
+            }
+        });
+
+    });
+
+}
+function insertDashboardBarChart(elemParent, id, title, fieldLabel, fieldId, groups, colors) {
+
+    const elemCanvas = insertDashboardChartBox(elemParent, id, title, 40 + (groups.length * 36));
 
     loadChartLibrary(function() {
 
@@ -925,7 +1045,7 @@ function insertDashboardBarChart(elemParent, id, title, fieldLabel, fieldId, gro
             type : 'bar',
             data : {
                 labels   : groups.map(function(group) { return group.label; }),
-                datasets : [{ data : groups.map(function(group) { return group.count; }), backgroundColor : colorBar }]
+                datasets : [{ data : groups.map(function(group) { return group.count; }), backgroundColor : colors || colorBar }]
             },
             options : {
                 indexAxis           : 'y',
