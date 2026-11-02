@@ -103,6 +103,10 @@ body.dashboard-mode #add { display : none; }
 .dashboard-chart-canvas {
     position : relative;
 }
+.dashboard-chart-select {
+    margin-bottom : 8px;
+    max-width     : 100%;
+}
 .dashboard-tile { cursor : pointer; }
 .dashboard-tile:hover { background : var(--color-hover-background); }
 
