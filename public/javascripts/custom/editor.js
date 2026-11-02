@@ -568,3 +568,54 @@ document.addEventListener('click', function(e) {
 
 }, true);
 
+// Requirements Dashboard: KPI tiles and charts for the currently open structure. Users found
+// large specifications hard to oversee in the Content Editor alone. The dashboard takes the
+// place of the Content Editor and its side panels while active, but the Navigator stays visible
+// so tiles and bars can filter it. Toggle and panel are inserted via DOM here, not in
+// editor.pug, to keep future Autodesk updates of the core files mergeable.
+$(document).ready(function() {
+
+    $('<div></div>')
+        .attr('id', 'button-toggle-dashboard')
+        .addClass('button')
+        .addClass('with-toggle')
+        .addClass('toggle-off')
+        .attr('title', 'Click to toggle the dashboard of this structure on/off')
+        .html('Dashboard')
+        .insertBefore('#button-sync-reused')
+        .click(function() {
+            toggleDashboard();
+        });
+
+    const elemDashboard = $('<div></div>')
+        .attr('id', 'dashboard')
+        .addClass('surface-level-1')
+        .addClass('pos-abs-right')
+        .appendTo('#main');
+
+    const elemHeader = $('<div></div>').appendTo(elemDashboard)
+        .addClass('panel-header');
+
+    $('<div></div>').appendTo(elemHeader)
+        .addClass('panel-title')
+        .append($('<div></div>').addClass('panel-title-main').html('Dashboard'));
+
+    $('<div></div>').appendTo(elemHeader)
+        .attr('id', 'dashboard-controls')
+        .addClass('panel-controls');
+
+    $('<div></div>').appendTo(elemDashboard)
+        .attr('id', 'dashboard-content')
+        .addClass('panel-content')
+        .addClass('surface-level-1')
+        .addClass('no-scrollbar');
+
+});
+
+function toggleDashboard() {
+
+    $('body').toggleClass('dashboard-mode');
+    $('#button-toggle-dashboard').toggleClass('toggle-on').toggleClass('toggle-off');
+
+}
+

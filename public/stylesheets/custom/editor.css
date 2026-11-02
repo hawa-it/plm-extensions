@@ -29,3 +29,18 @@
     cursor         : pointer;
     text-decoration: underline;
 }
+
+/* Requirements Dashboard: covers the area right of the Navigator while active. Editor and its
+   side panels are hidden (not moved), so their own no-side/no-pins/no-add-existing layout
+   states stay untouched and come back unchanged when the dashboard is closed. */
+#dashboard {
+    border-width : var(--border-v) var(--border-h);
+    display      : none;
+    left         : calc(var(--width-tree) + (1 * var(--border-h)));
+}
+body.no-navigator #dashboard { left : 0px; }
+body.dashboard-mode #dashboard { display : block; }
+body.dashboard-mode #editor,
+body.dashboard-mode #side,
+body.dashboard-mode #pins,
+body.dashboard-mode #add { display : none; }
