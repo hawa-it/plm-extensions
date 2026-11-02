@@ -659,6 +659,7 @@ function loadDashboardData() {
     const link = links.root;
 
     dashboardData.loading = true;
+    clearDashboardFilter();
     showDashboardMessage('Loading saved state ...');
 
     $.get('/plm/bom-views-and-fields', { link : link }, function(response) {
@@ -748,16 +749,24 @@ function renderDashboard() {
     const elemTiles = $('<div></div>').appendTo(elemContent)
         .addClass('dashboard-tiles');
 
-    insertDashboardTile(elemTiles, 'Requirements', parts.length, countUnique + ' unique (reused ones only once)');
-    insertDashboardTile(elemTiles, 'Done', countDone, 'Lifecycle ' + config.dashboard.lifecycleDone, 'dashboard-tile-done');
-    insertDashboardTile(elemTiles, 'Open', parts.length - countDone, 'Any other lifecycle', 'dashboard-tile-open');
-    insertDashboardTile(elemTiles, 'Without REQ Level', countNoLevel, 'Required for the hierarchy check', (countNoLevel > 0) ? 'dashboard-tile-warning' : '');
+    // The filter functions are what a click on the tile applies to the Navigator; the total
+    // tile has none, so clicking it clears an active filter instead.
+    insertDashboardTile(elemTiles, 'Requirements', parts.length, countUnique + ' unique (reused ones only once)', '', null);
+    insertDashboardTile(elemTiles, 'Done', countDone, 'Lifecycle ' + config.dashboard.lifecycleDone, 'dashboard-tile-done', function(part) {
+        return part.details[fieldIds.lifecycle] === config.dashboard.lifecycleDone;
+    });
+    insertDashboardTile(elemTiles, 'Open', parts.length - countDone, 'Any other lifecycle', 'dashboard-tile-open', function(part) {
+        return part.details[fieldIds.lifecycle] !== config.dashboard.lifecycleDone;
+    });
+    insertDashboardTile(elemTiles, 'Without REQ Level', countNoLevel, 'Required for the hierarchy check', (countNoLevel > 0) ? 'dashboard-tile-warning' : '', function(part) {
+        return isBlank(part.details[fieldIds.level]);
+    });
 
     const elemCharts = $('<div></div>').appendTo(elemContent)
         .addClass('dashboard-charts');
 
     // Known levels first, in hierarchy order (same ranking as the save-time check)
-    insertDashboardBarChart(elemCharts, 'dashboard-chart-level', 'Requirements by REQ Level',
+    insertDashboardBarChart(elemCharts, 'dashboard-chart-level', 'Requirements by REQ Level', 'REQ Level', fieldIds.level,
         getDashboardGroups(parts, fieldIds.level, Object.keys(config.wsMain.reqLevelRank || {})));
 
 }
@@ -806,7 +815,7 @@ function loadChartLibrary(callback) {
         .fail(function() { showErrorMessage('Dashboard', 'Chart library could not be loaded.'); });
 
 }
-function insertDashboardBarChart(elemParent, id, title, groups) {
+function insertDashboardBarChart(elemParent, id, title, fieldLabel, fieldId, groups) {
 
     const elemChart = $('<div></div>').appendTo(elemParent)
         .addClass('dashboard-chart')
@@ -844,6 +853,16 @@ function insertDashboardBarChart(elemParent, id, title, groups) {
                 maintainAspectRatio : false,
                 animation           : false,
                 plugins             : { legend : { display : false } },
+                onHover             : function(e, elements) {
+                    e.native.target.style.cursor = (elements.length > 0) ? 'pointer' : 'default';
+                },
+                onClick             : function(e, elements) {
+                    if(elements.length === 0) return;
+                    const group = groups[elements[0].index];
+                    applyDashboardFilter(fieldLabel + ': ' + group.label, function(part) {
+                        return (group.value === '') ? isBlank(part.details[fieldId]) : (part.details[fieldId] === group.value);
+                    });
+                },
                 scales              : {
                     x : { beginAtZero : true, ticks : { precision : 0, color : colorFont }, grid : { color : colorGrid } },
                     y : { ticks : { color : colorFont }, grid : { display : false } }
@@ -854,12 +873,17 @@ function insertDashboardBarChart(elemParent, id, title, groups) {
     });
 
 }
-function insertDashboardTile(elemParent, label, value, subtitle, className) {
+function insertDashboardTile(elemParent, label, value, subtitle, className, filter) {
 
     const elemTile = $('<div></div>').appendTo(elemParent)
         .addClass('dashboard-tile')
         .addClass('surface-level-2')
-        .addClass(className || '');
+        .addClass(className || '')
+        .attr('title', isBlank(filter) ? 'Click to clear the Navigator filter' : 'Click to show only these rows in the Navigator')
+        .click(function() {
+            if(isBlank(filter)) clearDashboardFilter();
+            else applyDashboardFilter(label, filter);
+        });
 
     $('<div></div>').appendTo(elemTile).addClass('dashboard-tile-value').html(value);
     $('<div></div>').appendTo(elemTile).addClass('dashboard-tile-label').html(label);
@@ -900,6 +924,83 @@ function getDashboardUnsavedCount() {
     return count;
 
 }
+
+// Drill-down: restricts the Navigator to the rows behind a tile or bar, keeping their parent
+// rows visible (dimmed) so the position in the structure stays recognizable. Rows are matched
+// by edge id, which the Navigator and the dashboard's own BOM request share - unlike the item
+// link it stays unique for requirements reused in several places. Rows added in the editor but
+// not yet saved have no edge id and are hidden, since they are not part of the saved state.
+// The filter deliberately stays active when the dashboard is closed, so the matching rows can
+// be worked through in the Content Editor one by one.
+function applyDashboardFilter(label, filter) {
+
+    clearDashboardFilter();
+
+    const edgeIds = new Set(dashboardData.parts.filter(filter).map(function(part) { return String(part.edgeId); }));
+
+    let parents      = [];
+    let countMatches = 0;
+
+    $('#tree-tbody').children('.tree-item').each(function() {
+
+        const elemRow = $(this);
+        const level   = Number(elemRow.attr('data-level'));
+
+        parents[level] = elemRow;
+        parents.length = level + 1;
+
+        // Rows created in the editor and saved since loading only get their edge id on the
+        // Content Editor row (storeNewBOMEdgeId), not on the Navigator row - fall back to it.
+        const edgeId = elemRow.attr('data-edgeid') || $('#editor-content').children('.id-' + elemRow.attr('data-id')).attr('data-edgeid');
+
+        if(edgeIds.has(edgeId)) {
+            countMatches++;
+            elemRow.addClass('dashboard-filter-match');
+            for(let index = 1; index < level; index++) {
+                if(!isBlank(parents[index])) parents[index].addClass('dashboard-filter-parent');
+            }
+        }
+
+    });
+
+    $('#tree').addClass('dashboard-filtered');
+
+    const elemFilter = $('<div></div>')
+        .attr('id', 'dashboard-filter')
+        .addClass('button')
+        .addClass('with-icon')
+        .addClass('icon-close')
+        .attr('title', 'Click to clear the dashboard filter')
+        .html(label + ' (' + countMatches + ')')
+        .click(function(e) {
+            e.stopPropagation();
+            clearDashboardFilter();
+        });
+
+    if($('#tree-controls').length > 0) elemFilter.prependTo('#tree-controls');
+    else elemFilter.appendTo('#tree-header');
+
+}
+function clearDashboardFilter() {
+
+    $('#dashboard-filter').remove();
+    $('#tree').removeClass('dashboard-filtered');
+    $('#tree-tbody').find('.dashboard-filter-match, .dashboard-filter-parent').removeClass('dashboard-filter-match').removeClass('dashboard-filter-parent');
+
+}
+
+// A click on a Navigator row while the dashboard is open means "take me there": close the
+// dashboard first so the Content Editor is visible again, then let selectBOMItem
+// (apps/editor.js) scroll to the matching row as usual.
+const baseSelectBOMItem = selectBOMItem;
+
+selectBOMItem = function(elemClicked) {
+
+    if($('body').hasClass('dashboard-mode')) toggleDashboard();
+
+    baseSelectBOMItem(elemClicked);
+
+};
 
 // updateAfterTemplateProcessing (apps/editor.js) only runs at the very end of a save run (see
 // editBOMLinks), which makes it the one reliable "save finished" point to hook into. The

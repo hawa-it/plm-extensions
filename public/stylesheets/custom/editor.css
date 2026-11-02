@@ -98,3 +98,14 @@ body.dashboard-mode #add { display : none; }
 .dashboard-chart-canvas {
     position : relative;
 }
+.dashboard-tile { cursor : pointer; }
+.dashboard-tile:hover { background : var(--color-hover-background); }
+
+/* Drill-down filter on the Navigator; !important as the tree's own search/toggles also set
+   display on these rows. Parent rows stay visible but dimmed to keep the structure readable. */
+#tree.dashboard-filtered .tree-item:not(.dashboard-filter-match):not(.dashboard-filter-parent) { display : none !important; }
+#tree.dashboard-filtered .tree-item.dashboard-filter-parent:not(.dashboard-filter-match) { opacity : 0.5; }
+#dashboard-filter {
+    background : var(--color-status-yellow);
+    color      : #000;
+}
