@@ -604,6 +604,22 @@ $(document).ready(function() {
         .attr('id', 'dashboard-controls')
         .addClass('panel-controls');
 
+    // Upper levels of a structure are mostly chapters for grouping, the actual requirements sit
+    // at the bottom (see process description, 5.3) - counting chapters would distort ratios
+    // such as the validation coverage, so they can be left out.
+    $('<div></div>').appendTo(elemControls)
+        .attr('id', 'dashboard-only-leaves')
+        .addClass('button')
+        .addClass('with-toggle')
+        .addClass('toggle-off')
+        .attr('title', 'Count only requirements without sub requirements (leaves), not the chapters above them')
+        .html('Only Leaves')
+        .click(function() {
+            $(this).toggleClass('toggle-on').toggleClass('toggle-off');
+            clearDashboardFilter();
+            renderDashboard();
+        });
+
     $('<div></div>').appendTo(elemControls)
         .attr('id', 'dashboard-refresh')
         .addClass('button')
@@ -710,14 +726,42 @@ function showDashboardMessage(message) {
     );
 
 }
+// The rows all counts and charts are based on: either every row, or only the leaves (see the
+// Only Leaves toggle). The Navigator filter uses the same rows, so tile and filter always agree.
+function getDashboardParts() {
+
+    if($('#dashboard-only-leaves').hasClass('toggle-off')) return dashboardData.parts;
+
+    return dashboardData.parts.filter(function(part) { return !part.hasChildren; });
+
+}
+function hasDashboardField(fieldId) {
+
+    return !isBlank(fieldId) && (dashboardData.parts.length > 0) && dashboardData.parts[0].details.hasOwnProperty(fieldId);
+
+}
+function insertDashboardSection(elemParent, title) {
+
+    $('<div></div>').appendTo(elemParent)
+        .addClass('dashboard-section-title')
+        .html(title);
+
+    return $('<div></div>').appendTo(elemParent)
+        .addClass('dashboard-tiles');
+
+}
 function renderDashboard() {
+
+    if(isBlank(dashboardData.timestamp)) return;
 
     const elemContent  = $('#dashboard-content').html('');
     const countUnsaved = getDashboardUnsavedCount();
+    const onlyLeaves   = $('#dashboard-only-leaves').hasClass('toggle-on');
 
     $('<div></div>').appendTo(elemContent)
         .addClass('dashboard-status')
-        .html('Saved state of ' + dashboardData.timestamp.toLocaleTimeString() + ', ' + dashboardData.parts.length + ' requirement rows');
+        .html('Saved state of ' + dashboardData.timestamp.toLocaleTimeString() + ', ' + dashboardData.parts.length + ' requirement rows' +
+            (onlyLeaves ? ', counting only the ' + getDashboardParts().length + ' leaves' : ''));
 
     if(countUnsaved > 0) {
         $('<div></div>').appendTo(elemContent)
@@ -741,26 +785,29 @@ function renderDashboard() {
 
     // Counted per row, the same way the Navigator lists them (a reused requirement appears
     // once per usage), so a Navigator filter by tile later shows exactly the number on it.
-    const parts        = dashboardData.parts;
-    const countUnique  = new Set(parts.map(function(part) { return part.link; })).size;
-    const countDone    = parts.filter(function(part) { return part.details[fieldIds.lifecycle] === config.dashboard.lifecycleDone; }).length;
-    const countNoLevel = parts.filter(function(part) { return isBlank(part.details[fieldIds.level]); }).length;
+    const parts       = getDashboardParts();
+    const countUnique = new Set(parts.map(function(part) { return part.link; })).size;
 
-    const elemTiles = $('<div></div>').appendTo(elemContent)
-        .addClass('dashboard-tiles');
+    // Archived is a target lifecycle of Requirement Approvals besides Released (process
+    // description, 3.1.9 / 3.2.2). Such rows are neither done nor open, so they get their own
+    // tile instead of inflating the open count.
+    const isDone     = function(part) { return part.details[fieldIds.lifecycle] === config.dashboard.lifecycleDone; };
+    const isArchived = function(part) { return part.details[fieldIds.lifecycle] === config.dashboard.lifecycleArchived; };
+    const isOpen     = function(part) { return !isDone(part) && !isArchived(part); };
+    const noLevel    = function(part) { return isBlank(part.details[fieldIds.level]); };
 
     // The filter functions are what a click on the tile applies to the Navigator; the total
     // tile has none, so clicking it clears an active filter instead.
-    insertDashboardTile(elemTiles, 'Requirements', parts.length, countUnique + ' unique (reused ones only once)', '', null);
-    insertDashboardTile(elemTiles, 'Done', countDone, 'Lifecycle ' + config.dashboard.lifecycleDone, 'dashboard-tile-done', function(part) {
-        return part.details[fieldIds.lifecycle] === config.dashboard.lifecycleDone;
-    });
-    insertDashboardTile(elemTiles, 'Open', parts.length - countDone, 'Any other lifecycle', 'dashboard-tile-open', function(part) {
-        return part.details[fieldIds.lifecycle] !== config.dashboard.lifecycleDone;
-    });
-    insertDashboardTile(elemTiles, 'Without REQ Level', countNoLevel, 'Required for the hierarchy check', (countNoLevel > 0) ? 'dashboard-tile-warning' : '', function(part) {
-        return isBlank(part.details[fieldIds.level]);
-    });
+    const elemStatus = insertDashboardSection(elemContent, 'Status');
+
+    insertDashboardTile(elemStatus, 'Requirements', parts.length, countUnique + ' unique (reused ones only once)', '', null);
+    insertDashboardFilterTile(elemStatus, parts, 'Done', 'Lifecycle ' + config.dashboard.lifecycleDone, 'dashboard-tile-done', isDone);
+    insertDashboardFilterTile(elemStatus, parts, 'Open', 'Any other lifecycle', 'dashboard-tile-open', isOpen);
+    insertDashboardFilterTile(elemStatus, parts, 'Archived', 'Lifecycle ' + config.dashboard.lifecycleArchived, '', isArchived);
+
+    const elemQuality = insertDashboardSection(elemContent, 'Data Quality');
+
+    insertDashboardFilterTile(elemQuality, parts, 'Without REQ Level', 'Required for the hierarchy check', 'dashboard-tile-warning', noLevel);
 
     const elemCharts = $('<div></div>').appendTo(elemContent)
         .addClass('dashboard-charts');
@@ -878,6 +925,17 @@ function insertDashboardBarChart(elemParent, id, title, fieldLabel, fieldId, gro
     });
 
 }
+// Tile whose value is the number of rows matching the filter. Warning tiles are only
+// highlighted when there actually is something to look at.
+function insertDashboardFilterTile(elemParent, parts, label, subtitle, className, filter) {
+
+    const count = parts.filter(filter).length;
+
+    if((className === 'dashboard-tile-warning') && (count === 0)) className = '';
+
+    return insertDashboardTile(elemParent, label, count, subtitle, className, filter);
+
+}
 function insertDashboardTile(elemParent, label, value, subtitle, className, filter) {
 
     const elemTile = $('<div></div>').appendTo(elemParent)
@@ -941,7 +999,7 @@ function applyDashboardFilter(label, filter) {
 
     clearDashboardFilter();
 
-    const edgeIds = new Set(dashboardData.parts.filter(filter).map(function(part) { return String(part.edgeId); }));
+    const edgeIds = new Set(getDashboardParts().filter(filter).map(function(part) { return String(part.edgeId); }));
 
     let parents      = [];
     let countMatches = 0;

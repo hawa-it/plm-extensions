@@ -59,6 +59,11 @@ body.dashboard-mode #add { display : none; }
     background  : var(--color-surface-level-2);
     padding     : 8px 12px;
 }
+.dashboard-section-title {
+    font-weight : bold;
+    margin-top  : 8px;
+    opacity     : 0.8;
+}
 .dashboard-tiles {
     display               : grid;
     gap                   : 12px;
