@@ -154,7 +154,9 @@ exports.applications = {
                     preparation : [ 'Definition' ],
                     review      : [ 'Internal Review', 'External Review' ]
                 },
-                validationResults : [ 'Success', 'Conditional Success', 'Failed', 'Pending' ] // Display order, values as written by the script above
+                validationResults : [ 'Success', 'Conditional Success', 'Failed', 'Pending' ], // Display order, values as written by the script above
+                validationFailed  : 'Failed',
+                testDefinitionFieldIds : [ 'TEST_PROCEDURE', 'EXPECTED_RESULT', 'SUCCESS_CRITERIA' ] // Optional in the BOM view, enables tile "Not Validatable"
             },
             panels : {
                 insertBOM : {

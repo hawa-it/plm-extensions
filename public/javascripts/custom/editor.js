@@ -773,8 +773,9 @@ function renderDashboard() {
     // key missing entirely means the field is not part of the BOM view - a configuration
     // error that would otherwise silently show up as zero counts.
     const fieldIds      = config.dashboard.fieldIds;
-    const missingFields = (dashboardData.parts.length === 0) ? [] : Object.values(fieldIds).filter(function(fieldId) {
-        return !dashboardData.parts[0].details.hasOwnProperty(fieldId);
+    const testFieldIds  = config.dashboard.testDefinitionFieldIds || [];
+    const missingFields = (dashboardData.parts.length === 0) ? [] : Object.values(fieldIds).concat(testFieldIds).filter(function(fieldId) {
+        return !hasDashboardField(fieldId);
     });
 
     if(missingFields.length > 0) {
@@ -804,6 +805,32 @@ function renderDashboard() {
     insertDashboardFilterTile(elemStatus, parts, 'Done', 'Lifecycle ' + config.dashboard.lifecycleDone, 'dashboard-tile-done', isDone);
     insertDashboardFilterTile(elemStatus, parts, 'Open', 'Any other lifecycle', 'dashboard-tile-open', isOpen);
     insertDashboardFilterTile(elemStatus, parts, 'Archived', 'Lifecycle ' + config.dashboard.lifecycleArchived, '', isArchived);
+
+    // Validation, see process description: requirements are to be released before they get
+    // validated (5.6), validations continue until all relevant requirements are covered
+    // (4.1, step 6), and failed ones need a decision by project management (5.10).
+    // "Validated" means a closed validation has written a result, whatever it is.
+    const isValidated = function(part) { return !isBlank(part.details[fieldIds.validation]); };
+    const isFailed    = function(part) { return part.details[fieldIds.validation] === config.dashboard.validationFailed; };
+
+    const elemValidation = insertDashboardSection(elemContent, 'Validation');
+
+    insertDashboardFilterTile(elemValidation, parts, 'Not Fulfilled', 'Latest result ' + config.dashboard.validationFailed + ', decision needed', 'dashboard-tile-warning', isFailed);
+    insertDashboardFilterTile(elemValidation, parts, 'Released, Not Validated', 'Validation still to be done', 'dashboard-tile-open', function(part) {
+        return isDone(part) && !isValidated(part);
+    });
+    insertDashboardFilterTile(elemValidation, parts, 'Validated, Not Released', 'Should be released before validation', 'dashboard-tile-warning', function(part) {
+        return isValidated(part) && isOpen(part);
+    });
+
+    // Without a test definition a requirement cannot be validated - only shown if the test
+    // definition fields are part of the dashboard's BOM view (they are long text fields, so
+    // adding them makes the request larger).
+    if((testFieldIds.length > 0) && testFieldIds.every(hasDashboardField)) {
+        insertDashboardFilterTile(elemValidation, parts, 'Not Validatable', 'Released, but test definition incomplete', 'dashboard-tile-warning', function(part) {
+            return isDone(part) && testFieldIds.some(function(fieldId) { return isBlank(part.details[fieldId]); });
+        });
+    }
 
     const elemQuality = insertDashboardSection(elemContent, 'Data Quality');
 
