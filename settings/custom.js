@@ -138,6 +138,23 @@ exports.applications = {
             },{
                 workspace : 'equipments'
             }],
+            dashboard : { // Requirements Dashboard (custom/editor.js), always shows the saved state of the open structure
+                bomViewName : 'Requirements Dashboard', // Own BOM view, so the editor's "Requirements Overview" stays untouched
+                fieldIds    : {
+                    level      : 'REQ_LEVEL',
+                    lifecycle  : 'LIFECYCLE',
+                    category   : 'REQUIREMENT_TYPE',
+                    reused     : 'REUSED',
+                    change     : 'WORKING_CHANGE_ORDER',    // "Change Pending": open Requirement Approval (workspace 508)
+                    validation : 'LATEST_VALIDATION_RESULT' // Written by "REQ - Requirement Validations WF Actions.js" on CLOSE_1
+                },
+                lifecycleDone     : 'Released', // Counts as done, every other lifecycle value as open
+                approvalStates    : {           // Workflow states of Requirement Approvals (workspace 508)
+                    preparation : [ 'Definition' ],
+                    review      : [ 'Internal Review', 'External Review' ]
+                },
+                validationResults : [ 'Success', 'Conditional Success', 'Failed', 'Pending' ] // Display order, values as written by the script above
+            },
             panels : {
                 insertBOM : {
                     hideDescriptor : false // Shows the item Descriptor (Number + Title) per node in the Navigator tree
