@@ -753,6 +753,106 @@ function renderDashboard() {
     insertDashboardTile(elemTiles, 'Open', parts.length - countDone, 'Any other lifecycle', 'dashboard-tile-open');
     insertDashboardTile(elemTiles, 'Without REQ Level', countNoLevel, 'Required for the hierarchy check', (countNoLevel > 0) ? 'dashboard-tile-warning' : '');
 
+    const elemCharts = $('<div></div>').appendTo(elemContent)
+        .addClass('dashboard-charts');
+
+    // Known levels first, in hierarchy order (same ranking as the save-time check)
+    insertDashboardBarChart(elemCharts, 'dashboard-chart-level', 'Requirements by REQ Level',
+        getDashboardGroups(parts, fieldIds.level, Object.keys(config.wsMain.reqLevelRank || {})));
+
+}
+
+// Groups the rows by the value of one field: given values first in the given order, then any
+// other value found (sorted), then empty ones - so values not yet known to the configuration
+// still show up instead of being dropped.
+function getDashboardGroups(parts, fieldId, order) {
+
+    let counts = {};
+    let empty  = 0;
+
+    for(let part of parts) {
+        const value = part.details[fieldId];
+        if(isBlank(value)) empty++;
+        else counts[value] = (counts[value] || 0) + 1;
+    }
+
+    const others = Object.keys(counts).filter(function(value) { return !order.includes(value); }).sort();
+    const groups = order.concat(others).filter(function(value) { return counts.hasOwnProperty(value); }).map(function(value) {
+        return { label : value, value : value, count : counts[value] };
+    });
+
+    if(empty > 0) groups.push({ label : '(empty)', value : '', count : empty });
+
+    return groups;
+
+}
+
+// Chart.js is only needed while the dashboard is in use, so the library (the UMD build, see
+// libs/chart.umd.js) is loaded on first use rather than on every editor start, and without
+// touching editor.pug.
+let dashboardCharts = {};
+
+function loadChartLibrary(callback) {
+
+    if(typeof Chart !== 'undefined') { callback(); return; }
+
+    // The UMD build only sets the global Chart if no AMD loader (define.amd) is present on the
+    // page, otherwise it registers there instead - report that rather than failing silently.
+    $.ajax({ url : '/javascripts/libs/chart.umd.js', dataType : 'script', cache : true })
+        .done(function() {
+            if(typeof Chart === 'undefined') showErrorMessage('Dashboard', 'Chart library loaded, but Chart is not available globally.');
+            else callback();
+        })
+        .fail(function() { showErrorMessage('Dashboard', 'Chart library could not be loaded.'); });
+
+}
+function insertDashboardBarChart(elemParent, id, title, groups) {
+
+    const elemChart = $('<div></div>').appendTo(elemParent)
+        .addClass('dashboard-chart')
+        .addClass('surface-level-2');
+
+    $('<div></div>').appendTo(elemChart)
+        .addClass('dashboard-chart-title')
+        .html(title);
+
+    const elemCanvas = $('<canvas></canvas>').attr('id', id);
+
+    $('<div></div>').appendTo(elemChart)
+        .addClass('dashboard-chart-canvas')
+        .css('height', (40 + (groups.length * 36)) + 'px')
+        .append(elemCanvas);
+
+    loadChartLibrary(function() {
+
+        if(!isBlank(dashboardCharts[id])) dashboardCharts[id].destroy();
+
+        // Colors are read from the theme variables, so the chart follows light and dark theme
+        const style     = getComputedStyle(document.body);
+        const colorFont = style.getPropertyValue('--color-font').trim();
+        const colorBar  = style.getPropertyValue('--color-blue-500').trim();
+        const colorGrid = style.getPropertyValue('--color-surface-level-4').trim();
+
+        dashboardCharts[id] = new Chart(elemCanvas.get(0), {
+            type : 'bar',
+            data : {
+                labels   : groups.map(function(group) { return group.label; }),
+                datasets : [{ data : groups.map(function(group) { return group.count; }), backgroundColor : colorBar }]
+            },
+            options : {
+                indexAxis           : 'y',
+                maintainAspectRatio : false,
+                animation           : false,
+                plugins             : { legend : { display : false } },
+                scales              : {
+                    x : { beginAtZero : true, ticks : { precision : 0, color : colorFont }, grid : { color : colorGrid } },
+                    y : { ticks : { color : colorFont }, grid : { display : false } }
+                }
+            }
+        });
+
+    });
+
 }
 function insertDashboardTile(elemParent, label, value, subtitle, className) {
 

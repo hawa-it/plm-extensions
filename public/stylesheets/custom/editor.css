@@ -83,3 +83,18 @@ body.dashboard-mode #add { display : none; }
     font-size : 12px;
     opacity   : 0.7;
 }
+.dashboard-charts {
+    display               : grid;
+    gap                   : 12px;
+    grid-template-columns : repeat(auto-fill, minmax(420px, 1fr));
+}
+.dashboard-chart {
+    padding : 12px 16px;
+}
+.dashboard-chart-title {
+    font-weight   : bold;
+    margin-bottom : 8px;
+}
+.dashboard-chart-canvas {
+    position : relative;
+}
