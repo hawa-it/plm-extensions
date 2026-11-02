@@ -769,12 +769,17 @@ function renderDashboard() {
     insertDashboardBarChart(elemCharts, 'dashboard-chart-level', 'Requirements by REQ Level', 'REQ Level', fieldIds.level,
         getDashboardGroups(parts, fieldIds.level, Object.keys(config.wsMain.reqLevelRank || {})));
 
+    // LATEST_VALIDATION_RESULT is only written when a validation process gets closed (see
+    // config.dashboard), so validations still running are not reflected - said in the title.
+    insertDashboardBarChart(elemCharts, 'dashboard-chart-validation', 'Latest Validation Result (closed validations only)', 'Validation', fieldIds.validation,
+        getDashboardGroups(parts, fieldIds.validation, config.dashboard.validationResults || [], '(not validated)'));
+
 }
 
 // Groups the rows by the value of one field: given values first in the given order, then any
 // other value found (sorted), then empty ones - so values not yet known to the configuration
 // still show up instead of being dropped.
-function getDashboardGroups(parts, fieldId, order) {
+function getDashboardGroups(parts, fieldId, order, emptyLabel) {
 
     let counts = {};
     let empty  = 0;
@@ -790,7 +795,7 @@ function getDashboardGroups(parts, fieldId, order) {
         return { label : value, value : value, count : counts[value] };
     });
 
-    if(empty > 0) groups.push({ label : '(empty)', value : '', count : empty });
+    if(empty > 0) groups.push({ label : emptyLabel || '(empty)', value : '', count : empty });
 
     return groups;
 
