@@ -652,7 +652,7 @@ function toggleDashboard() {
 // own BOM view (config.dashboard.bomViewName) rather than reusing bomPartsList: the editor
 // never refreshes bomPartsList after saving, and its own view lacks fields such as Change
 // Pending. Unsaved edits are therefore excluded by design and only reported as a count.
-let dashboardData = { link : '', parts : [], stale : true, loading : false, timestamp : null };
+let dashboardData = { link : '', parts : [], stale : true, loading : false, timestamp : null, approvalStates : {} };
 
 function showDashboard() {
 
@@ -712,11 +712,55 @@ function loadDashboardData() {
             dashboardData.stale     = false;
             dashboardData.timestamp = new Date();
 
-            renderDashboard();
+            loadDashboardApprovalStates(renderDashboard);
 
         });
 
     });
+
+}
+// "Change Pending" (WORKING_CHANGE_ORDER) names the open Requirement Approval of a row, but not
+// its workflow state - which is what tells preparation (Definition) from review apart. The
+// details of each distinct approval are fetched once (a structure usually has only a few).
+// getBOMPartsList (routes/plm.js) keeps the raw field value in part.fields, which carries the
+// link, while part.details only holds its title. Rows whose value has no link, or whose
+// approval could not be read, end up with an unknown state rather than a guessed one.
+function getDashboardChangeLink(part) {
+
+    const field = part.fields.find(function(field) { return field.fieldId === config.dashboard.fieldIds.change; });
+    const value = isBlank(field) ? null : field.value;
+
+    return (!isBlank(value) && (typeof value === 'object') && !isBlank(value.link)) ? value.link : '';
+
+}
+function loadDashboardApprovalStates(callback) {
+
+    dashboardData.approvalStates = {};
+
+    if(!hasDashboardField(config.dashboard.fieldIds.change)) { callback(); return; }
+
+    const links = [...new Set(dashboardData.parts.map(getDashboardChangeLink).filter(function(link) { return !isBlank(link); }))];
+
+    if(links.length === 0) { callback(); return; }
+
+    showDashboardMessage('Loading ' + links.length + ' Requirement Approval(s) ...');
+
+    Promise.all(links.map(function(link) { return $.get('/plm/details', { link : link }); })).then(function(responses) {
+
+        responses.forEach(function(response, index) {
+            if(!response.error && !isBlank(response.data.currentState)) dashboardData.approvalStates[links[index]] = response.data.currentState.title;
+        });
+
+        callback();
+
+    });
+
+}
+function getDashboardApprovalState(part) {
+
+    if(isBlank(part.details[config.dashboard.fieldIds.change])) return null;    // No change pending
+
+    return dashboardData.approvalStates[getDashboardChangeLink(part)] || '';    // '' = state unknown
 
 }
 function showDashboardMessage(message) {
@@ -805,6 +849,30 @@ function renderDashboard() {
     insertDashboardFilterTile(elemStatus, parts, 'Done', 'Lifecycle ' + config.dashboard.lifecycleDone, 'dashboard-tile-done', isDone);
     insertDashboardFilterTile(elemStatus, parts, 'Open', 'Any other lifecycle', 'dashboard-tile-open', isOpen);
     insertDashboardFilterTile(elemStatus, parts, 'Archived', 'Lifecycle ' + config.dashboard.lifecycleArchived, '', isArchived);
+
+    // Requirement Approvals (workspace 508) by workflow state, see config.dashboard.approvalStates
+    if(hasDashboardField(fieldIds.change)) {
+
+        const states  = config.dashboard.approvalStates;
+        const inState = function(list) { return function(part) { return list.includes(getDashboardApprovalState(part)); }; };
+
+        insertDashboardFilterTile(elemStatus, parts, 'In Preparation', 'Approval in ' + states.preparation.join(' / '), 'dashboard-tile-open', inState(states.preparation));
+        insertDashboardFilterTile(elemStatus, parts, 'In Review', 'Approval in ' + states.review.join(' / '), 'dashboard-tile-open', inState(states.review));
+
+        // A released row with a pending change is being revised (process description, 5.7)
+        insertDashboardFilterTile(elemStatus, parts, 'In Revision', 'Released, change pending', '', function(part) {
+            return isDone(part) && (getDashboardApprovalState(part) !== null);
+        });
+
+        const countUnknown = parts.filter(function(part) { return getDashboardApprovalState(part) === ''; }).length;
+
+        if(countUnknown > 0) {
+            insertDashboardFilterTile(elemStatus, parts, 'Change Pending, State Unknown', 'Approval state could not be read', 'dashboard-tile-warning', function(part) {
+                return getDashboardApprovalState(part) === '';
+            });
+        }
+
+    }
 
     // Validation, see process description: requirements are to be released before they get
     // validated (5.6), validations continue until all relevant requirements are covered
