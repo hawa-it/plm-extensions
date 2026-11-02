@@ -600,9 +600,20 @@ $(document).ready(function() {
         .addClass('panel-title')
         .append($('<div></div>').addClass('panel-title-main').html('Dashboard'));
 
-    $('<div></div>').appendTo(elemHeader)
+    const elemControls = $('<div></div>').appendTo(elemHeader)
         .attr('id', 'dashboard-controls')
         .addClass('panel-controls');
+
+    $('<div></div>').appendTo(elemControls)
+        .attr('id', 'dashboard-refresh')
+        .addClass('button')
+        .addClass('with-icon')
+        .addClass('icon-refresh')
+        .attr('title', 'Reload the saved state from Fusion Manage')
+        .html('Refresh')
+        .click(function() {
+            loadDashboardData();
+        });
 
     $('<div></div>').appendTo(elemDashboard)
         .attr('id', 'dashboard-content')
@@ -617,5 +628,147 @@ function toggleDashboard() {
     $('body').toggleClass('dashboard-mode');
     $('#button-toggle-dashboard').toggleClass('toggle-on').toggleClass('toggle-off');
 
+    if($('body').hasClass('dashboard-mode')) showDashboard();
+
 }
+
+// The dashboard always shows the saved state as returned by Fusion Manage, loaded through its
+// own BOM view (config.dashboard.bomViewName) rather than reusing bomPartsList: the editor
+// never refreshes bomPartsList after saving, and its own view lacks fields such as Change
+// Pending. Unsaved edits are therefore excluded by design and only reported as a count.
+let dashboardData = { link : '', parts : [], stale : true, loading : false, timestamp : null };
+
+function showDashboard() {
+
+    if(dashboardData.stale || (dashboardData.link !== links.root)) loadDashboardData();
+    else renderDashboard();
+
+}
+function loadDashboardData() {
+
+    if(isBlank(config.dashboard)) return;
+    if(dashboardData.loading) return;
+
+    // Template, draft and empty modes have no saved structure of their own yet (in template
+    // mode links.root even points at the template), so there is nothing meaningful to show.
+    if((editMode !== 'existing') || isBlank(links.root)) {
+        showDashboardMessage('The dashboard is available once this structure has been saved.');
+        return;
+    }
+
+    const link = links.root;
+
+    dashboardData.loading = true;
+    showDashboardMessage('Loading saved state ...');
+
+    $.get('/plm/bom-views-and-fields', { link : link }, function(response) {
+
+        const bomViews = (response.error || !Array.isArray(response.data)) ? [] : response.data;
+        const bomView  = bomViews.find(function(view) { return view.name === config.dashboard.bomViewName; });
+
+        if(isBlank(bomView)) {
+            dashboardData.loading = false;
+            showDashboardMessage('BOM view "' + config.dashboard.bomViewName + '" could not be found.' + (response.error ? ' ' + response.message : ''));
+            return;
+        }
+
+        // Same depth and revision bias as the Navigator, so both show the same revisions
+        $.get('/plm/bom', {
+            link            : link,
+            depth           : settings.tree.depth,
+            revisionBias    : settings.tree.revisionBias,
+            viewId          : bomView.id,
+            getBOMPartsList : true
+        }, function(response) {
+
+            dashboardData.loading = false;
+
+            if(link !== links.root) return;
+
+            if(response.error) {
+                showDashboardMessage(response.message);
+                return;
+            }
+
+            dashboardData.link      = link;
+            dashboardData.parts     = response.data.bomPartsList.slice(1); // Index 0 is the root itself
+            dashboardData.stale     = false;
+            dashboardData.timestamp = new Date();
+
+            renderDashboard();
+
+        });
+
+    });
+
+}
+function showDashboardMessage(message) {
+
+    $('#dashboard-content').html('').append(
+        $('<div></div>').addClass('dashboard-message').html(message)
+    );
+
+}
+function renderDashboard() {
+
+    const elemContent  = $('#dashboard-content').html('');
+    const countUnsaved = getDashboardUnsavedCount();
+
+    $('<div></div>').appendTo(elemContent)
+        .addClass('dashboard-status')
+        .html('Saved state of ' + dashboardData.timestamp.toLocaleTimeString() + ', ' + dashboardData.parts.length + ' requirement rows');
+
+    if(countUnsaved > 0) {
+        $('<div></div>').appendTo(elemContent)
+            .addClass('dashboard-unsaved')
+            .html(countUnsaved + ' unsaved change(s) in the Content Editor are not included. Save them to update the dashboard.');
+    }
+
+}
+
+// Counts rows whose saved state differs from what the Content Editor shows, using the same
+// rules saveChanges() (apps/editor.js) applies to decide what to send - read-only here, so
+// nothing gets marked or modified. Rows added and deleted again without saving are ignored.
+function getDashboardUnsavedCount() {
+
+    let count = 0;
+
+    $('#editor-content').children('.editor-item').each(function() {
+
+        const elemItem = $(this);
+        const link     = elemItem.attr('data-link');
+
+        if(elemItem.hasClass('deleted')) {
+            if(!isBlank(link)) count++;
+        } else if(isBlank(link)) {
+            count++;
+        } else if(elemItem.hasClass('changed') || elemItem.hasClass('pending-reuse')) {
+            count++;
+        } else if(isBlank(elemItem.attr('data-edgeid')) || isBlank(elemItem.attr('data-parent'))) {
+            count++;
+        } else if(elemItem.attr('data-parent') !== getParentLink(elemItem)) {
+            count++;
+        } else if(elemItem.attr('data-number') !== elemItem.attr('data-position')) {
+            count++;
+        }
+
+    });
+
+    return count;
+
+}
+
+// updateAfterTemplateProcessing (apps/editor.js) only runs at the very end of a save run (see
+// editBOMLinks), which makes it the one reliable "save finished" point to hook into. The
+// dashboard is only marked stale here and reloads from Fusion Manage the next time it is
+// shown, since the Save button is not reachable while the dashboard is open anyway.
+const baseUpdateAfterTemplateProcessing = updateAfterTemplateProcessing;
+
+updateAfterTemplateProcessing = function() {
+
+    baseUpdateAfterTemplateProcessing();
+
+    dashboardData.stale = true;
+
+};
 

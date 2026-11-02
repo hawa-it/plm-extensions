@@ -44,3 +44,18 @@ body.dashboard-mode #editor,
 body.dashboard-mode #side,
 body.dashboard-mode #pins,
 body.dashboard-mode #add { display : none; }
+#dashboard-content {
+    display        : flex;
+    flex-direction : column;
+    gap            : 12px;
+}
+.dashboard-message,
+.dashboard-status {
+    opacity : 0.7;
+    padding : 8px 0px;
+}
+.dashboard-unsaved {
+    border-left : 4px solid var(--color-status-yellow);
+    background  : var(--color-surface-level-2);
+    padding     : 8px 12px;
+}
