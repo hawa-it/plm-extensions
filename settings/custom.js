@@ -142,14 +142,17 @@ exports.applications = {
                 bomViewName : 'Requirements Dashboard', // Own BOM view, so the editor's "Requirements Overview" stays untouched
                 fieldIds    : {
                     level      : 'REQ_LEVEL',
+                    source     : 'SOURCE',
+                    type       : 'TYPE',
                     lifecycle  : 'LIFECYCLE',
-                    category   : 'REQUIREMENT_TYPE',
+                    category   : 'REQUIREMENT_TYPE',  // Field name "REQ CATEGORY"
                     reused     : 'REUSED',
                     change     : 'WORKING_CHANGE_ORDER',    // "Change Pending": open Requirement Approval (workspace 508)
                     validation : 'LATEST_VALIDATION_RESULT' // Written by "REQ - Requirement Validations WF Actions.js" on CLOSE_1
                 },
                 lifecycleDone     : 'Released', // Counts as done, every other lifecycle value as open (except archived)
                 lifecycleArchived : 'Archived', // Second target lifecycle of Requirement Approvals, neither done nor open
+                categoryCatalog   : 'Catalog',  // REQ CATEGORY value of catalog requirements
                 approvalStates    : {           // Workflow states of Requirement Approvals (workspace 508)
                     preparation : [ 'Definition' ],
                     review      : [ 'Internal Review', 'External Review' ]

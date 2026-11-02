@@ -836,6 +836,26 @@ function renderDashboard() {
 
     insertDashboardFilterTile(elemQuality, parts, 'Without REQ Level', 'Required for the hierarchy check', 'dashboard-tile-warning', noLevel);
 
+    // REQ Level, Source and Type are to be filled in by the user before release (process
+    // description, appendix 6.1)
+    insertDashboardFilterTile(elemQuality, parts, 'Incomplete', 'Not released, REQ Level, Source or Type empty', 'dashboard-tile-warning', function(part) {
+        return isOpen(part) && [ fieldIds.level, fieldIds.source, fieldIds.type ].some(function(fieldId) { return isBlank(part.details[fieldId]); });
+    });
+
+    // Catalog requirements are meant to be reused only once released (5.5)
+    insertDashboardFilterTile(elemQuality, parts, 'Catalog, Not Released', 'Reused before its release', 'dashboard-tile-warning', function(part) {
+        return (part.details[fieldIds.category] === config.dashboard.categoryCatalog) && isOpen(part);
+    });
+
+    // Releasing a requirement releases all its sub requirements (5.6), so an unreleased row
+    // below a released one points to a later change or an inconsistency worth checking.
+    const parentOf = getDashboardParents();
+
+    insertDashboardFilterTile(elemQuality, parts, 'Unreleased Below Released', 'Parent released, this row not', 'dashboard-tile-warning', function(part) {
+        const parent = parentOf.get(part);
+        return !isBlank(parent) && isDone(parent) && isOpen(part);
+    });
+
     const elemCharts = $('<div></div>').appendTo(elemContent)
         .addClass('dashboard-charts');
 
@@ -851,6 +871,22 @@ function renderDashboard() {
         validationGroups, validationGroups.map(function(group) { return getValidationColor(group.value); }));
 
     insertDashboardChapterChart(elemCharts, parts, validationGroups);
+
+}
+
+// Parent row of each row, from the tree order and levels (the root itself is not included)
+function getDashboardParents() {
+
+    let result  = new Map();
+    let parents = [];
+
+    for(let part of dashboardData.parts) {
+        parents[part.level] = part;
+        parents.length      = part.level + 1;
+        if(part.level > 1) result.set(part, parents[part.level - 1]);
+    }
+
+    return result;
 
 }
 
