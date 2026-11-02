@@ -724,6 +724,49 @@ function renderDashboard() {
             .html(countUnsaved + ' unsaved change(s) in the Content Editor are not included. Save them to update the dashboard.');
     }
 
+    // getBOMPartsList (routes/plm.js) sets every field of the view to null when empty, so a
+    // key missing entirely means the field is not part of the BOM view - a configuration
+    // error that would otherwise silently show up as zero counts.
+    const fieldIds      = config.dashboard.fieldIds;
+    const missingFields = (dashboardData.parts.length === 0) ? [] : Object.values(fieldIds).filter(function(fieldId) {
+        return !dashboardData.parts[0].details.hasOwnProperty(fieldId);
+    });
+
+    if(missingFields.length > 0) {
+        $('<div></div>').appendTo(elemContent)
+            .addClass('dashboard-unsaved')
+            .html('Missing in BOM view "' + config.dashboard.bomViewName + '": ' + missingFields.join(', '));
+    }
+
+    // Counted per row, the same way the Navigator lists them (a reused requirement appears
+    // once per usage), so a Navigator filter by tile later shows exactly the number on it.
+    const parts        = dashboardData.parts;
+    const countUnique  = new Set(parts.map(function(part) { return part.link; })).size;
+    const countDone    = parts.filter(function(part) { return part.details[fieldIds.lifecycle] === config.dashboard.lifecycleDone; }).length;
+    const countNoLevel = parts.filter(function(part) { return isBlank(part.details[fieldIds.level]); }).length;
+
+    const elemTiles = $('<div></div>').appendTo(elemContent)
+        .addClass('dashboard-tiles');
+
+    insertDashboardTile(elemTiles, 'Requirements', parts.length, countUnique + ' unique (reused ones only once)');
+    insertDashboardTile(elemTiles, 'Done', countDone, 'Lifecycle ' + config.dashboard.lifecycleDone, 'dashboard-tile-done');
+    insertDashboardTile(elemTiles, 'Open', parts.length - countDone, 'Any other lifecycle', 'dashboard-tile-open');
+    insertDashboardTile(elemTiles, 'Without REQ Level', countNoLevel, 'Required for the hierarchy check', (countNoLevel > 0) ? 'dashboard-tile-warning' : '');
+
+}
+function insertDashboardTile(elemParent, label, value, subtitle, className) {
+
+    const elemTile = $('<div></div>').appendTo(elemParent)
+        .addClass('dashboard-tile')
+        .addClass('surface-level-2')
+        .addClass(className || '');
+
+    $('<div></div>').appendTo(elemTile).addClass('dashboard-tile-value').html(value);
+    $('<div></div>').appendTo(elemTile).addClass('dashboard-tile-label').html(label);
+    $('<div></div>').appendTo(elemTile).addClass('dashboard-tile-subtitle').html(subtitle);
+
+    return elemTile;
+
 }
 
 // Counts rows whose saved state differs from what the Content Editor shows, using the same

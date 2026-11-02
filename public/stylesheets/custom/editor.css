@@ -59,3 +59,27 @@ body.dashboard-mode #add { display : none; }
     background  : var(--color-surface-level-2);
     padding     : 8px 12px;
 }
+.dashboard-tiles {
+    display               : grid;
+    gap                   : 12px;
+    grid-template-columns : repeat(auto-fill, minmax(200px, 1fr));
+}
+.dashboard-tile {
+    border-left : 4px solid var(--color-surface-level-4);
+    padding     : 12px 16px;
+}
+.dashboard-tile-done    { border-left-color : var(--color-status-green);  }
+.dashboard-tile-open    { border-left-color : var(--color-blue-500);      }
+.dashboard-tile-warning { border-left-color : var(--color-status-yellow); }
+.dashboard-tile-value {
+    font-size   : 32px;
+    font-weight : bold;
+    line-height : 40px;
+}
+.dashboard-tile-label {
+    font-weight : bold;
+}
+.dashboard-tile-subtitle {
+    font-size : 12px;
+    opacity   : 0.7;
+}
