@@ -818,7 +818,8 @@ function renderDashboard() {
     // error that would otherwise silently show up as zero counts.
     const fieldIds      = config.dashboard.fieldIds;
     const testFieldIds  = config.dashboard.testDefinitionFieldIds || [];
-    const missingFields = (dashboardData.parts.length === 0) ? [] : Object.values(fieldIds).concat(testFieldIds).filter(function(fieldId) {
+    const assessmentIds = (config.dashboard.assessmentFields || []).map(function(assessment) { return assessment.fieldId; });
+    const missingFields = (dashboardData.parts.length === 0) ? [] : Object.values(fieldIds).concat(testFieldIds, assessmentIds).filter(function(fieldId) {
         return !hasDashboardField(fieldId);
     });
 
@@ -939,6 +940,51 @@ function renderDashboard() {
         validationGroups, validationGroups.map(function(group) { return getValidationColor(group.value); }));
 
     insertDashboardChapterChart(elemCharts, parts, validationGroups);
+
+    insertDashboardBarChart(elemCharts, 'dashboard-chart-category', 'Requirements by REQ Category', 'REQ Category', fieldIds.category,
+        getDashboardGroups(parts, fieldIds.category, config.dashboard.categoryOrder || []));
+
+    if(hasDashboardField(fieldIds.validationDate)) {
+        insertDashboardBarChart(elemCharts, 'dashboard-chart-validation-age', 'Age of Latest Validation', 'Validation age', '',
+            getDashboardAgeGroups(parts, fieldIds.validationDate));
+    }
+
+    // Assessment picklists (Priority, Risk, Difficulty) - one chart per field configured and
+    // present in the BOM view, nothing shown as long as none is configured
+    for(let assessment of (config.dashboard.assessmentFields || [])) {
+        if(hasDashboardField(assessment.fieldId)) {
+            insertDashboardBarChart(elemCharts, 'dashboard-chart-assessment-' + assessment.fieldId, 'Requirements by ' + assessment.label, assessment.label, assessment.fieldId,
+                getDashboardGroups(parts, assessment.fieldId, assessment.order || []));
+        }
+    }
+
+}
+
+// Groups rows by the age of a date field, in days. Each group carries its own filter, as
+// age ranges cannot be matched by value equality like the other charts.
+function getDashboardAgeGroups(parts, fieldId) {
+
+    const now    = new Date();
+    const ranges = [
+        { label : 'Up to 30 days' , min : 0  , max : 30       },
+        { label : '31 to 90 days' , min : 31 , max : 90       },
+        { label : 'Over 90 days'  , min : 91 , max : Infinity }
+    ];
+
+    const getAge = function(part) {
+        const date = new Date(part.details[fieldId]);
+        return (isBlank(part.details[fieldId]) || isNaN(date)) ? null : Math.floor((now - date) / 86400000);
+    };
+
+    let groups = ranges.map(function(range) {
+        return { label : range.label, filter : function(part) { const age = getAge(part); return (age !== null) && (age >= range.min) && (age <= range.max); } };
+    });
+
+    groups.push({ label : '(no date)', filter : function(part) { return getAge(part) === null; } });
+
+    groups.forEach(function(group) { group.count = parts.filter(group.filter).length; });
+
+    return groups.filter(function(group) { return group.count > 0; });
 
 }
 
@@ -1162,7 +1208,7 @@ function insertDashboardBarChart(elemParent, id, title, fieldLabel, fieldId, gro
                 onClick             : function(e, elements) {
                     if(elements.length === 0) return;
                     const group = groups[elements[0].index];
-                    applyDashboardFilter(fieldLabel + ': ' + group.label, function(part) {
+                    applyDashboardFilter(fieldLabel + ': ' + group.label, group.filter || function(part) {
                         return (group.value === '') ? isBlank(part.details[fieldId]) : (part.details[fieldId] === group.value);
                     });
                 },

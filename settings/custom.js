@@ -148,8 +148,12 @@ exports.applications = {
                     category   : 'REQUIREMENT_TYPE',  // Field name "REQ CATEGORY"
                     reused     : 'REUSED',
                     change     : 'WORKING_CHANGE_ORDER',    // "Change Pending": open Requirement Approval (workspace 508)
-                    validation : 'LATEST_VALIDATION_RESULT' // Written by "REQ - Requirement Validations WF Actions.js" on CLOSE_1
+                    validation     : 'LATEST_VALIDATION_RESULT', // Written by "REQ - Requirement Validations WF Actions.js" on CLOSE_1
+                    validationDate : 'LATEST_VALIDATION_DATE'    // Written by the same script, enables chart "Age of Latest Validation"
                 },
+                categoryOrder     : [ 'Specification', 'Project', 'Catalog' ], // REQ CATEGORY values in display order
+                assessmentFields  : [ // Optional charts, e.g. { fieldId : '<ID>', label : 'Priority Assessment', order : [ ... ] } - field IDs still to be confirmed
+                ],
                 lifecycleDone     : 'Released', // Counts as done, every other lifecycle value as open (except archived)
                 lifecycleArchived : 'Archived', // Second target lifecycle of Requirement Approvals, neither done nor open
                 categoryCatalog   : 'Catalog',  // REQ CATEGORY value of catalog requirements
