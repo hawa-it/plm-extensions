@@ -165,6 +165,37 @@ exports.applications = {
                 validationFailed  : 'Failed',
                 testDefinitionFieldIds : [ 'TEST_PROCEDURE', 'EXPECTED_RESULT', 'SUCCESS_CRITERIA' ] // Optional in the BOM view, enables tile "Not Validatable"
             },
+            chapterView : { // Read-only chapter view (custom/editor.js), groups the loaded structure like the department's Excel
+                enabled            : true,
+                fieldIdChapter     : 'CHAPTER',  // Single Line Text, must be part of the BOM view "Requirements Overview"
+                fieldIdRegister    : 'REGISTER', // Single Selection (CUSTOM_LOOKUP_REQUIREMENT_REGISTER), same BOM view
+                fieldIdReqLevel    : 'REQ_LEVEL',
+                chapterSort        : 'first-occurrence', // or 'alphanumeric' (e.g. for "01 Plattform & Normen")
+                hideEmptyRegisters : false,              // false: empty registers are shown greyed out with (0)
+                columns : [                              // Only fields contained in the BOM view
+                    { fieldId : 'ID',          label : 'ID'          },
+                    { fieldId : 'TITLE',       label : 'Title'       },
+                    { fieldId : 'DESCRIPTION', label : 'Description' },
+                    { fieldId : 'REQ_LEVEL',   label : 'REQ Level'   }
+                ],
+                registers : [                            // Order = order of the tabs
+                    { label : 'Stakeholder',       value : 'Stakeholder Requirements',       reqLevel : 'Stakeholder Requirement' },
+                    { label : 'Tech Product',      value : 'Tech Product Requirements',      reqLevel : 'Product Requirement'     },
+                    { label : 'Digital Product',   value : 'Digital Product Requirements',   reqLevel : 'Product Requirement'     },
+                    { label : 'Tech Component',    value : 'Tech Component Requirements',    reqLevel : 'Component Requirement'   },
+                    { label : 'Digital Component', value : 'Digital Component Requirements', reqLevel : 'Component Requirement'   }
+                ],
+                labels : {
+                    toggle        : 'Chapter View',
+                    unassigned    : 'Unassigned',
+                    noChapter     : 'No Chapter',
+                    staleHint     : 'Loaded state. Unsaved changes appear after saving and reloading.',
+                    missingField  : 'Field not found in BOM view',
+                    emptyRegister : '0 Requirements',
+                    levelMismatch : 'REQ Level does not match this register. Expected: {expected}, actual: {actual}',
+                    notFound      : 'This requirement is no longer part of the Content Editor.'
+                }
+            },
             panels : {
                 insertBOM : {
                     hideDescriptor : false // Shows the item Descriptor (Number + Title) per node in the Navigator tree
