@@ -118,3 +118,105 @@ body.dashboard-mode #add { display : none; }
     background : var(--color-status-yellow);
     color      : #000;
 }
+
+/* Chapter View: read-only, replaces Navigator, Content Editor and side panels while active.
+   Those are hidden (not moved) like with the dashboard, so their own layout states are kept. */
+#chapter-view {
+    border-width : var(--border-v) var(--border-h);
+    display      : none;
+    left         : 0px;
+}
+body.chapter-view #chapter-view { display : block; }
+body.chapter-view #tree,
+body.chapter-view #editor,
+body.chapter-view #pins,
+body.chapter-view #side,
+body.chapter-view #add { display : none; }
+
+/* Hint and tabs stay on top, only the chapters scroll */
+#chapter-view-content {
+    display        : flex;
+    flex-direction : column;
+    gap            : 8px;
+    overflow       : hidden;
+}
+.chapter-view-hint {
+    opacity : 0.7;
+    padding : 8px 0px 0px;
+}
+.chapter-view-missing {
+    border-left : 4px solid var(--color-status-yellow);
+    background  : var(--color-surface-level-2);
+    padding     : 8px 12px;
+}
+.chapter-view-tabs { flex-shrink : 0; }
+.chapter-view-tabs > .chapter-view-tab-empty { opacity : 0.5; }
+.chapter-view-tab-contents {
+    flex       : 1;
+    min-height : 0px;
+    overflow-y : auto;
+}
+.chapter-view-tab {
+    display        : flex;
+    flex-direction : column;
+    gap            : 12px;
+    padding        : 4px 0px 12px;
+}
+.chapter-view-empty {
+    opacity : 0.7;
+    padding : 12px 0px;
+}
+
+/* Chapters */
+.chapter-view-chapter-header {
+    align-items : center;
+    background  : var(--color-surface-level-3);
+    cursor      : pointer;
+    display     : flex;
+    font-weight : bold;
+    gap         : 8px;
+    padding     : 6px 10px;
+}
+.chapter-view-chapter-header:hover { background : var(--color-hover-background); }
+.chapter-view-chapter-count { font-weight : normal; opacity : 0.7; }
+.chapter-view-chapter-none .chapter-view-chapter-title { font-style : italic; }
+.chapter-view-chapter.collapsed .chapter-view-table { display : none; }
+
+/* Requirement rows: fixed layout, one line per row, full text as tooltip */
+.chapter-view-table {
+    border-collapse : collapse;
+    table-layout    : fixed;
+    width           : 100%;
+}
+.chapter-view-table th {
+    font-size   : 12px;
+    font-weight : normal;
+    opacity     : 0.7;
+    text-align  : left;
+}
+.chapter-view-table th,
+.chapter-view-table td {
+    border-bottom : 1px solid var(--color-surface-level-3);
+    overflow      : hidden;
+    padding       : 4px 8px;
+    text-overflow : ellipsis;
+    white-space   : nowrap;
+}
+.chapter-view-table .chapter-view-col-check     { padding : 4px 0px; text-align : center; width : 28px; }
+.chapter-view-table .chapter-view-col-ID        { width : 150px; }
+.chapter-view-table .chapter-view-col-TITLE     { width : 30%; }
+.chapter-view-table .chapter-view-col-REQ_LEVEL { width : 200px; }
+.chapter-view-row { cursor : pointer; }
+.chapter-view-row:hover { background : var(--color-hover-background); }
+.chapter-view-row.chapter-view-row-nolink { cursor : default; }
+.chapter-view-row-mismatch .chapter-view-col-check .icon {
+    color     : var(--color-status-yellow);
+    font-size : 18px;
+}
+
+/* Target row in the Content Editor after a jump from the chapter view */
+.editor-item.chapter-view-highlight {
+    outline        : 3px solid var(--color-blue-500);
+    outline-offset : -3px;
+    transition     : outline-color 0.5s ease;
+}

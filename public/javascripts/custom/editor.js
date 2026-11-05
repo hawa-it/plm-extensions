@@ -1394,3 +1394,456 @@ updateAfterTemplateProcessing = function() {
 
 };
 
+// Chapter View: read-only view of the loaded structure grouped like the department's Excel -
+// one tab per register (REGISTER field), chapter headings (CHAPTER field) within, requirements
+// below. Navigator, Content Editor and BOM stay untouched, nothing is written to Fusion Manage.
+// Toggle and panel are inserted via DOM here, not in editor.pug, like the dashboard above.
+let chapterViewData    = null; // Built in the afterBOMCompletion wrap below, null while not available
+let chapterViewCapture = null; // Content Editor row ids collected while the core loop runs
+
+function getChapterViewConfig() {
+
+    return (!isBlank(config.chapterView) && config.chapterView.enabled) ? config.chapterView : null;
+
+}
+
+$(document).ready(function() {
+
+    const chapterConfig = getChapterViewConfig();
+
+    if(chapterConfig === null) return;
+
+    // Disabled until a structure has been loaded (not on #landing, #start or in template mode)
+    $('<div></div>')
+        .attr('id', 'button-toggle-chapter-view')
+        .addClass('button')
+        .addClass('with-toggle')
+        .addClass('toggle-off')
+        .addClass('disabled')
+        .attr('title', 'Click to toggle the read-only chapter view of the loaded structure on/off')
+        .text(chapterConfig.labels.toggle)
+        .insertBefore('#header-avatar')
+        .click(function() {
+            toggleChapterView();
+        });
+
+    const elemView = $('<div></div>')
+        .attr('id', 'chapter-view')
+        .addClass('surface-level-1')
+        .addClass('pos-abs-right')
+        .appendTo('#main');
+
+    const elemHeader = $('<div></div>').appendTo(elemView)
+        .addClass('panel-header');
+
+    $('<div></div>').appendTo(elemHeader)
+        .addClass('panel-title')
+        .append($('<div></div>').addClass('panel-title-main').text(chapterConfig.labels.toggle));
+
+    $('<div></div>').appendTo(elemView)
+        .attr('id', 'chapter-view-content')
+        .addClass('panel-content')
+        .addClass('surface-level-1');
+
+});
+
+// The core loop of afterBOMCompletion (apps/editor.js) assigns data-id from the global nextId
+// counter, not from the bomPartsList index - nextId keeps counting across inserts, so index and
+// row id only match on a first load. Recording the ids of the rows actually created during that
+// loop gives a reliable index -> row mapping for the jump into the Content Editor.
+const baseChapterInsertContentEditorElement = insertContentEditorElement;
+
+insertContentEditorElement = function(elemPrevious, link, number, revision, parent, edge, level, data) {
+
+    const elemTop = baseChapterInsertContentEditorElement(elemPrevious, link, number, revision, parent, edge, level, data);
+
+    if(chapterViewCapture !== null) chapterViewCapture.push(elemTop.attr('data-id'));
+
+    return elemTop;
+
+};
+
+const baseChapterAfterBOMCompletion = afterBOMCompletion;
+
+afterBOMCompletion = function(id, data) {
+
+    if((id !== 'tree') || (getChapterViewConfig() === null)) {
+        baseChapterAfterBOMCompletion(id, data);
+        return;
+    }
+
+    let editorIds = [];
+
+    chapterViewCapture = [];
+
+    try {
+        baseChapterAfterBOMCompletion(id, data);
+    } finally {
+        editorIds          = chapterViewCapture;
+        chapterViewCapture = null;
+    }
+
+    // In template mode the tree shows the template, not the structure being created, so there
+    // is no loaded state of its own to show (same reasoning as the dashboard).
+    if(editMode === 'template') {
+        chapterViewData = null;
+    } else {
+        // Exactly one row per entry after the root is expected; if not, the mapping cannot be
+        // trusted and the jump is disabled rather than landing on a wrong row.
+        if(editorIds.length !== (bomPartsList.length - 1)) {
+            console.warn('Chapter View: ' + editorIds.length + ' editor rows for ' + (bomPartsList.length - 1) + ' BOM entries, jump to editor disabled');
+            editorIds = [];
+        }
+        chapterViewData = buildChapterViewData(editorIds);
+        renderChapterView();
+    }
+
+    $('#button-toggle-chapter-view').toggleClass('disabled', chapterViewData === null);
+
+};
+
+// Picklist values arrive as title string from getBOMPartsList (routes/plm.js), but may also be
+// a { link, title } object - both are reduced to the display text.
+function getChapterViewValue(details, fieldId) {
+
+    if(isBlank(details) || isBlank(fieldId)) return '';
+
+    const value = details[fieldId];
+
+    if(isBlank(value)) return '';
+    if(typeof value === 'object') return isBlank(value.title) ? '' : String(value.title);
+
+    return String(value);
+
+}
+
+// getBOMPartsList sets every field of the view on every row (null if empty), the root included,
+// so a key missing on the root means the field is not part of the BOM view at all.
+function hasChapterViewField(fieldId) {
+
+    return (bomPartsList.length > 0) && !isBlank(bomPartsList[0].details) && bomPartsList[0].details.hasOwnProperty(fieldId);
+
+}
+
+function buildChapterViewData(editorIds) {
+
+    const chapterConfig = getChapterViewConfig();
+    const registers     = chapterConfig.registers.map(function(register) {
+        return { key : register.value, label : register.label, reqLevel : register.reqLevel || '', chapters : new Map(), count : 0 };
+    });
+    const unassigned    = { key : 'unassigned', label : chapterConfig.labels.unassigned, reqLevel : '', chapters : new Map(), count : 0 };
+    const seen          = new Set();
+
+    // Register values are matched case-insensitively, anything else ends up unassigned
+    const registerByValue = new Map(registers.map(function(register) { return [ register.key.trim().toLowerCase(), register ]; }));
+
+    // Index 0 is the root (the specification itself) and not shown
+    for(let index = 1; index < bomPartsList.length; index++) {
+
+        const part = bomPartsList[index];
+
+        // Rows without link are placeholders of a new structure, not part of the loaded state
+        if(isBlank(part.link)) continue;
+
+        // A reused requirement appears once per usage in the BOM, but only once here
+        if(seen.has(part.link)) continue;
+        seen.add(part.link);
+
+        const valueRegister = getChapterViewValue(part.details, chapterConfig.fieldIdRegister).trim().toLowerCase();
+        const register      = registerByValue.get(valueRegister) || unassigned;
+
+        // Grouping ignores case and surrounding blanks, the first spelling found is displayed
+        const chapterLabel = getChapterViewValue(part.details, chapterConfig.fieldIdChapter).trim();
+        const chapterKey   = chapterLabel.toLowerCase();
+
+        if(!register.chapters.has(chapterKey)) {
+            register.chapters.set(chapterKey, { label : chapterLabel, rows : [] });
+        }
+
+        register.chapters.get(chapterKey).rows.push({
+            details  : part.details,
+            id       : getChapterViewValue(part.details, 'ID'),
+            editorId : editorIds[index - 1] || ''
+        });
+
+        register.count++;
+
+    }
+
+    if(unassigned.count > 0) registers.push(unassigned);
+
+    return {
+        root          : links.root,
+        registers     : registers,
+        hasReqLevel   : hasChapterViewField(chapterConfig.fieldIdReqLevel),
+        missingFields : [ chapterConfig.fieldIdChapter, chapterConfig.fieldIdRegister ].filter(function(fieldId) {
+            return !hasChapterViewField(fieldId);
+        })
+    };
+
+}
+
+function renderChapterView() {
+
+    const chapterConfig = getChapterViewConfig();
+    const labels        = chapterConfig.labels;
+    const elemContent   = $('#chapter-view-content').html('');
+
+    if(chapterViewData === null) return;
+
+    // The view shows the state loaded with the structure, edits in the Content Editor are not
+    // reflected until saved and reloaded - said once on top instead of reloading automatically.
+    $('<div></div>').appendTo(elemContent)
+        .addClass('chapter-view-hint')
+        .text(labels.staleHint);
+
+    for(let fieldId of chapterViewData.missingFields) {
+        $('<div></div>').appendTo(elemContent)
+            .addClass('chapter-view-missing')
+            .text(labels.missingField + ': ' + fieldId);
+    }
+
+    const registers = chapterViewData.registers.filter(function(register) {
+        return !chapterConfig.hideEmptyRegisters || (register.count > 0);
+    });
+
+    if(registers.length === 0) return;
+
+    // Framework tabs (framework/styles.css); enableTabs() only runs on page load, so the clicks
+    // are bound here and handed to clickTab(), which matches tab and content by index.
+    const elemTabs = $('<div></div>').appendTo(elemContent)
+        .addClass('tabs')
+        .addClass('chapter-view-tabs')
+        .attr('data-tab-group', 'chapter-view-tab');
+
+    const elemTabContents = $('<div></div>').appendTo(elemContent)
+        .addClass('chapter-view-tab-contents');
+
+    for(let register of registers) {
+
+        $('<div></div>').appendTo(elemTabs)
+            .addClass('chapter-view-tab-label')
+            .toggleClass('chapter-view-tab-empty', register.count === 0)
+            .attr('data-register', register.key)
+            .text(register.label + ' (' + register.count + ')')
+            .click(function() {
+                clickTab($(this));
+                storeChapterViewTab($(this).attr('data-register'));
+            });
+
+        const elemTabContent = $('<div></div>').appendTo(elemTabContents)
+            .addClass('chapter-view-tab')
+            .addClass('hidden');
+
+        if(register.count === 0) {
+            $('<div></div>').appendTo(elemTabContent)
+                .addClass('chapter-view-empty')
+                .text(labels.emptyRegister);
+        } else {
+            for(let chapter of getChapterViewChapters(register)) insertChapterViewChapter(elemTabContent, register, chapter);
+        }
+
+    }
+
+    const stored  = getStoredChapterViewTab();
+    let   elemTab = elemTabs.children().filter(function() { return $(this).attr('data-register') === stored; });
+
+    if(elemTab.length === 0) elemTab = elemTabs.children().first();
+
+    clickTab(elemTab);
+
+}
+
+// Chapters in configured order, requirements without chapter always last
+function getChapterViewChapters(register) {
+
+    const chapterConfig = getChapterViewConfig();
+    let   chapters      = Array.from(register.chapters.values()).filter(function(chapter) { return chapter.label !== ''; });
+    const noChapter     = register.chapters.get('');
+
+    if(chapterConfig.chapterSort === 'alphanumeric') {
+        chapters.sort(function(a, b) { return a.label.localeCompare(b.label, undefined, { numeric : true }); });
+    }
+
+    if(!isBlank(noChapter)) chapters.push({ label : chapterConfig.labels.noChapter, rows : noChapter.rows, isNoChapter : true });
+
+    return chapters;
+
+}
+
+// Requirements by ID, those without ID at the end in loaded order
+function sortChapterViewRows(rows) {
+
+    return rows.slice().sort(function(a, b) {
+        if(a.id === '') return (b.id === '') ? 0 : 1;
+        if(b.id === '') return -1;
+        return a.id.localeCompare(b.id, undefined, { numeric : true });
+    });
+
+}
+
+function insertChapterViewChapter(elemParent, register, chapter) {
+
+    const chapterConfig = getChapterViewConfig();
+    const labels        = chapterConfig.labels;
+
+    const elemChapter = $('<div></div>').appendTo(elemParent)
+        .addClass('chapter-view-chapter')
+        .toggleClass('chapter-view-chapter-none', chapter.isNoChapter === true);
+
+    $('<div></div>').appendTo(elemChapter)
+        .addClass('chapter-view-chapter-header')
+        .append($('<span></span>').addClass('icon').addClass('icon-chevron-down').addClass('chapter-view-chapter-toggle'))
+        .append($('<span></span>').addClass('chapter-view-chapter-title').text(chapter.label))
+        .append($('<span></span>').addClass('chapter-view-chapter-count').text('(' + chapter.rows.length + ')'))
+        .click(function() {
+            elemChapter.toggleClass('collapsed');
+            $(this).find('.chapter-view-chapter-toggle').toggleClass('icon-chevron-down').toggleClass('icon-chevron-right');
+        });
+
+    const elemTable = $('<table></table>').appendTo(elemChapter)
+        .addClass('chapter-view-table');
+
+    const elemHead = $('<tr></tr>').appendTo($('<thead></thead>').appendTo(elemTable));
+
+    $('<th></th>').appendTo(elemHead).addClass('chapter-view-col-check');
+
+    for(let column of chapterConfig.columns) {
+        $('<th></th>').appendTo(elemHead)
+            .addClass('chapter-view-col-' + column.fieldId)
+            .text(column.label);
+    }
+
+    const elemBody = $('<tbody></tbody>').appendTo(elemTable);
+
+    for(let row of sortChapterViewRows(chapter.rows)) {
+
+        const elemRow = $('<tr></tr>').appendTo(elemBody)
+            .addClass('chapter-view-row')
+            .toggleClass('chapter-view-row-nolink', row.editorId === '')
+            .attr('data-editor-id', row.editorId);
+
+        if(row.editorId !== '') {
+            elemRow.click(function() {
+                jumpFromChapterView($(this).attr('data-editor-id'));
+            });
+        }
+
+        // Plausibility only: the REQ Level expected for this register is shown, never corrected
+        const elemCheck = $('<td></td>').appendTo(elemRow).addClass('chapter-view-col-check');
+        const actual    = getChapterViewValue(row.details, chapterConfig.fieldIdReqLevel);
+
+        if(chapterViewData.hasReqLevel && (register.reqLevel !== '') && (actual !== register.reqLevel)) {
+            elemRow.addClass('chapter-view-row-mismatch');
+            $('<span></span>').appendTo(elemCheck)
+                .addClass('icon')
+                .addClass('icon-warning')
+                .attr('title', labels.levelMismatch.replace('{expected}', register.reqLevel).replace('{actual}', actual || '-'));
+        }
+
+        for(let column of chapterConfig.columns) {
+            const text = getChapterViewText(getChapterViewValue(row.details, column.fieldId));
+            $('<td></td>').appendTo(elemRow)
+                .addClass('chapter-view-col-' + column.fieldId)
+                .attr('title', text)
+                .text(text);
+        }
+
+    }
+
+}
+
+// DESCRIPTION is rich text; DOMParser yields its plain text without running scripts or loading
+// images contained in it, unlike jQuery's .html() on a detached element.
+function getChapterViewText(value) {
+
+    if(value.indexOf('<') < 0) return value;
+
+    const doc = new DOMParser().parseFromString(value, 'text/html');
+
+    return (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
+
+}
+
+// The last tab is remembered per structure; storage may be unavailable (private mode, policy)
+function getChapterViewStorageKey() {
+
+    return 'editor-chapter-view-tab:' + ((chapterViewData === null) ? '' : chapterViewData.root);
+
+}
+function storeChapterViewTab(registerKey) {
+
+    try { localStorage.setItem(getChapterViewStorageKey(), registerKey); } catch(e) {}
+
+}
+function getStoredChapterViewTab() {
+
+    try { return localStorage.getItem(getChapterViewStorageKey()); } catch(e) { return null; }
+
+}
+
+function isChapterViewAvailable() {
+
+    return (chapterViewData !== null) && (editMode !== 'template') && $('#main').is(':visible');
+
+}
+function toggleChapterView() {
+
+    if($('body').hasClass('chapter-view')) {
+        closeChapterView();
+        return;
+    }
+
+    if(!isChapterViewAvailable()) return;
+
+    // Dashboard and chapter view both take the place of the Content Editor, only one at a time
+    if($('body').hasClass('dashboard-mode')) toggleDashboard();
+
+    $('body').addClass('chapter-view');
+    $('#button-toggle-chapter-view').removeClass('toggle-off').addClass('toggle-on');
+
+}
+function closeChapterView() {
+
+    $('body').removeClass('chapter-view');
+    $('#button-toggle-chapter-view').removeClass('toggle-on').addClass('toggle-off');
+
+}
+
+const baseChapterToggleDashboard = toggleDashboard;
+
+toggleDashboard = function() {
+
+    if($('body').hasClass('chapter-view')) closeChapterView();
+
+    baseChapterToggleDashboard();
+
+};
+
+// Jump to the requirement's row in the Content Editor, using the same helpers as a click on a
+// Navigator row (selectBOMItem) or an editor row, and briefly highlight it.
+function jumpFromChapterView(editorId) {
+
+    const elemEditor = $('#editor-content').children('.editor-item.id-' + editorId).first();
+
+    if(elemEditor.length === 0) {
+        showErrorMessage(getChapterViewConfig().labels.toggle, getChapterViewConfig().labels.notFound);
+        return;
+    }
+
+    closeChapterView();
+
+    if($('.editor-item.max').length > 0) {
+        $('.editor-item').removeClass('max').addClass('min');
+        elemEditor.addClass('max').removeClass('min');
+    } else scrollToElement(elemEditor);
+
+    selectMatchingTreeItem(elemEditor);
+    setSidePanel(elemEditor.attr('data-link'));
+
+    elemEditor.addClass('chapter-view-highlight');
+
+    setTimeout(function() { elemEditor.removeClass('chapter-view-highlight'); }, 2000);
+
+}
+
