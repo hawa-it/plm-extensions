@@ -2103,7 +2103,7 @@ function insertChapterViewEdit(elemBody, row, colspan) {
 
     const apply = function() {
         const title = elemTitle.val().trim();
-        if(title === '') { elemTitle.addClass('missing').focus(); return; }
+        if(title === '') { elemTitle.addClass('chapter-view-input-missing').focus(); return; }
         applyChapterViewEdit(row, title, elemDescription.find('.rte-input').html(), getChapterViewEditFieldChanges(elemFields));
     };
 
@@ -2258,7 +2258,7 @@ function insertChapterViewCreate(elemChapter, register, chapter) {
     for(let choice of choices) elemCategory.append($('<option></option>').attr('value', choice.link).text(choice.label));
 
     const submit = function() {
-        if(elemTitle.val().trim() === '') { elemTitle.addClass('missing').focus(); return; }
+        if(elemTitle.val().trim() === '') { elemTitle.addClass('chapter-view-input-missing').focus(); return; }
         createChapterViewRequirement(register, chapter.key, elemTitle.val().trim(), elemDescription.val().trim(), elemCategory.val());
     };
 
@@ -2382,6 +2382,8 @@ function getChapterViewPicklistOption(fieldId, title) {
     return isBlank(option) ? null : { link : option.link, title : option.title };
 
 }
+    // Own class instead of the editor's .missing: saveChanges() (apps/editor.js) aborts the save as
+    // long as any element with .missing exists on the page, this form included
 
 // Called from the storeNewItemLinks wrap above once the ID of a newly created item is known
 function updateChapterViewRowId(elemEditor, requirementId) {

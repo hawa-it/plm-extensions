@@ -287,7 +287,7 @@ body.chapter-view #add { display : none; }
 }
 .chapter-view-create-title       { flex : 1; }
 .chapter-view-create-description { flex : 2; }
-.chapter-view-create-form input.missing { border-color : var(--color-status-red); }
+.chapter-view-create-form input.chapter-view-input-missing { border-color : var(--color-status-red); }
 
 /* Chapter View: open icon and edit area below a row */
 .chapter-view-table .chapter-view-col-open { padding : 4px 0px; text-align : center; width : 32px; }
@@ -314,7 +314,7 @@ body.chapter-view #add { display : none; }
     font-weight : bold;
     padding     : 6px 8px;
 }
-.chapter-view-edit-title.missing { border-color : var(--color-status-red); }
+.chapter-view-edit-title.chapter-view-input-missing { border-color : var(--color-status-red); }
 .chapter-view-edit .rte-input {
     border-color : var(--color-surface-level-4);
     max-height   : 300px;
