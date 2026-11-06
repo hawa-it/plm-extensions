@@ -344,3 +344,13 @@ body.chapter-view #add { display : none; }
     padding    : 7px 28px 7px 14px;
     width      : calc(100% - 42px);
 }
+
+/* The framework positions picklists for the wide label column of Advanced Mode
+   (.field .picklist: left = label width + 28px), which leaves no width in the narrower fields of
+   the chapter view; and it shows the rich text toolbar only while hovering an .editor-item. */
+.chapter-view-edit-fields .picklist {
+    left      : 0px;
+    right     : 0px;
+    min-width : 240px;
+}
+.chapter-view-edit .rte-toolbar > * { display : block; }
