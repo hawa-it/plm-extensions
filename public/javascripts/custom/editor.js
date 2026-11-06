@@ -460,6 +460,8 @@ storeNewItemLinks = function(action, elements, responses) {
 
             elemIdBox.html(requirementId);
 
+            updateChapterViewRowId(element, requirementId);
+
             const elemTreeId = $('#tree-tbody').find('.id-' + element.attr('data-id')).find('.tree-column-title-id');
 
             if(elemTreeId.length === 0) {
@@ -1399,8 +1401,9 @@ updateAfterTemplateProcessing = function() {
 // (CHAPTER field) within, requirements below. Navigator, Content Editor and BOM stay untouched.
 // Rows can be moved between chapters by drag & drop (allowMove); the new chapter is written into
 // the row's CHAPTER Advanced Field in the Content Editor, so the regular "Save All Changes" stores
-// it - no separate write path to Fusion Manage. Toggle and panel are inserted via DOM here, not
-// in editor.pug, like the dashboard above.
+// it - no separate write path to Fusion Manage. New requirements (allowCreate) work the same way:
+// a new Content Editor row with REQ Level and chapter preset. Toggle and panel are inserted via
+// DOM here, not in editor.pug, like the dashboard above.
 let chapterViewData      = null;      // Built in the afterBOMCompletion wrap below, null while not available
 let chapterViewCapture   = null;      // Content Editor row ids collected while the core loop runs
 let chapterViewSelection = new Set(); // uids of rows selected with Ctrl / Shift + click
@@ -1618,6 +1621,7 @@ function buildChapterViewData(editorIds) {
         registers     : registers,
         rows          : rows,
         canMove       : isChapterViewMoveEnabled(),
+        canCreate     : isChapterViewCreateEnabled(),
         hasReqLevel   : hasChapterViewField(chapterConfig.fieldIdReqLevel),
         missingFields : [ chapterConfig.fieldIdChapter, chapterConfig.fieldIdRegister ].filter(function(fieldId) {
             return !hasChapterViewField(fieldId);
@@ -1641,8 +1645,29 @@ function isChapterViewMoveEnabled() {
 
 }
 
-// All Content Editor rows of a requirement - several if it is reused
+// New requirements are appended directly below the root, which the core only allows while the
+// root itself is WIP (see insertContentEditorElement); users sort them into the BOM afterwards.
+// REQ Level and chapter are preset through their Advanced Fields, so both must be editable there.
+function isChapterViewCreateEnabled() {
+
+    const chapterConfig = getChapterViewConfig();
+    const fieldIds      = [ chapterConfig.fieldIdChapter, chapterConfig.fieldIdRegister ];
+
+    if(!chapterConfig.allowCreate) return false;
+    if(bomPartsList.length === 0) return false;
+    if(bomPartsList[0].revision !== 'WIP') return false;
+
+    return fieldIds.every(function(fieldId) {
+        return (config.wsMain.advancedFields || []).some(function(field) { return (field.fieldId === fieldId) && field.editable; });
+    });
+
+}
+
+// All Content Editor rows of a requirement - several if it is reused. A requirement created here
+// has no link before saving, so its single row is found by id instead.
 function getChapterViewEditorRows(row) {
+
+    if(isBlank(row.link)) return $('#editor-content').children('.editor-item.id-' + row.editorId).not('.deleted');
 
     return $('#editor-content').children('.editor-item').not('.deleted').filter(function() {
         return $(this).attr('data-link') === row.link;
@@ -1686,6 +1711,8 @@ function renderChapterView() {
 
     if(chapterViewData === null) return;
 
+    removeChapterViewDeletedRows();
+
     // The view shows the state loaded with the structure, edits in the Content Editor are not
     // reflected until saved and reloaded - said once on top instead of reloading automatically.
     $('<div></div>').appendTo(elemContent)
@@ -1702,6 +1729,12 @@ function renderChapterView() {
         $('<div></div>').appendTo(elemContent)
             .addClass('chapter-view-missing')
             .text(labels.notEditable.replace('{field}', chapterConfig.fieldIdChapter));
+    }
+
+    if(chapterConfig.allowCreate && !chapterViewData.canCreate && (bomPartsList.length > 0) && (bomPartsList[0].revision !== 'WIP')) {
+        $('<div></div>').appendTo(elemContent)
+            .addClass('chapter-view-missing')
+            .text(labels.rootNotWorking);
     }
 
     updateChapterViewPending();
@@ -1739,11 +1772,12 @@ function renderChapterView() {
             .addClass('chapter-view-tab')
             .addClass('hidden');
 
+        // An empty register still offers "No Chapter" to create the first requirement in it
         if(register.count === 0) {
             $('<div></div>').appendTo(elemTabContent)
                 .addClass('chapter-view-empty')
                 .text(labels.emptyRegister);
-            continue;
+            if(!chapterViewData.canCreate || (register.key === 'unassigned')) continue;
         }
 
         if(chapterViewData.canMove) insertChapterViewNewChapter(elemTabContent, register);
@@ -1773,8 +1807,9 @@ function updateChapterViewPending() {
 
 }
 
-// Chapters in configured order, requirements without chapter always last. While moving is
-// enabled, "No Chapter" is always there as a drop target to clear the chapter of a row.
+// Chapters in configured order, requirements without chapter always last. While moving or
+// creating is enabled, "No Chapter" is always there: as drop target to clear the chapter of a
+// row, and to create a requirement without chapter (also in an empty register).
 function getChapterViewChapters(register) {
 
     const chapterConfig = getChapterViewConfig();
@@ -1785,9 +1820,11 @@ function getChapterViewChapters(register) {
         chapters.sort(function(a, b) { return a.label.localeCompare(b.label, undefined, { numeric : true }); });
     }
 
-    if(!isBlank(noChapter) && ((noChapter.rows.length > 0) || chapterViewData.canMove)) {
+    const isTarget      = chapterViewData.canMove || chapterViewData.canCreate;
+
+    if(!isBlank(noChapter) && ((noChapter.rows.length > 0) || isTarget)) {
         chapters.push({ key : '', label : chapterConfig.labels.noChapter, rows : noChapter.rows, isNoChapter : true });
-    } else if(isBlank(noChapter) && chapterViewData.canMove) {
+    } else if(isBlank(noChapter) && isTarget) {
         register.chapters.set('', { key : '', label : '', rows : [] });
         chapters.push({ key : '', label : chapterConfig.labels.noChapter, rows : register.chapters.get('').rows, isNoChapter : true });
     }
@@ -1859,7 +1896,17 @@ function insertChapterViewChapter(elemParent, register, chapter) {
 
     if(chapterViewData.canMove) insertChapterViewDropTarget(elemChapter, register, chapter.key);
 
-    if(chapter.rows.length === 0) return;
+    if(chapter.rows.length > 0) insertChapterViewTable(elemChapter, register, chapter);
+
+    // Not in "Unassigned", which has no REQ Level to preset
+    if(chapterViewData.canCreate && (register.key !== 'unassigned')) insertChapterViewCreate(elemChapter, register, chapter);
+
+}
+
+function insertChapterViewTable(elemChapter, register, chapter) {
+
+    const chapterConfig = getChapterViewConfig();
+    const labels        = chapterConfig.labels;
 
     const elemTable = $('<table></table>').appendTo(elemChapter)
         .addClass('chapter-view-table');
@@ -1920,7 +1967,8 @@ function insertChapterViewChapter(elemParent, register, chapter) {
         }
 
         for(let column of chapterConfig.columns) {
-            const text = getChapterViewText(getChapterViewValue(row.details, column.fieldId));
+            const value = ((column.fieldId === 'ID') && (row.id === '') && isBlank(row.link)) ? labels.newId : getChapterViewValue(row.details, column.fieldId);
+            const text  = getChapterViewText(value);
             $('<td></td>').appendTo(elemRow)
                 .addClass('chapter-view-col-' + column.fieldId)
                 .attr('title', text)
@@ -1928,6 +1976,178 @@ function insertChapterViewChapter(elemParent, register, chapter) {
         }
 
     }
+
+}
+
+// "+ New Requirement" below each chapter opens a small form; Title is required, REQ CATEGORY uses
+// the same choices as a new row in the Content Editor (newChildCategoryChoices).
+function insertChapterViewCreate(elemChapter, register, chapter) {
+
+    const labels     = getChapterViewConfig().labels;
+    const choices    = config.wsMain.newChildCategoryChoices || [];
+    const elemCreate = $('<div></div>').appendTo(elemChapter).addClass('chapter-view-create');
+
+    const elemOpen = $('<div></div>').appendTo(elemCreate)
+        .addClass('chapter-view-create-open')
+        .text(labels.newRequirement);
+
+    const elemForm = $('<div></div>').appendTo(elemCreate)
+        .addClass('chapter-view-create-form')
+        .addClass('hidden');
+
+    const elemTitle = $('<input></input>').appendTo(elemForm)
+        .addClass('chapter-view-create-title')
+        .attr('placeholder', labels.title);
+
+    const elemDescription = $('<input></input>').appendTo(elemForm)
+        .addClass('chapter-view-create-description')
+        .attr('placeholder', labels.description);
+
+    const elemCategory = $('<select></select>').appendTo(elemForm)
+        .addClass('button')
+        .toggleClass('hidden', choices.length === 0);
+
+    for(let choice of choices) elemCategory.append($('<option></option>').attr('value', choice.link).text(choice.label));
+
+    const submit = function() {
+        if(elemTitle.val().trim() === '') { elemTitle.addClass('missing').focus(); return; }
+        createChapterViewRequirement(register, chapter.key, elemTitle.val().trim(), elemDescription.val().trim(), elemCategory.val());
+    };
+
+    $('<div></div>').appendTo(elemForm).addClass('button').addClass('default').text(labels.create).click(submit);
+    $('<div></div>').appendTo(elemForm).addClass('button').text(labels.cancel).click(function() {
+        elemForm.addClass('hidden');
+        elemOpen.removeClass('hidden');
+    });
+
+    elemForm.find('input').on('keydown', function(e) {
+        if(e.key === 'Enter') submit();
+        if(e.key === 'Escape') { elemForm.addClass('hidden'); elemOpen.removeClass('hidden'); }
+    });
+
+    elemOpen.click(function() {
+        elemOpen.addClass('hidden');
+        elemForm.removeClass('hidden');
+        elemTitle.focus();
+    });
+
+}
+
+// Appends a new row at the end of the Content Editor on level 1 - saved as direct child of the
+// root, where the hierarchy check does not apply. REQ Level (from the register) and chapter are
+// passed as row data and their Advanced Fields marked changed, so createNewItems() sends them
+// like a manual entry. The picklist value needs the option's link, looked up by its title in the
+// picklists the editor already loaded for its Advanced Fields.
+function createChapterViewRequirement(register, chapterKey, title, description, categoryLink) {
+
+    const chapterConfig = getChapterViewConfig();
+    const labels        = chapterConfig.labels;
+    const chapter       = register.chapters.get(chapterKey);
+    const levelOption   = getChapterViewPicklistOption(chapterConfig.fieldIdRegister, register.key);
+
+    if(isBlank(chapter)) return;
+
+    if(levelOption === null) {
+        showErrorMessage(labels.toggle, labels.levelNotFound.replace('{value}', register.key));
+        return;
+    }
+
+    let data = {
+        TITLE       : title,
+        DESCRIPTION : $('<div></div>').text(description).html()   // Plain text, escaped for the rich text field
+    };
+
+    data[chapterConfig.fieldIdRegister] = levelOption;
+    data[chapterConfig.fieldIdChapter ] = chapter.label;
+
+    const elemLast   = $('#editor-content').children('.editor-item').last();
+    const elemEditor = insertContentEditorElement((elemLast.length > 0) ? elemLast : null, null, '', 'WIP', null, null, 1, data);
+
+    setNumbersAndLevels();
+
+    for(let fieldId of [ chapterConfig.fieldIdRegister, chapterConfig.fieldIdChapter ]) {
+        elemEditor.find('.editor-item-advanced .field-id-' + fieldId + '.field-editable').addClass('changed');
+    }
+
+    // Rows with data get no REQ CATEGORY choice from the insertContentEditorElement wrap, so it
+    // is added here with the value chosen in the form, still changeable in the Content Editor
+    if(!isBlank(categoryLink)) setRequirementCategoryOption(elemEditor, categoryLink);
+
+    let details = {};
+
+    for(let column of chapterConfig.columns) details[column.fieldId] = null;
+
+    details.TITLE                          = title;
+    details.DESCRIPTION                    = description;
+    details[chapterConfig.fieldIdRegister] = register.key;
+    details[chapterConfig.fieldIdChapter ] = chapter.label;
+
+    // originalKey null: a new requirement stays pending until saved, wherever it is moved to
+    const row = {
+        uid           : 'new-' + elemEditor.attr('data-id'),
+        link          : '',
+        details       : details,
+        id            : '',
+        editorId      : elemEditor.attr('data-id'),
+        chapterKey    : chapterKey,
+        originalKey   : null,
+        originalLabel : ''
+    };
+
+    chapter.rows.push(row);
+    chapterViewData.rows.set(row.uid, row);
+    register.count++;
+
+    renderChapterView();
+
+}
+
+// A requirement created here and deleted again in the Content Editor before saving is gone for
+// good (it has no link to restore), so it is dropped from the view as well
+function removeChapterViewDeletedRows() {
+
+    for(let register of chapterViewData.registers) {
+        for(let chapter of register.chapters.values()) {
+            chapter.rows = chapter.rows.filter(function(row) {
+                if(!isBlank(row.link) || (getChapterViewEditorRows(row).length > 0)) return true;
+                chapterViewData.rows.delete(row.uid);
+                register.count--;
+                return false;
+            });
+        }
+    }
+
+}
+
+function getChapterViewPicklistOption(fieldId, title) {
+
+    const field = (config.wsMain.advancedFields || []).find(function(field) { return field.fieldId === fieldId; });
+
+    if(isBlank(field) || isBlank(field.def.picklist)) return null;
+
+    const picklist = (config.wsMain.picklists || []).find(function(picklist) { return !isBlank(picklist) && (picklist.link === field.def.picklist); });
+
+    if(isBlank(picklist) || !Array.isArray(picklist.items)) return null;
+
+    const option = picklist.items.find(function(item) { return getChapterViewKey(String(item.title)) === getChapterViewKey(title); });
+
+    return isBlank(option) ? null : { link : option.link, title : option.title };
+
+}
+
+// Called from the storeNewItemLinks wrap above once the ID of a newly created item is known
+function updateChapterViewRowId(elemEditor, requirementId) {
+
+    if(chapterViewData === null) return;
+
+    const row = chapterViewData.rows.get('new-' + elemEditor.attr('data-id'));
+
+    if(isBlank(row)) return;
+
+    row.id         = requirementId;
+    row.details.ID = requirementId;
+
+    if($('body').hasClass('chapter-view')) renderChapterView();
 
 }
 
@@ -2146,6 +2366,12 @@ updateAfterTemplateProcessing = function() {
         for(let chapter of register.chapters.values()) {
             for(let row of chapter.rows) {
                 if(row.chapterKey === row.originalKey) continue;
+                // A new requirement counts as saved once createNewItems stored its link
+                if(isBlank(row.link)) {
+                    const link = getChapterViewEditorRows(row).attr('data-link');
+                    if(isBlank(link)) continue;
+                    row.link = link;
+                }
                 row.originalKey      = row.chapterKey;
                 row.originalLabel    = chapter.label;
                 row.details[fieldId] = chapter.label;   // Same object as in bomPartsList

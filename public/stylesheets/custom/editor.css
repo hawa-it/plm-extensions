@@ -247,3 +247,30 @@ body.chapter-view #add { display : none; }
 .chapter-view-row-lock { font-size : 16px; opacity : 0.5; }
 #chapter-view.chapter-view-dragging .chapter-view-chapter { outline : 1px dashed var(--color-surface-level-4); }
 #chapter-view .chapter-view-chapter.chapter-view-drop-target { outline : 2px solid var(--color-blue-500); }
+
+/* Chapter View: new requirement per chapter */
+.chapter-view-chapter.collapsed .chapter-view-create { display : none; }
+.chapter-view-create-open {
+    cursor  : pointer;
+    opacity : 0.6;
+    padding : 6px 10px;
+}
+.chapter-view-create-open:hover {
+    background : var(--color-hover-background);
+    opacity    : 1;
+}
+.chapter-view-create-form {
+    align-items : center;
+    display     : flex;
+    gap         : 8px;
+    padding     : 6px 10px;
+}
+.chapter-view-create-form input {
+    background : var(--color-surface-level-2);
+    border     : 1px solid var(--color-surface-level-4);
+    color      : inherit;
+    padding    : 4px 8px;
+}
+.chapter-view-create-title       { flex : 1; }
+.chapter-view-create-description { flex : 2; }
+.chapter-view-create-form input.missing { border-color : var(--color-status-red); }
