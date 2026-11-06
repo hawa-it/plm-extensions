@@ -205,7 +205,8 @@ body.chapter-view #add { display : none; }
 .chapter-view-table .chapter-view-col-check     { padding : 4px 0px; text-align : center; width : 28px; }
 .chapter-view-table .chapter-view-col-ID        { width : 150px; }
 .chapter-view-table .chapter-view-col-TITLE     { width : 30%; }
-.chapter-view-table .chapter-view-col-REQ_LEVEL { width : 200px; }
+.chapter-view-table .chapter-view-col-REQ_LEVEL,
+.chapter-view-table .chapter-view-col-REQUIREMENT_PRIORITY { width : 200px; }
 .chapter-view-row { cursor : pointer; }
 .chapter-view-row:hover { background : var(--color-hover-background); }
 .chapter-view-row.chapter-view-row-nolink { cursor : default; }

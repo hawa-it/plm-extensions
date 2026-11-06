@@ -195,7 +195,7 @@ exports.applications = {
                     { fieldId : 'ID',          label : 'ID'          },
                     { fieldId : 'TITLE',       label : 'Title'       },
                     { fieldId : 'DESCRIPTION', label : 'Description' },
-                    { fieldId : 'REQ_LEVEL',   label : 'REQ Level'   }
+                    { fieldId : 'REQUIREMENT_PRIORITY', label : 'Priority' } // REQ Level is given by the tab already
                 ],
                 registers : [                            // Order = order of the tabs; value = REQ LEVEL value exactly as in Fusion (case-insensitive)
                     { label : 'Stakeholder',       value : 'Stakeholder Requirement'        },

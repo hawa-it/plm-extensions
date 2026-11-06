@@ -1674,8 +1674,9 @@ function buildChapterViewData(editorIds) {
         canMove       : isChapterViewMoveEnabled(),
         canCreate     : isChapterViewCreateEnabled(),
         hasReqLevel   : hasChapterViewField(chapterConfig.fieldIdReqLevel),
-        missingFields : [ chapterConfig.fieldIdChapter, chapterConfig.fieldIdRegister ].filter(function(fieldId) {
-            return !hasChapterViewField(fieldId);
+        // Columns included, as a column missing in the BOM view would otherwise just stay empty
+        missingFields : [ chapterConfig.fieldIdChapter, chapterConfig.fieldIdRegister ].concat(chapterConfig.columns.map(function(column) { return column.fieldId; })).filter(function(fieldId, index, fieldIds) {
+            return (fieldIds.indexOf(fieldId) === index) && !hasChapterViewField(fieldId);
         })
     };
 
