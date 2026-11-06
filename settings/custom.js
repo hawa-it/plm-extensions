@@ -173,6 +173,7 @@ exports.applications = {
                 chapterSort        : 'first-occurrence', // or 'alphanumeric' (e.g. for "01 Plattform & Normen")
                 hideEmptyRegisters : false,              // false: empty registers are shown greyed out with (0)
                 allowMove          : true,               // Drag & drop between chapters, saved with the Content Editor (needs CHAPTER in advancedFieldIds)
+                allowEdit          : true,               // Title and description editable here, saved with the Content Editor
                 allowCreate        : true,               // New requirements per chapter, appended directly below the root (needs CHAPTER and REQ_LEVEL in advancedFieldIds)
                 columns : [                              // Only fields contained in the BOM view
                     { fieldId : 'ID',          label : 'ID'          },
@@ -197,17 +198,20 @@ exports.applications = {
                     levelMismatch : 'REQ Level does not match this register. Expected: {expected}, actual: {actual}',
                     notFound      : 'This requirement is no longer part of the Content Editor.',
                     save          : 'Save All Changes',
-                    moveHint      : 'Drag rows onto a chapter to move them, Ctrl / Shift + click selects several rows.',
+                    moveHint      : 'Click selects a row, double-click edits title and description, drag rows onto a chapter to move them, Ctrl / Shift + click selects several rows.',
                     newChapter    : 'New chapter name',
                     addChapter    : 'Add Chapter',
                     pending       : '{count} unsaved chapter change(s)',
-                    locked        : 'Locked, the chapter of this requirement cannot be changed',
+                    locked        : 'Locked, this requirement cannot be changed here',
                     notEditable   : 'Moving rows needs {field} as editable Advanced Field.',
                     newRequirement: '+ New Requirement',
                     title         : 'Title',
                     description   : 'Description',
                     create        : 'Create',
                     cancel        : 'Cancel',
+                    edit          : 'Edit',
+                    apply         : 'Apply',
+                    openInEditor  : 'Open in Editor',
                     newId         : '(new)',
                     levelNotFound : 'REQ Level "{value}" is not an option of the picklist, the requirement cannot be created.',
                     rootNotWorking: 'New requirements can only be added while the specification is in work (WIP).'
