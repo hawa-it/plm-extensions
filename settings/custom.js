@@ -112,7 +112,7 @@ exports.applications = {
                 workspaceId   : 835,
                 workspaceName : 'Requirements Custom',
                 bomViewName   : 'Requirements Overview',
-                advancedFieldIds      : [ 'MATERIAL_COST', 'TOOLING_COST', 'EFFORT', 'TEST_PROCEDURE', 'EXPECTED_RESULT', 'SUCCESS_CRITERIA', 'REQ_LEVEL', 'SOURCE', 'TYPE' ],
+                advancedFieldIds      : [ 'MATERIAL_COST', 'TOOLING_COST', 'EFFORT', 'TEST_PROCEDURE', 'EXPECTED_RESULT', 'SUCCESS_CRITERIA', 'REQ_LEVEL', 'SOURCE', 'TYPE', 'CHAPTER' ], // CHAPTER: also written by moves in the chapter view
                 newDefaultValues      : [
                     [ 'REQUIREMENT_TYPE', { link : '/api/v3/lookups/CUSTOM_LOOKUP_REQUIREMENT_TYPE_LEVEL/options/2' } ], // Specification (new root structure)
                 ],
@@ -172,6 +172,7 @@ exports.applications = {
                 fieldIdReqLevel    : 'REQ_LEVEL', // Only used by the optional reqLevel check per register below
                 chapterSort        : 'first-occurrence', // or 'alphanumeric' (e.g. for "01 Plattform & Normen")
                 hideEmptyRegisters : false,              // false: empty registers are shown greyed out with (0)
+                allowMove          : true,               // Drag & drop between chapters, saved with the Content Editor (needs CHAPTER in advancedFieldIds)
                 columns : [                              // Only fields contained in the BOM view
                     { fieldId : 'ID',          label : 'ID'          },
                     { fieldId : 'TITLE',       label : 'Title'       },
@@ -193,7 +194,14 @@ exports.applications = {
                     missingField  : 'Field not found in BOM view',
                     emptyRegister : '0 Requirements',
                     levelMismatch : 'REQ Level does not match this register. Expected: {expected}, actual: {actual}',
-                    notFound      : 'This requirement is no longer part of the Content Editor.'
+                    notFound      : 'This requirement is no longer part of the Content Editor.',
+                    save          : 'Save All Changes',
+                    moveHint      : 'Drag rows onto a chapter to move them, Ctrl / Shift + click selects several rows.',
+                    newChapter    : 'New chapter name',
+                    addChapter    : 'Add Chapter',
+                    pending       : '{count} unsaved chapter change(s)',
+                    locked        : 'Locked, the chapter of this requirement cannot be changed',
+                    notEditable   : 'Moving rows needs {field} as editable Advanced Field.'
                 }
             },
             panels : {
