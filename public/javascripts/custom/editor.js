@@ -2003,8 +2003,9 @@ function insertChapterViewCreate(elemChapter, register, chapter) {
         .addClass('chapter-view-create-description')
         .attr('placeholder', labels.description);
 
+    // Styled like the inputs; the framework's .button height clips the text of a select here
     const elemCategory = $('<select></select>').appendTo(elemForm)
-        .addClass('button')
+        .addClass('chapter-view-create-category')
         .toggleClass('hidden', choices.length === 0);
 
     for(let choice of choices) elemCategory.append($('<option></option>').attr('value', choice.link).text(choice.label));
