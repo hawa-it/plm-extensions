@@ -313,3 +313,34 @@ body.chapter-view #add { display : none; }
     gap             : 8px;
     justify-content : flex-end;
 }
+
+/* Chapter View: further fields in the edit area, laid out like the Advanced Fields of the editor */
+.chapter-view-edit-fields {
+    display               : grid;
+    gap                   : 2px;
+    grid-template-columns : repeat(auto-fill, minmax(320px, 1fr));
+}
+.chapter-view-edit-fields > .field {
+    background : var(--color-surface-level-2);
+    display    : flex;
+}
+.chapter-view-edit-fields .field-label {
+    background : var(--color-surface-level-3);
+    opacity    : 0.7;
+    padding    : 7px 14px;
+    text-align : right;
+    width      : 120px;
+    min-width  : 120px;
+}
+.chapter-view-edit-fields .field-value {
+    flex     : 1;
+    position : relative;
+}
+.chapter-view-edit-fields input {
+    background : var(--color-surface-level-2);
+    border     : none !important;
+    color      : inherit;
+    height     : 22px;
+    padding    : 7px 28px 7px 14px;
+    width      : calc(100% - 42px);
+}

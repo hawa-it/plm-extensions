@@ -2100,31 +2100,95 @@ function insertChapterViewEdit(elemBody, row, colspan) {
 
     insertRichTextEditor(elemDescription, elemEditor.find('.editor-item-description .rte-input').first().html(), null, 'chapter-view-edit');
 
+    const elemFields = insertChapterViewEditFields(elemEdit, elemEditor);
+
     const elemActions = $('<div></div>').appendTo(elemEdit).addClass('chapter-view-edit-actions');
 
     const apply = function() {
         const title = elemTitle.val().trim();
         if(title === '') { elemTitle.addClass('missing').focus(); return; }
-        applyChapterViewEdit(row, title, elemDescription.find('.rte-input').html());
+        applyChapterViewEdit(row, title, elemDescription.find('.rte-input').html(), getChapterViewEditFieldChanges(elemFields));
     };
 
     $('<div></div>').appendTo(elemActions).addClass('button').addClass('default').text(labels.apply).click(apply);
     $('<div></div>').appendTo(elemActions).addClass('button').text(labels.cancel).click(closeChapterViewEdit);
 
+    // No stopPropagation on clicks here: picklists open through the framework's click handler on
+    // document (framework/utils.js); the edit row itself has no click handlers to shield from
     elemTitle.on('keydown', function(e) {
         if(e.key === 'Enter') apply();
         if(e.key === 'Escape') closeChapterViewEdit();
     });
 
-    // Keeps clicks and drags inside the edit area from reaching the chapter's drop handling
-    elemEdit.on('click dblclick', function(e) { e.stopPropagation(); });
+}
+
+// Further fields (editFields, e.g. Source, Type, Priority) with the same controls as in Advanced
+// Mode (insertField, incl. picklist search). Only fields editable in the editor row are offered;
+// their current value is read from there, not from the loaded state. Multiple selections are not
+// supported here. Own container class, as .editor-item-advanced is hidden outside Advanced Mode.
+function insertChapterViewEditFields(elemEdit, elemEditor) {
+
+    const elemFields = $('<div></div>').appendTo(elemEdit).addClass('chapter-view-edit-fields');
+
+    for(let fieldId of (getChapterViewConfig().editFields || [])) {
+
+        const field      = (config.wsMain.advancedFields || []).find(function(field) { return field.fieldId === fieldId; });
+        const elemSource = elemEditor.find('.editor-item-advanced .field-id-' + fieldId + '.field-editable').first();
+
+        if(isBlank(field) || (elemSource.length === 0)) continue;
+
+        const current = getFieldValue(elemSource);
+
+        if(current.type === 'multi-select') continue;
+
+        // Picklists need { link, title } to show the title and keep the link (see
+        // insertFieldPicklistControls); rows loaded from the BOM view only carry the title
+        const isPicklist = (current.type === 'single-select');
+        const value      = !isPicklist ? (current.value || '') : (isBlank(current.display) ? '' : { link : current.value || current.display, title : current.display });
+
+        const elemField = $('<div></div>').appendTo(elemFields).addClass('field');
+
+        $('<div></div>').appendTo(elemField).addClass('field-label').text(field.def.name);
+
+        const elemValue = $('<div></div>').appendTo(elemField)
+            .addClass('field-value')
+            .attr('data-initial', isPicklist ? (current.display || '') : (current.value || ''));
+
+        insertField({ editable : true }, elemValue, Object.assign({}, field.def, { hasValue : true, setValue : value }), null, config.wsMain.picklists, false, false);
+
+    }
+
+    return elemFields;
+
+}
+function getChapterViewEditFieldChanges(elemFields) {
+
+    let changes = [];
+
+    elemFields.children('.field').each(function() {
+
+        const elemValue  = $(this).children('.field-value');
+        const result     = getFieldValue(elemValue);
+        const isPicklist = (result.type === 'single-select');
+        const display    = isPicklist ? (elemValue.find('.picklist-input').first().val() || '') : (result.value || '');
+
+        if(display === elemValue.attr('data-initial')) return;
+
+        // Search text typed into a picklist without choosing an option is no valid value
+        if(isPicklist && (display !== '') && isBlank(result.value)) return;
+
+        changes.push({ fieldId : result.fieldId, isPicklist : isPicklist, link : isPicklist ? (result.value || '') : '', display : display });
+
+    });
+
+    return changes;
 
 }
 
-// Writes title and description into all editor rows of the requirement (several if reused) and
-// marks them changed, the same as typing in the Content Editor would; Navigator and pins are
-// updated through the core's own helpers.
-function applyChapterViewEdit(row, title, description) {
+// Writes title, description and changed further fields into all editor rows of the requirement
+// (several if reused) and marks them changed, the same as typing in the Content Editor would;
+// Navigator and pins are updated through the core's own helpers.
+function applyChapterViewEdit(row, title, description, changes) {
 
     getChapterViewEditorRows(row).each(function() {
 
@@ -2133,6 +2197,21 @@ function applyChapterViewEdit(row, title, description) {
 
         elemTitle.val(title).removeClass('missing');
         elemEditor.find('.editor-item-description .rte-input').first().html(description);
+
+        for(let change of changes) {
+
+            const elemTarget = elemEditor.find('.editor-item-advanced .field-id-' + change.fieldId + '.field-editable').first();
+
+            if(change.isPicklist) {
+                const elemInput = elemTarget.find('.picklist-input').first().val(change.display);
+                if(isBlank(change.link)) elemInput.removeAttr('data-value'); else elemInput.attr('data-value', change.link);
+            } else {
+                elemTarget.find('input, textarea').first().val(change.display);
+            }
+
+            elemTarget.addClass('changed');
+
+        }
 
         setChanged(elemEditor);
         updateTreeItemTitle(elemTitle);
@@ -2143,6 +2222,8 @@ function applyChapterViewEdit(row, title, description) {
     row.details.TITLE       = title;
     row.details.DESCRIPTION = description;
     row.edited              = true;
+
+    for(let change of changes) row.details[change.fieldId] = change.display;
 
     closeChapterViewEdit();
 
