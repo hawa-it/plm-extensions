@@ -270,10 +270,22 @@ insertMatchingBOMTreeNode = function(elemEditor, elemPrevious) {
 
     const requirementId = elemEditor.find('.editor-item-id').first().html();
 
+    const elemTitleCell = elemTreeItem.find('.tree-column-title');
+
     $('<span></span>')
         .addClass('tree-column-title-id')
         .html(isBlank(requirementId) ? '' : (requirementId + ' - '))
-        .prependTo(elemTreeItem.find('.tree-column-title'));
+        .prependTo(elemTitleCell);
+
+    // genTreeRow only gets a title, no field data, so the TITLE column of the BOM view stays
+    // empty (the title lands in the descriptor column instead). Fill it from the editor row, as
+    // text node since titles are user input. Rows inserted blank get it later by typing
+    // (updateTreeItemTitle).
+    const title = elemEditor.find('.editor-item-title').val();
+
+    if(!isBlank(title) && (elemTitleCell.children('.tree-column-title-id').length === elemTitleCell.contents().length)) {
+        elemTitleCell.append(document.createTextNode(title));
+    }
 
     if(elemEditor.hasClass('reused')) {
         elemTreeItem.addClass('tree-item-reused').attr('title', config.wsMain.itemsReused.title || 'Reused');
