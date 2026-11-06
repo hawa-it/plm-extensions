@@ -204,9 +204,17 @@ body.chapter-view #add { display : none; }
 }
 .chapter-view-table .chapter-view-col-check     { padding : 4px 0px; text-align : center; width : 28px; }
 .chapter-view-table .chapter-view-col-ID        { width : 150px; }
-.chapter-view-table .chapter-view-col-TITLE     { width : 30%; }
+.chapter-view-table .chapter-view-col-TITLE     { width : 20%; }   /* DESCRIPTION has no width and takes the rest */
 .chapter-view-table .chapter-view-col-REQ_LEVEL,
 .chapter-view-table .chapter-view-col-REQUIREMENT_PRIORITY { width : 200px; }
+
+/* A selected row shows its whole description (a click selects, double-click edits); the other
+   cells stay on one line at the top of the row */
+.chapter-view-row.selected > td { vertical-align : top; }
+.chapter-view-table .chapter-view-row.selected > .chapter-view-col-DESCRIPTION {
+    overflow    : visible;
+    white-space : normal;
+}
 .chapter-view-row { cursor : pointer; }
 .chapter-view-row:hover { background : var(--color-hover-background); }
 .chapter-view-row.chapter-view-row-nolink { cursor : default; }
