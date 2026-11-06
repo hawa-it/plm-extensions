@@ -2685,3 +2685,129 @@ function jumpFromChapterView(editorId) {
     setTimeout(function() { elemEditor.removeClass('chapter-view-highlight'); }, 2000);
 
 }
+
+// Specification Sync: RELATED SPECIFICATION (PARENT_SPECIFICATION) and further fields taken over
+// from the specification are set by an existing on-demand action in Fusion Manage, run on the
+// specification (config.specificationSync.scriptName). It was only started by hand in Fusion, so
+// requirements created in the editor stayed without them. The editor runs that action instead of
+// duplicating its logic (project vs. catalog, primary vs. reused use): by button, and after a save
+// that created or newly linked requirements. Not after every save, since the action rewrites the
+// multi-value fields of every project requirement on each run.
+let specificationSyncPending = false;
+
+function getSpecificationSyncConfig() {
+
+    return (!isBlank(config.specificationSync) && config.specificationSync.enabled) ? config.specificationSync : null;
+
+}
+
+$(document).ready(function() {
+
+    const syncConfig = getSpecificationSyncConfig();
+
+    if(syncConfig === null) return;
+
+    $('<div></div>')
+        .attr('id', 'button-sync-specification')
+        .addClass('button')
+        .attr('title', 'Runs "' + syncConfig.scriptName + '" on the specification: sets Related Specification and the fields taken over from it in the whole structure')
+        .text(syncConfig.labels.button)
+        .insertBefore('#button-sync-reused')
+        .click(function() {
+            runSpecificationSync();
+        });
+
+});
+
+// Rows without link are created, rows without edge id get linked by this save. Template mode is
+// left out: links.root still points at the template there until the save has finished.
+const baseSyncSaveChanges = saveChanges;
+
+saveChanges = function() {
+
+    const syncConfig = getSpecificationSyncConfig();
+
+    if((syncConfig !== null) && syncConfig.afterSave && (editMode === 'existing')) {
+        const hasNewRows = $('#editor-content').children('.editor-item').not('.deleted').toArray().some(function(elem) {
+            return isBlank($(elem).attr('data-link')) || isBlank($(elem).attr('data-edgeid'));
+        });
+        if(hasNewRows) specificationSyncPending = true;
+    }
+
+    baseSyncSaveChanges();
+
+};
+
+// End of a complete save run (see the dashboard wrap above). A save aborted by the REQ Level check
+// or an error keeps the flag, so the next successful save runs the action.
+const baseSyncUpdateAfterTemplateProcessing = updateAfterTemplateProcessing;
+
+updateAfterTemplateProcessing = function() {
+
+    baseSyncUpdateAfterTemplateProcessing();
+
+    if(specificationSyncPending) {
+        specificationSyncPending = false;
+        runSpecificationSync();
+    }
+
+};
+
+function runSpecificationSync() {
+
+    const syncConfig = getSpecificationSyncConfig();
+
+    if(syncConfig === null) return;
+
+    const labels     = syncConfig.labels;
+    const elemButton = $('#button-sync-specification');
+
+    if(elemButton.hasClass('disabled')) return;
+    if(isBlank(links.root) || (editMode !== 'existing')) return;
+
+    elemButton.addClass('disabled').text(labels.running);
+
+    const finish = function(isError, message) {
+        elemButton.removeClass('disabled').text(labels.button);
+        if(isError) showErrorMessage(labels.title, message); else showSuccessMessage(labels.title, message);
+    };
+
+    Promise.all([
+        $.get('/plm/workspace-scripts', { wsId : config.wsMain.workspaceId, useCache : true }),
+        $.get('/plm/details', { link : links.root })
+    ]).then(function(responses) {
+
+        const name    = syncConfig.scriptName.trim().toLowerCase();
+        const scripts = (responses[0].error || isBlank(responses[0].data)) ? [] : (responses[0].data.scripts || []);
+        const script  = scripts.find(function(script) {
+            return (script.scriptBehaviorType === 'ON_DEMAND') && [ script.uniqueName, script.displayName ].some(function(value) {
+                return !isBlank(value) && (value.trim().toLowerCase() === name);
+            });
+        });
+
+        if(isBlank(script)) { finish(true, labels.notFound.replace('{name}', syncConfig.scriptName)); return; }
+        if(responses[1].error) { finish(true, responses[1].message); return; }
+
+        // The open structure may be a sub structure (e.g. a REQP opened on its own); the action
+        // only runs on a specification, so its RELATED SPECIFICATION is used then
+        const sections = responses[1].data.sections;
+        const category = getSectionFieldValue(sections, 'REQUIREMENT_TYPE', '', 'title');
+        const specLink = (category === 'Specification') ? links.root : getSectionFieldValue(sections, 'PARENT_SPECIFICATION', '', 'link');
+
+        if(isBlank(specLink)) { finish(true, labels.noSpec); return; }
+
+        $.post('/plm/run-item-script', { link : specLink, scriptId : script.__self__.split('/').pop(), getDetails : 'true' }, function(response) {
+
+            if(response.error) { finish(true, response.message); return; }
+
+            // The action reports its outcome in the result field; aborts and errors are only
+            // recognizable by its wording ("Abbruch", "Fehler")
+            const result = String(getSectionFieldValue(response.data.sections, syncConfig.resultFieldId, '') || '');
+
+            finish(/abbruch|fehler/i.test(result), result || syncConfig.scriptName);
+
+        });
+
+    });
+
+}
