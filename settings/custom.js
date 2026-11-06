@@ -189,6 +189,7 @@ exports.applications = {
                 allowMove          : true,               // Drag & drop between chapters, saved with the Content Editor (needs CHAPTER in advancedFieldIds)
                 allowEdit          : true,               // Title and description editable here, saved with the Content Editor
                 editFields         : [ 'SOURCE', 'TYPE', 'REQUIREMENT_PRIORITY' ], // Further fields in the edit area, must be in advancedFieldIds
+                allowDelete        : true,               // Removes requirements from this structure (BOM link), saved with the Content Editor
                 allowCreate        : true,               // New requirements per chapter, appended directly below the root (needs CHAPTER and REQ_LEVEL in advancedFieldIds)
                 columns : [                              // Only fields contained in the BOM view
                     { fieldId : 'ID',          label : 'ID'          },
@@ -227,6 +228,11 @@ exports.applications = {
                     edit          : 'Edit',
                     apply         : 'Apply',
                     openInEditor  : 'Open in Editor',
+                    delete        : 'Delete',
+                    undoDelete    : 'Undo delete',
+                    deletedByParent : 'Removed together with its parent requirement',
+                    confirmChildren : '"{title}" has {count} sub requirement(s), they are removed from this structure as well. Continue?',
+                    confirmReused : '"{title}" is used {count} times in this structure, all of them are removed. Continue?',
                     newId         : '(new)',
                     levelNotFound : 'REQ Level "{value}" is not an option of the picklist, the requirement cannot be created.',
                     rootNotWorking: 'New requirements can only be added while the specification is in work (WIP).'
