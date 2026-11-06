@@ -378,3 +378,20 @@ body.chapter-view #add { display : none; }
     cursor    : pointer;
     font-size : 18px;
 }
+
+/* Chapter View: rename a chapter from its heading */
+.chapter-view-chapter-rename {
+    font-size  : 16px;
+    opacity    : 0;
+    transition : opacity 0.2s ease;
+}
+.chapter-view-chapter-header:hover .chapter-view-chapter-rename { opacity : 0.6; }
+.chapter-view-chapter-header .chapter-view-chapter-rename:hover { opacity : 1; }
+.chapter-view-chapter-rename-input {
+    background  : var(--color-surface-level-2);
+    border      : 1px solid var(--color-blue-500);
+    color       : inherit;
+    font-weight : bold;
+    min-width   : 300px;
+    padding     : 2px 8px;
+}

@@ -1644,7 +1644,8 @@ function buildChapterViewData(editorIds) {
             register.chapters.set(chapterKey, { key : chapterKey, label : chapterLabel, rows : [] });
         }
 
-        // chapterKey follows the moves in this view, originalKey/originalLabel keep the saved state
+        // chapterKey and chapterLabel (the value written into CHAPTER) follow moves and renames in
+        // this view, originalKey/originalLabel keep the saved state
         const row = {
             uid           : String(index),
             link          : part.link,
@@ -1652,6 +1653,7 @@ function buildChapterViewData(editorIds) {
             id            : getChapterViewValue(part.details, 'ID'),
             editorId      : editorIds[index - 1] || '',
             chapterKey    : chapterKey,
+            chapterLabel  : chapterLabel,
             originalKey   : chapterKey,
             originalLabel : chapterLabel
         };
@@ -1756,7 +1758,15 @@ function isChapterViewRowEditable(row) {
 // Unsaved: moved to another chapter, edited here, created here (originalKey null) or deleted
 function isChapterViewRowPending(row) {
 
-    return (row.chapterKey !== row.originalKey) || (row.edited === true) || isChapterViewRowDeleted(row);
+    return isChapterViewChapterPending(row) || (row.edited === true) || isChapterViewRowDeleted(row);
+
+}
+
+// The chapter value differs from the saved one: another chapter, or the same one in another
+// spelling (renamed, e.g. "projekt" -> "Projekt", which the grouping key does not tell apart)
+function isChapterViewChapterPending(row) {
+
+    return (row.chapterKey !== row.originalKey) || (row.chapterLabel !== row.originalLabel);
 
 }
 
@@ -2049,7 +2059,7 @@ function insertChapterViewChapter(elemParent, register, chapter) {
         .toggleClass('chapter-view-chapter-none', chapter.isNoChapter === true)
         .toggleClass('collapsed', chapterViewCollapsed.has(collapseKey));
 
-    $('<div></div>').appendTo(elemChapter)
+    const elemHeader = $('<div></div>').appendTo(elemChapter)
         .addClass('chapter-view-chapter-header')
         .append($('<span></span>').addClass('icon').addClass(chapterViewCollapsed.has(collapseKey) ? 'icon-chevron-right' : 'icon-chevron-down').addClass('chapter-view-chapter-toggle'))
         .append($('<span></span>').addClass('chapter-view-chapter-title').text(chapter.label))
@@ -2059,6 +2069,19 @@ function insertChapterViewChapter(elemParent, register, chapter) {
             if(elemChapter.hasClass('collapsed')) chapterViewCollapsed.add(collapseKey); else chapterViewCollapsed.delete(collapseKey);
             $(this).find('.chapter-view-chapter-toggle').toggleClass('icon-chevron-down').toggleClass('icon-chevron-right');
         });
+
+    // Renaming writes CHAPTER like moving does, so it needs the same editable field
+    if(chapterViewData.canMove && (chapter.isNoChapter !== true)) {
+        $('<span></span>').insertAfter(elemHeader.children('.chapter-view-chapter-count'))
+            .addClass('icon')
+            .addClass('icon-edit')
+            .addClass('chapter-view-chapter-rename')
+            .attr('title', labels.renameChapter)
+            .click(function(e) {
+                e.stopPropagation();
+                startChapterViewRename(elemHeader, register, chapter);
+            });
+    }
 
     if(chapterViewData.canMove) insertChapterViewDropTarget(elemChapter, register, chapter.key);
 
@@ -2465,6 +2488,7 @@ function createChapterViewRequirement(register, chapterKey, title, description, 
         id            : '',
         editorId      : elemEditor.attr('data-id'),
         chapterKey    : chapterKey,
+        chapterLabel  : chapter.label,
         originalKey   : null,
         originalLabel : ''
     };
@@ -2634,6 +2658,90 @@ function insertChapterViewDropTarget(elemChapter, register, chapterKey) {
 
 }
 
+// Inline rename in the chapter heading: Enter applies, Escape or leaving the field cancels (no
+// apply on blur, as applying may ask for confirmation)
+function startChapterViewRename(elemHeader, register, chapter) {
+
+    const elemTitle = elemHeader.children('.chapter-view-chapter-title').addClass('hidden');
+    let   isDone    = false;
+
+    elemHeader.children('.chapter-view-chapter-rename').addClass('hidden');
+
+    const elemInput = $('<input></input>').insertAfter(elemTitle)
+        .addClass('chapter-view-chapter-rename-input')
+        .val(chapter.label)
+        .on('click dblclick', function(e) { e.stopPropagation(); });
+
+    const finish = function(apply) {
+        if(isDone) return;
+        isDone = true;
+        if(apply) renameChapterViewChapter(register, chapter.key, elemInput.val()); else renderChapterView();
+    };
+
+    elemInput
+        .on('keydown', function(e) {
+            if(e.key === 'Enter') { e.preventDefault(); finish(true); }
+            if(e.key === 'Escape') finish(false);
+        })
+        .on('blur', function() { finish(false); })
+        .focus()
+        .select();
+
+}
+
+// A chapter only exists through the requirements carrying it, so renaming sets CHAPTER on all of
+// them. Locked requirements cannot be changed and keep the old name, after confirmation (the
+// chapter then splits until they are revised). A name that already exists in this register merges
+// both, also after confirmation; a new name takes the old chapter's place in the order.
+function renameChapterViewChapter(register, chapterKey, newLabel) {
+
+    const labels  = getChapterViewConfig().labels;
+    const chapter = register.chapters.get(chapterKey);
+    const label   = newLabel.trim();
+    const newKey  = getChapterViewKey(label);
+
+    if(isBlank(chapter) || (label === '') || (label === chapter.label)) { renderChapterView(); return; }
+
+    const movable     = chapter.rows.filter(isChapterViewRowMovable);
+    const countLocked = chapter.rows.length - movable.length;
+
+    if((countLocked > 0) && !confirm(labels.confirmRenameLocked.replace('{count}', countLocked).replace('{total}', chapter.rows.length).replace('{title}', chapter.label))) {
+        renderChapterView();
+        return;
+    }
+
+    // Same chapter in another spelling: relabel in place
+    if(newKey === chapterKey) {
+        chapter.label = label;
+        for(let row of movable) {
+            row.chapterLabel = label;
+            setChapterViewEditorValue(row, label);
+        }
+        renderChapterView();
+        return;
+    }
+
+    if(register.chapters.has(newKey)) {
+        if(!confirm(labels.confirmMerge.replace('{title}', register.chapters.get(newKey).label))) { renderChapterView(); return; }
+    } else {
+        const entries = Array.from(register.chapters.entries());
+        register.chapters.clear();
+        for(let entry of entries) {
+            if(entry[0] === chapterKey) register.chapters.set(newKey, { key : newKey, label : label, rows : [] });
+            register.chapters.set(entry[0], entry[1]);
+        }
+    }
+
+    if(chapterViewCollapsed.has(register.key + '|' + chapterKey)) chapterViewCollapsed.add(register.key + '|' + newKey);
+
+    moveChapterViewRows(register, movable.map(function(row) { return row.uid; }), newKey);
+
+    if(chapter.rows.length === 0) register.chapters.delete(chapterKey);
+
+    renderChapterView();
+
+}
+
 function moveChapterViewRows(register, uids, targetKey) {
 
     const target = register.chapters.get(targetKey);
@@ -2656,7 +2764,9 @@ function moveChapterViewRows(register, uids, targetKey) {
         row.chapterKey = targetKey;
 
         // Moved back to where it was saved: the original spelling is restored, not the target's
-        setChapterViewEditorValue(row, (targetKey === row.originalKey) ? row.originalLabel : target.label);
+        row.chapterLabel = (targetKey === row.originalKey) ? row.originalLabel : target.label;
+
+        setChapterViewEditorValue(row, row.chapterLabel);
 
     }
 
@@ -2671,7 +2781,7 @@ function moveChapterViewRows(register, uids, targetKey) {
 function setChapterViewEditorValue(row, value) {
 
     const fieldClass = '.field-id-' + getChapterViewConfig().fieldIdChapter + '.field-editable';
-    const isPending  = (row.chapterKey !== row.originalKey);
+    const isPending  = isChapterViewChapterPending(row);
 
     getChapterViewEditorRows(row).each(function() {
 
@@ -2781,8 +2891,8 @@ updateAfterTemplateProcessing = function() {
                     row.link = link;
                 }
                 row.originalKey      = row.chapterKey;
-                row.originalLabel    = chapter.label;
-                row.details[fieldId] = chapter.label;   // Same object as in bomPartsList
+                row.originalLabel    = row.chapterLabel;
+                row.details[fieldId] = row.chapterLabel;   // Same object as in bomPartsList
                 row.edited           = false;
             }
         }
