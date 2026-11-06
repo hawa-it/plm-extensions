@@ -112,7 +112,7 @@ exports.applications = {
                 workspaceId   : 835,
                 workspaceName : 'Requirements Custom',
                 bomViewName   : 'Requirements Overview',
-                advancedFieldIds      : [ 'MATERIAL_COST', 'TOOLING_COST', 'EFFORT', 'TEST_PROCEDURE', 'EXPECTED_RESULT', 'SUCCESS_CRITERIA', 'REQ_LEVEL', 'SOURCE', 'TYPE', 'CHAPTER' ], // CHAPTER: also written by moves in the chapter view
+                advancedFieldIds      : [ 'MATERIAL_COST', 'TOOLING_COST', 'EFFORT', 'TEST_PROCEDURE', 'EXPECTED_RESULT', 'SUCCESS_CRITERIA', 'REQ_LEVEL', 'SOURCE', 'TYPE', 'CHAPTER', 'REQUIREMENT_PRIORITY' ], // CHAPTER: also written by moves in the chapter view
                 newDefaultValues      : [
                     [ 'REQUIREMENT_TYPE', { link : '/api/v3/lookups/CUSTOM_LOOKUP_REQUIREMENT_TYPE_LEVEL/options/2' } ], // Specification (new root structure)
                 ],
@@ -165,6 +165,19 @@ exports.applications = {
                 validationFailed  : 'Failed',
                 testDefinitionFieldIds : [ 'TEST_PROCEDURE', 'EXPECTED_RESULT', 'SUCCESS_CRITERIA' ] // Optional in the BOM view, enables tile "Not Validatable"
             },
+            specificationSync : { // Runs the existing on-demand action on the specification (custom/editor.js): sets RELATED SPECIFICATION etc. in the whole BOM
+                enabled       : true,
+                scriptName    : 'REQ - Requirements BOM Sync_Add Action', // uniqueName of the on-demand action in workspace 835
+                resultFieldId : 'BOM_SYNC_RESULT',      // Written by the action on the specification, shown as message
+                afterSave     : true,                    // Also run after a save that created or newly linked requirements
+                labels        : {
+                    button   : 'Sync Specification',
+                    running  : 'Syncing ...',
+                    title    : 'Sync Specification',
+                    notFound : 'On-demand action "{name}" not found in this workspace.',
+                    noSpec   : 'No specification found for this structure.'
+                }
+            },
             chapterView : { // Read-only chapter view (custom/editor.js), groups the loaded structure like the department's Excel
                 enabled            : true,
                 fieldIdChapter     : 'CHAPTER',  // Single Line Text, must be part of the BOM view "Requirements Overview"
@@ -174,6 +187,7 @@ exports.applications = {
                 hideEmptyRegisters : false,              // false: empty registers are shown greyed out with (0)
                 allowMove          : true,               // Drag & drop between chapters, saved with the Content Editor (needs CHAPTER in advancedFieldIds)
                 allowEdit          : true,               // Title and description editable here, saved with the Content Editor
+                editFields         : [ 'SOURCE', 'TYPE', 'REQUIREMENT_PRIORITY' ], // Further fields in the edit area, must be in advancedFieldIds
                 allowCreate        : true,               // New requirements per chapter, appended directly below the root (needs CHAPTER and REQ_LEVEL in advancedFieldIds)
                 columns : [                              // Only fields contained in the BOM view
                     { fieldId : 'ID',          label : 'ID'          },
