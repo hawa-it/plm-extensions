@@ -188,7 +188,7 @@ exports.applications = {
                 hideEmptyRegisters : false,              // false: empty registers are shown greyed out with (0)
                 allowMove          : true,               // Drag & drop between chapters, saved with the Content Editor (needs CHAPTER in advancedFieldIds)
                 allowEdit          : true,               // Title and description editable here, saved with the Content Editor
-                editFields         : [ 'SOURCE', 'TYPE', 'REQUIREMENT_PRIORITY' ], // Further fields in the edit area, must be in advancedFieldIds
+                editFields         : [ 'REQ_LEVEL', 'SOURCE', 'TYPE', 'REQUIREMENT_PRIORITY' ], // Further fields in the edit area, must be in advancedFieldIds; REQ_LEVEL moves the requirement to another tab (No Chapter)
                 allowDelete        : true,               // Removes requirements from this structure (BOM link), saved with the Content Editor
                 allowCreate        : true,               // New requirements per chapter, appended directly below the root (needs CHAPTER and REQ_LEVEL in advancedFieldIds)
                 columns : [                              // Only fields contained in the BOM view
