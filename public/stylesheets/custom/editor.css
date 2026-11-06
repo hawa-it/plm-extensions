@@ -380,12 +380,15 @@ body.chapter-view #add { display : none; }
 }
 
 /* Chapter View: rename a chapter from its heading */
+/* icon-edit is used here (rename, Edit button) but not defined by framework/fonts.css; same
+   Material Symbols font, glyph "edit" */
+.icon-edit::before { content : '\e3c9'; }
 .chapter-view-chapter-rename {
     font-size  : 16px;
-    opacity    : 0;
+    opacity    : 0.35;
     transition : opacity 0.2s ease;
 }
-.chapter-view-chapter-header:hover .chapter-view-chapter-rename { opacity : 0.6; }
+.chapter-view-chapter-header:hover .chapter-view-chapter-rename { opacity : 0.7; }
 .chapter-view-chapter-header .chapter-view-chapter-rename:hover { opacity : 1; }
 .chapter-view-chapter-rename-input {
     background  : var(--color-surface-level-2);
