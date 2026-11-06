@@ -1493,6 +1493,19 @@ $(document).ready(function() {
             if((row !== null) && (row.editorId !== '')) jumpFromChapterView(row.editorId);
         });
 
+    // Acts on all selected rows, unlike Edit and Open
+    $('<div></div>').appendTo(elemControls)
+        .attr('id', 'chapter-view-delete')
+        .addClass('button')
+        .addClass('with-icon')
+        .addClass('icon-delete')
+        .addClass('disabled')
+        .toggleClass('hidden', !chapterConfig.allowDelete)
+        .text(chapterConfig.labels.delete)
+        .click(function() {
+            deleteChapterViewRows(Array.from(chapterViewSelection));
+        });
+
     $('<div></div>').appendTo(elemControls)
         .attr('id', 'chapter-view-save')
         .addClass('button')
@@ -1740,12 +1753,108 @@ function isChapterViewRowEditable(row) {
 
 }
 
-// Unsaved: moved to another chapter, edited here, or created here (originalKey null)
+// Unsaved: moved to another chapter, edited here, created here (originalKey null) or deleted
 function isChapterViewRowPending(row) {
 
-    return (row.chapterKey !== row.originalKey) || (row.edited === true);
+    return (row.chapterKey !== row.originalKey) || (row.edited === true) || isChapterViewRowDeleted(row);
 
 }
+
+// Like getChapterViewEditorRows, but including rows marked deleted
+function getChapterViewEditorRowsAll(row) {
+
+    if(isBlank(row.link)) return $('#editor-content').children('.editor-item.id-' + row.editorId);
+
+    return $('#editor-content').children('.editor-item').filter(function() {
+        return $(this).attr('data-link') === row.link;
+    });
+
+}
+function isChapterViewRowDeleted(row) {
+
+    const elemEditors = getChapterViewEditorRowsAll(row);
+
+    return (elemEditors.length > 0) && elemEditors.toArray().every(function(elem) { return $(elem).hasClass('deleted'); });
+
+}
+
+// Deleting removes the BOM link to the parent on save (removeBOMItems), so the parent's BOM must
+// be changeable: not locked, or the root while it is WIP - otherwise the save would fail.
+function isChapterViewRowDeletable(row) {
+
+    if(!getChapterViewConfig().allowDelete) return false;
+
+    const elemEditors = getChapterViewEditorRows(row);
+
+    if(elemEditors.length === 0) return false;
+
+    return elemEditors.toArray().every(function(elem) {
+        const elemParent = getParent($(elem));
+        return (elemParent === null) ? (bomPartsList[0].revision === 'WIP') : !elemParent.hasClass('locked');
+    });
+
+}
+
+// Uses the Content Editor's own delete on every row of the requirement in this structure (all
+// uses if reused), so saving removes the BOM links as if deleted there. A requirement created
+// here and not saved yet is also cleared (as the editor's "delete forever"), the save skips it.
+// Only asked to confirm when more than the row itself is affected: sub requirements, which the
+// editor deletes along, or further uses of a reused requirement. Undo is possible until saved.
+function deleteChapterViewRows(uids) {
+
+    const labels = getChapterViewConfig().labels;
+
+    for(let uid of uids) {
+
+        const row = chapterViewData.rows.get(uid);
+
+        if(isBlank(row) || isChapterViewRowDeleted(row) || !isChapterViewRowDeletable(row)) continue;
+
+        const elemEditors   = getChapterViewEditorRows(row);
+        const countChildren = elemEditors.toArray().reduce(function(sum, elem) { return sum + getChildren($(elem)).length; }, 0);
+        const title         = row.details.TITLE || row.id;
+
+        if((countChildren > 0) && !confirm(labels.confirmChildren.replace('{title}', title).replace('{count}', countChildren))) continue;
+        if((elemEditors.length > 1) && !confirm(labels.confirmReused.replace('{title}', title).replace('{count}', elemEditors.length))) continue;
+
+        elemEditors.each(function() {
+            deleteContentEditorElement($(this));
+            if(isBlank(row.link)) clearContentEditorElement($(this));
+        });
+
+    }
+
+    if(uids.includes(chapterViewEditUid)) chapterViewEditUid = null;
+
+    clearChapterViewSelection();
+    renderChapterView();
+
+}
+function undoChapterViewDelete(row) {
+
+    getChapterViewEditorRowsAll(row).each(function() {
+        const elemUndo = $(this).find('.editor-item-recover .icon-undo').first();
+        if(elemUndo.length > 0) undeleteContentEditorElement(elemUndo);
+    });
+
+    renderChapterView();
+
+}
+
+// undeleteContentEditorElement (apps/editor.js) adds 'deleted' to the Navigator row instead of
+// removing it (addClass where removeClass is meant), so an undone row stayed marked deleted in the
+// Navigator. Corrected here after the core function ran; the Content Editor row itself is fine.
+const baseUndeleteContentEditorElement = undeleteContentEditorElement;
+
+undeleteContentEditorElement = function(elemClicked) {
+
+    const elemEditor = elemClicked.closest('.editor-item');
+
+    baseUndeleteContentEditorElement(elemClicked);
+
+    getMatchByIndex(elemEditor).removeClass('deleted');
+
+};
 
 function getChapterViewPendingCount() {
 
@@ -1986,9 +2095,11 @@ function insertChapterViewTable(elemChapter, register, chapter) {
 
         const isMovable   = isChapterViewRowMovable(row);
         const isEditable  = isChapterViewRowEditable(row);
+        const isDeleted   = isChapterViewRowDeleted(row);
         const elemRow     = $('<tr></tr>').appendTo(elemBody)
             .addClass('chapter-view-row')
             .toggleClass('chapter-view-row-nolink', row.editorId === '')
+            .toggleClass('chapter-view-row-deleted', isDeleted)
             .toggleClass('chapter-view-row-pending', isChapterViewRowPending(row))
             .toggleClass('selected', chapterViewSelection.has(row.uid))
             .attr('data-uid', row.uid)
@@ -2011,7 +2122,21 @@ function insertChapterViewTable(elemChapter, register, chapter) {
         const elemCheck = $('<td></td>').appendTo(elemRow).addClass('chapter-view-col-check');
         const actual    = getChapterViewValue(row.details, chapterConfig.fieldIdReqLevel);
 
-        if((chapterViewData.canMove || chapterConfig.allowEdit) && !isMovable && !isEditable) {
+        // Deleted rows offer undo where the delete was made (a row removed together with its
+        // parent is restored by undoing the parent)
+        if(isDeleted) {
+            const canUndo = getChapterViewEditorRowsAll(row).find('.editor-item-recover .icon-undo').length > 0;
+            $('<span></span>').appendTo(elemCheck)
+                .addClass('icon')
+                .addClass(canUndo ? 'icon-undo' : 'icon-delete')
+                .addClass(canUndo ? 'chapter-view-row-undo' : 'chapter-view-row-lock')
+                .attr('title', canUndo ? labels.undoDelete : labels.deletedByParent)
+                .click(function(e) {
+                    if(!canUndo) return;
+                    e.stopPropagation();
+                    undoChapterViewDelete(row);
+                });
+        } else if((chapterViewData.canMove || chapterConfig.allowEdit) && !isMovable && !isEditable) {
             $('<span></span>').appendTo(elemCheck)
                 .addClass('icon')
                 .addClass('icon-lock')
@@ -2257,6 +2382,8 @@ function insertChapterViewCreate(elemChapter, register, chapter) {
 
     for(let choice of choices) elemCategory.append($('<option></option>').attr('value', choice.link).text(choice.label));
 
+    // Own class instead of the editor's .missing: saveChanges() (apps/editor.js) aborts the save as
+    // long as any element with .missing exists on the page, this form included
     const submit = function() {
         if(elemTitle.val().trim() === '') { elemTitle.addClass('chapter-view-input-missing').focus(); return; }
         createChapterViewRequirement(register, chapter.key, elemTitle.val().trim(), elemDescription.val().trim(), elemCategory.val());
@@ -2350,14 +2477,16 @@ function createChapterViewRequirement(register, chapterKey, title, description, 
 
 }
 
-// A requirement created here and deleted again in the Content Editor before saving is gone for
-// good (it has no link to restore), so it is dropped from the view as well
+// Drops rows whose requirement is gone from the Content Editor: one created here and deleted again
+// before saving (it has no link to restore), or a saved one whose rows removeBOMItems took out of
+// the editor once a save removed its BOM links. A saved one only marked deleted stays (undo).
 function removeChapterViewDeletedRows() {
 
     for(let register of chapterViewData.registers) {
         for(let chapter of register.chapters.values()) {
             chapter.rows = chapter.rows.filter(function(row) {
-                if(!isBlank(row.link) || (getChapterViewEditorRows(row).length > 0)) return true;
+                const exists = isBlank(row.link) ? (getChapterViewEditorRows(row).length > 0) : (getChapterViewEditorRowsAll(row).length > 0);
+                if(exists) return true;
                 chapterViewData.rows.delete(row.uid);
                 register.count--;
                 return false;
@@ -2382,8 +2511,6 @@ function getChapterViewPicklistOption(fieldId, title) {
     return isBlank(option) ? null : { link : option.link, title : option.title };
 
 }
-    // Own class instead of the editor's .missing: saveChanges() (apps/editor.js) aborts the save as
-    // long as any element with .missing exists on the page, this form included
 
 // Called from the storeNewItemLinks wrap above once the ID of a newly created item is known
 function updateChapterViewRowId(elemEditor, requirementId) {
@@ -2454,6 +2581,13 @@ function updateChapterViewActions() {
 
     $('#chapter-view-edit').toggleClass('disabled', (row === null) || !isChapterViewRowEditable(row));
     $('#chapter-view-open').toggleClass('disabled', (row === null) || (row.editorId === ''));
+
+    const canDelete = (chapterViewData !== null) && Array.from(chapterViewSelection).some(function(uid) {
+        const selected = chapterViewData.rows.get(uid);
+        return !isBlank(selected) && !isChapterViewRowDeleted(selected) && isChapterViewRowDeletable(selected);
+    });
+
+    $('#chapter-view-delete').toggleClass('disabled', !canDelete);
 
 }
 

@@ -367,3 +367,14 @@ body.chapter-view #add { display : none; }
     min-width : 240px;
 }
 .chapter-view-edit .rte-toolbar > * { display : block; }
+
+/* Chapter View: rows marked deleted until saved */
+.chapter-view-row-deleted > td:not(.chapter-view-col-check):not(.chapter-view-col-open) {
+    opacity         : 0.5;
+    text-decoration : line-through;
+}
+.chapter-view-row-undo {
+    color     : var(--color-blue-500);
+    cursor    : pointer;
+    font-size : 18px;
+}
