@@ -275,3 +275,41 @@ body.chapter-view #add { display : none; }
 .chapter-view-create-title       { flex : 1; }
 .chapter-view-create-description { flex : 2; }
 .chapter-view-create-form input.missing { border-color : var(--color-status-red); }
+
+/* Chapter View: open icon and edit area below a row */
+.chapter-view-table .chapter-view-col-open { padding : 4px 0px; text-align : center; width : 32px; }
+.chapter-view-col-open .icon {
+    cursor    : pointer;
+    font-size : 18px;
+    opacity   : 0.5;
+}
+.chapter-view-col-open .icon:hover { opacity : 1; }
+.chapter-view-table tr.chapter-view-edit-row > td {
+    overflow    : visible;
+    padding     : 8px 10px 12px;
+    white-space : normal;
+}
+.chapter-view-edit {
+    display        : flex;
+    flex-direction : column;
+    gap            : 8px;
+}
+.chapter-view-edit-title {
+    background  : var(--color-surface-level-2);
+    border      : 1px solid var(--color-surface-level-4);
+    color       : inherit;
+    font-weight : bold;
+    padding     : 6px 8px;
+}
+.chapter-view-edit-title.missing { border-color : var(--color-status-red); }
+.chapter-view-edit .rte-input {
+    border-color : var(--color-surface-level-4);
+    max-height   : 300px;
+    overflow-y   : auto;
+    user-select  : text;
+}
+.chapter-view-edit-actions {
+    display         : flex;
+    gap             : 8px;
+    justify-content : flex-end;
+}

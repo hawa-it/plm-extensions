@@ -1422,6 +1422,7 @@ let chapterViewSelection = new Set(); // uids of rows selected with Ctrl / Shift
 let chapterViewLastClick = null;      // uid of the last selected row, start of a Shift + click range
 let chapterViewDrag      = null;      // { register, uids } while rows are being dragged
 let chapterViewCollapsed = new Set(); // register key + '|' + chapter key of collapsed chapters
+let chapterViewEditUid   = null;      // uid of the row whose title and description are being edited
 
 function getChapterViewConfig() {
 
@@ -1469,6 +1470,31 @@ $(document).ready(function() {
     $('<div></div>').appendTo(elemControls)
         .attr('id', 'chapter-view-pending')
         .addClass('chapter-view-pending');
+
+    // Both act on the single selected row; a plain click on a row only selects it
+    $('<div></div>').appendTo(elemControls)
+        .attr('id', 'chapter-view-edit')
+        .addClass('button')
+        .addClass('with-icon')
+        .addClass('icon-edit')
+        .addClass('disabled')
+        .text(chapterConfig.labels.edit)
+        .click(function() {
+            const row = getChapterViewSelectedRow();
+            if((row !== null) && isChapterViewRowEditable(row)) openChapterViewEdit(row.uid);
+        });
+
+    $('<div></div>').appendTo(elemControls)
+        .attr('id', 'chapter-view-open')
+        .addClass('button')
+        .addClass('with-icon')
+        .addClass('icon-open')
+        .addClass('disabled')
+        .text(chapterConfig.labels.openInEditor)
+        .click(function() {
+            const row = getChapterViewSelectedRow();
+            if((row !== null) && (row.editorId !== '')) jumpFromChapterView(row.editorId);
+        });
 
     $('<div></div>').appendTo(elemControls)
         .attr('id', 'chapter-view-save')
@@ -1537,6 +1563,7 @@ afterBOMCompletion = function(id, data) {
         chapterViewData = buildChapterViewData(editorIds);
         chapterViewSelection.clear();
         chapterViewCollapsed.clear();
+        chapterViewEditUid = null;
         renderChapterView();
     }
 
@@ -1704,11 +1731,30 @@ function isChapterViewRowMovable(row) {
 
 }
 
+// Title and description are item-level like the chapter, so editing follows the same rules as
+// moving: all editor rows of the requirement must exist and none may be locked.
+function isChapterViewRowEditable(row) {
+
+    if(!getChapterViewConfig().allowEdit) return false;
+
+    const elemEditors = getChapterViewEditorRows(row);
+
+    return (elemEditors.length > 0) && elemEditors.toArray().every(function(elem) { return !$(elem).hasClass('locked'); });
+
+}
+
+// Unsaved: moved to another chapter, edited here, or created here (originalKey null)
+function isChapterViewRowPending(row) {
+
+    return (row.chapterKey !== row.originalKey) || (row.edited === true);
+
+}
+
 function getChapterViewPendingCount() {
 
     if(chapterViewData === null) return 0;
 
-    return Array.from(chapterViewData.rows.values()).filter(function(row) { return row.chapterKey !== row.originalKey; }).length;
+    return Array.from(chapterViewData.rows.values()).filter(isChapterViewRowPending).length;
 
 }
 
@@ -1807,6 +1853,8 @@ function renderChapterView() {
 
     // Re-rendered after every move, so keep the reading position
     elemTabContents.scrollTop(scrollTop);
+
+    updateChapterViewActions();
 
 }
 
@@ -1933,34 +1981,40 @@ function insertChapterViewTable(elemChapter, register, chapter) {
             .text(column.label);
     }
 
+    $('<th></th>').appendTo(elemHead).addClass('chapter-view-col-open');
+
     const elemBody = $('<tbody></tbody>').appendTo(elemTable);
 
     for(let row of sortChapterViewRows(chapter.rows)) {
 
-        const isMovable = isChapterViewRowMovable(row);
-        const elemRow   = $('<tr></tr>').appendTo(elemBody)
+        const isMovable   = isChapterViewRowMovable(row);
+        const isEditable  = isChapterViewRowEditable(row);
+        const elemRow     = $('<tr></tr>').appendTo(elemBody)
             .addClass('chapter-view-row')
             .toggleClass('chapter-view-row-nolink', row.editorId === '')
-            .toggleClass('chapter-view-row-pending', row.chapterKey !== row.originalKey)
+            .toggleClass('chapter-view-row-pending', isChapterViewRowPending(row))
             .toggleClass('selected', chapterViewSelection.has(row.uid))
             .attr('data-uid', row.uid)
             .attr('data-editor-id', row.editorId);
 
-        // Plain click jumps into the Content Editor, Ctrl / Shift + click selects rows to move
+        // Click selects (Ctrl / Shift + click several), double-click edits; jumping into the
+        // Content Editor is done by the open icon or the "Open in Editor" button
         elemRow.click(function(e) {
-            if(e.ctrlKey || e.metaKey || e.shiftKey) {
-                if(isMovable) selectChapterViewRow($(this), e.shiftKey);
-                return;
-            }
-            if(row.editorId !== '') jumpFromChapterView(row.editorId);
+            selectChapterViewRow($(this), e.ctrlKey || e.metaKey, e.shiftKey);
         });
+
+        if(isEditable) {
+            elemRow.dblclick(function() {
+                openChapterViewEdit(row.uid);
+            });
+        }
 
         if(isMovable) insertChapterViewDragSource(elemRow, register, row);
 
         const elemCheck = $('<td></td>').appendTo(elemRow).addClass('chapter-view-col-check');
         const actual    = getChapterViewValue(row.details, chapterConfig.fieldIdReqLevel);
 
-        if(chapterViewData.canMove && !isMovable) {
+        if((chapterViewData.canMove || chapterConfig.allowEdit) && !isMovable && !isEditable) {
             $('<span></span>').appendTo(elemCheck)
                 .addClass('icon')
                 .addClass('icon-lock')
@@ -1987,7 +2041,110 @@ function insertChapterViewTable(elemChapter, register, chapter) {
                 .text(text);
         }
 
+        const elemOpen = $('<td></td>').appendTo(elemRow).addClass('chapter-view-col-open');
+
+        if(row.editorId !== '') {
+            $('<span></span>').appendTo(elemOpen)
+                .addClass('icon')
+                .addClass('icon-open')
+                .attr('title', labels.openInEditor)
+                .click(function(e) {
+                    e.stopPropagation();
+                    jumpFromChapterView(row.editorId);
+                });
+        }
+
+        if(chapterViewEditUid === row.uid) insertChapterViewEdit(elemBody, row, chapterConfig.columns.length + 2);
+
     }
+
+}
+
+// Edit area below the row: title and description, the latter in the same rich text editor as
+// the Content Editor, so formatting is kept. Start values are taken from the editor row rather
+// than the loaded state, so unsaved edits made in the Content Editor are not overwritten.
+function openChapterViewEdit(uid) {
+
+    chapterViewEditUid = uid;
+    chapterViewSelection.clear();
+    chapterViewSelection.add(uid);
+    chapterViewLastClick = uid;
+
+    renderChapterView();
+
+    $('#chapter-view-content').find('.chapter-view-edit-title').first().focus();
+
+}
+function closeChapterViewEdit() {
+
+    chapterViewEditUid = null;
+    renderChapterView();
+
+}
+function insertChapterViewEdit(elemBody, row, colspan) {
+
+    const labels     = getChapterViewConfig().labels;
+    const elemEditor = getChapterViewEditorRows(row).first();
+    const elemCell   = $('<td></td>')
+        .attr('colspan', colspan)
+        .appendTo($('<tr></tr>').addClass('chapter-view-edit-row').appendTo(elemBody));
+
+    const elemEdit = $('<div></div>').appendTo(elemCell).addClass('chapter-view-edit');
+
+    const elemTitle = $('<input></input>').appendTo(elemEdit)
+        .addClass('chapter-view-edit-title')
+        .attr('placeholder', labels.title)
+        .val(elemEditor.find('.editor-item-title').first().val());
+
+    const elemDescription = $('<div></div>').appendTo(elemEdit).addClass('chapter-view-edit-description');
+
+    insertRichTextEditor(elemDescription, elemEditor.find('.editor-item-description .rte-input').first().html(), null, 'chapter-view-edit');
+
+    const elemActions = $('<div></div>').appendTo(elemEdit).addClass('chapter-view-edit-actions');
+
+    const apply = function() {
+        const title = elemTitle.val().trim();
+        if(title === '') { elemTitle.addClass('missing').focus(); return; }
+        applyChapterViewEdit(row, title, elemDescription.find('.rte-input').html());
+    };
+
+    $('<div></div>').appendTo(elemActions).addClass('button').addClass('default').text(labels.apply).click(apply);
+    $('<div></div>').appendTo(elemActions).addClass('button').text(labels.cancel).click(closeChapterViewEdit);
+
+    elemTitle.on('keydown', function(e) {
+        if(e.key === 'Enter') apply();
+        if(e.key === 'Escape') closeChapterViewEdit();
+    });
+
+    // Keeps clicks and drags inside the edit area from reaching the chapter's drop handling
+    elemEdit.on('click dblclick', function(e) { e.stopPropagation(); });
+
+}
+
+// Writes title and description into all editor rows of the requirement (several if reused) and
+// marks them changed, the same as typing in the Content Editor would; Navigator and pins are
+// updated through the core's own helpers.
+function applyChapterViewEdit(row, title, description) {
+
+    getChapterViewEditorRows(row).each(function() {
+
+        const elemEditor = $(this);
+        const elemTitle  = elemEditor.find('.editor-item-title').first();
+
+        elemTitle.val(title).removeClass('missing');
+        elemEditor.find('.editor-item-description .rte-input').first().html(description);
+
+        setChanged(elemEditor);
+        updateTreeItemTitle(elemTitle);
+        updatePin(elemTitle);
+
+    });
+
+    row.details.TITLE       = title;
+    row.details.DESCRIPTION = description;
+    row.edited              = true;
+
+    closeChapterViewEdit();
 
 }
 
@@ -2164,28 +2321,35 @@ function updateChapterViewRowId(elemEditor, requirementId) {
 
 }
 
-function selectChapterViewRow(elemRow, isRange) {
+// Plain click selects only this row, Ctrl + click adds or removes it, Shift + click selects all
+// rows between the last selected one and this one, in the order shown in the current tab.
+// Locked rows can be selected too (e.g. to open them in the editor), moves skip them anyway.
+function selectChapterViewRow(elemRow, isToggle, isRange) {
 
-    const uid = elemRow.attr('data-uid');
+    const uid      = elemRow.attr('data-uid');
+    const elemRows = elemRow.closest('.chapter-view-tab').find('.chapter-view-row');
 
-    // Shift + click selects all movable rows between the last selected one and this one, in the
-    // order shown in the current tab
     if(isRange && (chapterViewLastClick !== null)) {
-        const elemRows = elemRow.closest('.chapter-view-tab').find('.chapter-view-row[draggable="true"]');
-        const uids     = elemRows.toArray().map(function(elem) { return $(elem).attr('data-uid'); });
-        const from     = uids.indexOf(chapterViewLastClick);
-        const to       = uids.indexOf(uid);
+        const uids = elemRows.toArray().map(function(elem) { return $(elem).attr('data-uid'); });
+        const from = uids.indexOf(chapterViewLastClick);
+        const to   = uids.indexOf(uid);
         if((from >= 0) && (to >= 0)) {
             uids.slice(Math.min(from, to), Math.max(from, to) + 1).forEach(function(value) { chapterViewSelection.add(value); });
-            elemRows.each(function() { $(this).toggleClass('selected', chapterViewSelection.has($(this).attr('data-uid'))); });
-            return;
         }
+    } else if(isToggle) {
+        if(chapterViewSelection.has(uid)) chapterViewSelection.delete(uid); else chapterViewSelection.add(uid);
+        chapterViewLastClick = uid;
+    } else {
+        chapterViewSelection.clear();
+        chapterViewSelection.add(uid);
+        chapterViewLastClick = uid;
     }
 
-    if(chapterViewSelection.has(uid)) chapterViewSelection.delete(uid); else chapterViewSelection.add(uid);
+    $('#chapter-view-content').find('.chapter-view-row').each(function() {
+        $(this).toggleClass('selected', chapterViewSelection.has($(this).attr('data-uid')));
+    });
 
-    elemRow.toggleClass('selected', chapterViewSelection.has(uid));
-    chapterViewLastClick = uid;
+    updateChapterViewActions();
 
 }
 function clearChapterViewSelection() {
@@ -2193,6 +2357,23 @@ function clearChapterViewSelection() {
     chapterViewSelection.clear();
     chapterViewLastClick = null;
     $('#chapter-view-content').find('.chapter-view-row.selected').removeClass('selected');
+
+    updateChapterViewActions();
+
+}
+function getChapterViewSelectedRow() {
+
+    if((chapterViewData === null) || (chapterViewSelection.size !== 1)) return null;
+
+    return chapterViewData.rows.get(Array.from(chapterViewSelection)[0]) || null;
+
+}
+function updateChapterViewActions() {
+
+    const row = getChapterViewSelectedRow();
+
+    $('#chapter-view-edit').toggleClass('disabled', (row === null) || !isChapterViewRowEditable(row));
+    $('#chapter-view-open').toggleClass('disabled', (row === null) || (row.editorId === ''));
 
 }
 
@@ -2363,7 +2544,7 @@ toggleDashboard = function() {
 };
 
 // The save run ends here (see the dashboard wrap above), whether started from the Content Editor
-// or from this view: moved rows count as saved from now on. A failed edit of a single item is
+// or from this view: moved, edited and created rows count as saved from now on. A failed edit of a single item is
 // reported by editExistingItems itself; the view cannot tell which one, so it trusts the save.
 const baseChapterUpdateAfterTemplateProcessing = updateAfterTemplateProcessing;
 
@@ -2378,7 +2559,7 @@ updateAfterTemplateProcessing = function() {
     for(let register of chapterViewData.registers) {
         for(let chapter of register.chapters.values()) {
             for(let row of chapter.rows) {
-                if(row.chapterKey === row.originalKey) continue;
+                if(!isChapterViewRowPending(row)) continue;
                 // A new requirement counts as saved once createNewItems stored its link
                 if(isBlank(row.link)) {
                     const link = getChapterViewEditorRows(row).attr('data-link');
@@ -2388,6 +2569,7 @@ updateAfterTemplateProcessing = function() {
                 row.originalKey      = row.chapterKey;
                 row.originalLabel    = chapter.label;
                 row.details[fieldId] = chapter.label;   // Same object as in bomPartsList
+                row.edited           = false;
             }
         }
     }
