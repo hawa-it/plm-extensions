@@ -1927,8 +1927,17 @@ function renderChapterView() {
         .addClass('chapter-view-tabs')
         .attr('data-tab-group', 'chapter-view-tab');
 
+    // Drop bar: filled with the chapters of the dragged rows' register while dragging (see
+    // insertChapterViewDragSource). It sits outside the scrolling list, so it stays in place
+    // however far down the list the dragged rows come from.
+    $('<div></div>').appendTo(elemContent)
+        .attr('id', 'chapter-view-dropbar')
+        .addClass('chapter-view-dropbar');
+
     const elemTabContents = $('<div></div>').appendTo(elemContent)
         .addClass('chapter-view-tab-contents');
+
+    enableChapterViewAutoScroll(elemTabContents);
 
     for(let register of registers) {
 
@@ -1955,7 +1964,7 @@ function renderChapterView() {
             if(!chapterViewData.canCreate || (register.key === 'unassigned')) continue;
         }
 
-        if(chapterViewData.canMove) insertChapterViewNewChapter(elemTabContent, register);
+        insertChapterViewToolbar(elemTabContent, register);
 
         for(let chapter of getChapterViewChapters(register)) insertChapterViewChapter(elemTabContent, register, chapter);
 
@@ -2018,6 +2027,42 @@ function sortChapterViewRows(rows) {
         if(b.id === '') return -1;
         return a.id.localeCompare(b.id, undefined, { numeric : true });
     });
+
+}
+
+// Toolbar on top of each tab: new chapter (while moving is possible) and collapse / expand all
+// chapters of the tab, as in the Content Editor. With all collapsed, only the headings remain,
+// which makes them reachable as drop targets in long lists.
+function insertChapterViewToolbar(elemParent, register) {
+
+    const labels      = getChapterViewConfig().labels;
+    const elemToolbar = $('<div></div>').appendTo(elemParent).addClass('chapter-view-toolbar');
+
+    if(chapterViewData.canMove) insertChapterViewNewChapter(elemToolbar, register);
+
+    const setAll = function(collapse) {
+        for(let chapter of getChapterViewChapters(register)) {
+            const key = register.key + '|' + chapter.key;
+            if(collapse) chapterViewCollapsed.add(key); else chapterViewCollapsed.delete(key);
+        }
+        renderChapterView();
+    };
+
+    const elemToggles = $('<div></div>').appendTo(elemToolbar).addClass('chapter-view-toolbar-toggles');
+
+    $('<div></div>').appendTo(elemToggles)
+        .addClass('button')
+        .addClass('icon')
+        .addClass('icon-minus')
+        .attr('title', labels.collapseAll)
+        .click(function() { setAll(true); });
+
+    $('<div></div>').appendTo(elemToggles)
+        .addClass('button')
+        .addClass('icon')
+        .addClass('icon-plus')
+        .attr('title', labels.expandAll)
+        .click(function() { setAll(false); });
 
 }
 
@@ -2630,14 +2675,69 @@ function insertChapterViewDragSource(elemRow, register, row) {
             e.originalEvent.dataTransfer.effectAllowed = 'move';
             e.originalEvent.dataTransfer.setData('text/plain', row.id || row.uid); // Required by Firefox to start dragging
             $('#chapter-view').addClass('chapter-view-dragging');
+            // Deferred: changing the layout within dragstart can make browsers cancel the drag
+            setTimeout(function() { if(chapterViewDrag !== null) showChapterViewDropBar(register); }, 0);
         })
-        .on('dragend', function() {
-            chapterViewDrag = null;
-            $('#chapter-view').removeClass('chapter-view-dragging');
-            $('.chapter-view-drop-target').removeClass('chapter-view-drop-target');
-        });
+        .on('dragend', endChapterViewDrag);
 
 }
+
+// Also called on drop: the drop re-renders the view, and jQuery removes the dragend handler
+// together with the old row, so dragend alone would leave the drag state behind
+function endChapterViewDrag() {
+
+    chapterViewDrag = null;
+    $('#chapter-view').removeClass('chapter-view-dragging');
+    $('.chapter-view-drop-target').removeClass('chapter-view-drop-target');
+    $('#chapter-view-dropbar').html('').removeClass('visible');
+
+}
+
+// One drop field per chapter of the register, in the order shown below
+function showChapterViewDropBar(register) {
+
+    const labels      = getChapterViewConfig().labels;
+    const elemDropBar = $('#chapter-view-dropbar').html('').addClass('visible');
+
+    $('<div></div>').appendTo(elemDropBar)
+        .addClass('chapter-view-dropbar-label')
+        .text(labels.dropHint);
+
+    for(let chapter of getChapterViewChapters(register)) {
+
+        const elemChip = $('<div></div>').appendTo(elemDropBar)
+            .addClass('chapter-view-dropbar-chip')
+            .toggleClass('chapter-view-chapter-none', chapter.isNoChapter === true)
+            .attr('title', chapter.label)
+            .text(chapter.label + ' (' + chapter.rows.length + ')');
+
+        insertChapterViewDropTarget(elemChip, register, chapter.key);
+
+    }
+
+}
+
+// Scrolls the list while dragging near its upper or lower edge. dragover keeps firing while the
+// pointer rests there, so the list scrolls on until the pointer moves away.
+function enableChapterViewAutoScroll(elemList) {
+
+    const edge = 60;
+    const step = 20;
+
+    elemList.on('dragover', function(e) {
+
+        if(chapterViewDrag === null) return;
+
+        const rect = this.getBoundingClientRect();
+        const y    = e.originalEvent.clientY;
+
+        if(y < rect.top + edge)         this.scrollTop -= step;
+        else if(y > rect.bottom - edge) this.scrollTop += step;
+
+    });
+
+}
+
 function insertChapterViewDropTarget(elemChapter, register, chapterKey) {
 
     elemChapter
@@ -2654,7 +2754,9 @@ function insertChapterViewDropTarget(elemChapter, register, chapterKey) {
         .on('drop', function(e) {
             if((chapterViewDrag === null) || (chapterViewDrag.register !== register)) return;
             e.preventDefault();
-            moveChapterViewRows(register, chapterViewDrag.uids, chapterKey);
+            const uids = chapterViewDrag.uids;
+            endChapterViewDrag();
+            moveChapterViewRows(register, uids, chapterKey);
         });
 
 }
