@@ -1395,8 +1395,8 @@ updateAfterTemplateProcessing = function() {
 };
 
 // Chapter View: read-only view of the loaded structure grouped like the department's Excel -
-// one tab per register (REGISTER field), chapter headings (CHAPTER field) within, requirements
-// below. Navigator, Content Editor and BOM stay untouched, nothing is written to Fusion Manage.
+// one tab per register (derived from the field configured as fieldIdRegister, currently REQ
+// LEVEL), chapter headings (CHAPTER field) within, requirements below. Navigator, Content Editor and BOM stay untouched, nothing is written to Fusion Manage.
 // Toggle and panel are inserted via DOM here, not in editor.pug, like the dashboard above.
 let chapterViewData    = null; // Built in the afterBOMCompletion wrap below, null while not available
 let chapterViewCapture = null; // Content Editor row ids collected while the core loop runs
@@ -1729,7 +1729,8 @@ function insertChapterViewChapter(elemParent, register, chapter) {
             });
         }
 
-        // Plausibility only: the REQ Level expected for this register is shown, never corrected
+        // Plausibility only, if a register defines reqLevel: the expected REQ Level is shown, never
+        // corrected. Not configured while the registers are derived from REQ Level itself.
         const elemCheck = $('<td></td>').appendTo(elemRow).addClass('chapter-view-col-check');
         const actual    = getChapterViewValue(row.details, chapterConfig.fieldIdReqLevel);
 

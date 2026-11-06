@@ -168,8 +168,8 @@ exports.applications = {
             chapterView : { // Read-only chapter view (custom/editor.js), groups the loaded structure like the department's Excel
                 enabled            : true,
                 fieldIdChapter     : 'CHAPTER',  // Single Line Text, must be part of the BOM view "Requirements Overview"
-                fieldIdRegister    : 'REGISTER', // Single Selection (CUSTOM_LOOKUP_REQUIREMENT_REGISTER), same BOM view
-                fieldIdReqLevel    : 'REQ_LEVEL',
+                fieldIdRegister    : 'REQ_LEVEL', // Registers are derived from REQ LEVEL (CUSTOM_LOOKUP_REQ_LEVEL), no separate field
+                fieldIdReqLevel    : 'REQ_LEVEL', // Only used by the optional reqLevel check per register below
                 chapterSort        : 'first-occurrence', // or 'alphanumeric' (e.g. for "01 Plattform & Normen")
                 hideEmptyRegisters : false,              // false: empty registers are shown greyed out with (0)
                 columns : [                              // Only fields contained in the BOM view
@@ -178,12 +178,12 @@ exports.applications = {
                     { fieldId : 'DESCRIPTION', label : 'Description' },
                     { fieldId : 'REQ_LEVEL',   label : 'REQ Level'   }
                 ],
-                registers : [                            // Order = order of the tabs
-                    { label : 'Stakeholder',       value : 'Stakeholder Requirements',       reqLevel : 'Stakeholder Requirement' },
-                    { label : 'Tech Product',      value : 'Tech Product Requirements',      reqLevel : 'Product Requirement'     },
-                    { label : 'Digital Product',   value : 'Digital Product Requirements',   reqLevel : 'Product Requirement'     },
-                    { label : 'Tech Component',    value : 'Tech Component Requirements',    reqLevel : 'Component Requirement'   },
-                    { label : 'Digital Component', value : 'Digital Component Requirements', reqLevel : 'Component Requirement'   }
+                registers : [                            // Order = order of the tabs; value = REQ LEVEL value exactly as in Fusion (case-insensitive)
+                    { label : 'Stakeholder',       value : 'Stakeholder Requirement'        },
+                    { label : 'Tech Product',      value : 'Product Requirement'            },
+                    { label : 'Digital Product',   value : 'Digital Product Requirement'    },
+                    { label : 'Tech Component',    value : 'Component Requirement'          },
+                    { label : 'Digital Component', value : 'Digital Component Requirements' } // Plural as defined in the picklist
                 ],
                 labels : {
                     toggle        : 'Chapter View',
