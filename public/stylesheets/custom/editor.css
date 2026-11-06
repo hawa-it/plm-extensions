@@ -241,9 +241,22 @@ body.chapter-view #add { display : none; }
     padding    : 4px 8px;
 }
 .chapter-view-row[draggable="true"] { cursor : grab; }
-.chapter-view-row.selected { background : var(--color-hover-background); }
-.chapter-view-row.selected td:first-child { box-shadow : inset 4px 0px 0px var(--color-blue-500); }
+/* Selected rows look like the selected row in the Navigator (hover background, framed in the
+   hover border color); box-shadow instead of borders, as the table collapses its borders */
 .chapter-view-row-pending td:first-child { box-shadow : inset 4px 0px 0px var(--color-status-yellow); }
+.chapter-view-row.selected > td {
+    background : var(--color-hover-background) !important;
+    box-shadow : inset 0px 1px 0px var(--color-hover-border), inset 0px -1px 0px var(--color-hover-border);
+}
+.chapter-view-row.selected > td:first-child {
+    box-shadow : inset 1px 0px 0px var(--color-hover-border), inset 0px 1px 0px var(--color-hover-border), inset 0px -1px 0px var(--color-hover-border);
+}
+.chapter-view-row.selected > td:last-child {
+    box-shadow : inset -1px 0px 0px var(--color-hover-border), inset 0px 1px 0px var(--color-hover-border), inset 0px -1px 0px var(--color-hover-border);
+}
+.chapter-view-row-pending.selected > td:first-child {
+    box-shadow : inset 4px 0px 0px var(--color-status-yellow), inset 0px 1px 0px var(--color-hover-border), inset 0px -1px 0px var(--color-hover-border);
+}
 .chapter-view-row-lock { font-size : 16px; opacity : 0.5; }
 #chapter-view.chapter-view-dragging .chapter-view-chapter { outline : 1px dashed var(--color-surface-level-4); }
 #chapter-view .chapter-view-chapter.chapter-view-drop-target { outline : 2px solid var(--color-blue-500); }
