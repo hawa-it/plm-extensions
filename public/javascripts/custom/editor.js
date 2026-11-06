@@ -160,30 +160,30 @@ function markReusedItemsInNavigator() {
 
 }
 
-// "Sync Reused" button: REUSED is only ever set going forward by this app's own drag-and-drop
+// Reused sync: REUSED is only ever set going forward by this app's own drag-and-drop
 // reuse flow (see onEditorDrop / editExistingItems), so it won't reflect items that ended up
 // linked in multiple places some other way. This lets the user manually reconcile REUSED
 // against Fusion Manage's actual where-used count for every item in the open structure -
 // deliberately not done automatically on every load, since that would mean one extra request
-// per item (this structure alone has dozens).
+// per item (this structure alone has dozens). Started by the combined "Sync" button together
+// with the specification sync (see runSync at the end of this file); reports through callback.
 $(document).ready(function() {
 
+    const labels = getSyncLabels();
+
     $('<div></div>')
-        .attr('id', 'button-sync-reused')
+        .attr('id', 'button-sync')
         .addClass('button')
-        .html('Sync Reused')
+        .attr('title', labels.tooltip)
+        .text(labels.button)
         .insertBefore('#header-avatar')
         .click(function() {
-            syncReusedStatus();
+            runSync();
         });
 
 });
 
-function syncReusedStatus() {
-
-    const elemButton = $('#button-sync-reused');
-
-    if(elemButton.hasClass('disabled')) return;
+function syncReusedStatus(callback) {
 
     const items     = bomPartsList.slice(1).filter(function(bomPart) { return !isBlank(bomPart.link); });
     const batchSize = 5;
@@ -191,17 +191,14 @@ function syncReusedStatus() {
     let index        = 0;
     let countUpdated = 0;
 
-    if(items.length === 0) { showSuccessMessage('Sync Reused', 'No items to check.'); return; }
-
-    elemButton.addClass('disabled').html('Syncing...');
+    if(items.length === 0) { callback('Reused: no items to check.'); return; }
 
     function processBatch() {
 
         if(index >= items.length) {
 
             markReusedItemsInNavigator();
-            elemButton.removeClass('disabled').html('Sync Reused');
-            showSuccessMessage('Sync Reused', countUpdated + ' of ' + items.length + ' item(s) updated.');
+            callback('Reused: ' + countUpdated + ' of ' + items.length + ' item(s) updated.');
             return;
 
         }
@@ -596,7 +593,7 @@ $(document).ready(function() {
         .addClass('toggle-off')
         .attr('title', 'Click to toggle the dashboard of this structure on/off')
         .html('Dashboard')
-        .insertBefore('#button-sync-reused')
+        .insertBefore('#button-sync')
         .click(function() {
             toggleDashboard();
         });
@@ -2690,9 +2687,9 @@ function jumpFromChapterView(editorId) {
 // from the specification are set by an existing on-demand action in Fusion Manage, run on the
 // specification (config.specificationSync.scriptName). It was only started by hand in Fusion, so
 // requirements created in the editor stayed without them. The editor runs that action instead of
-// duplicating its logic (project vs. catalog, primary vs. reused use): by button, and after a save
-// that created or newly linked requirements. Not after every save, since the action rewrites the
-// multi-value fields of every project requirement on each run.
+// duplicating its logic (project vs. catalog, primary vs. reused use): with the combined "Sync"
+// button, and on its own after a save that created or newly linked requirements. Not after every
+// save, since the action rewrites the multi-value fields of every project requirement on each run.
 let specificationSyncPending = false;
 
 function getSpecificationSyncConfig() {
@@ -2700,24 +2697,6 @@ function getSpecificationSyncConfig() {
     return (!isBlank(config.specificationSync) && config.specificationSync.enabled) ? config.specificationSync : null;
 
 }
-
-$(document).ready(function() {
-
-    const syncConfig = getSpecificationSyncConfig();
-
-    if(syncConfig === null) return;
-
-    $('<div></div>')
-        .attr('id', 'button-sync-specification')
-        .addClass('button')
-        .attr('title', 'Runs "' + syncConfig.scriptName + '" on the specification: sets Related Specification and the fields taken over from it in the whole structure')
-        .text(syncConfig.labels.button)
-        .insertBefore('#button-sync-reused')
-        .click(function() {
-            runSpecificationSync();
-        });
-
-});
 
 // Rows without link are created, rows without edge id get linked by this save. Template mode is
 // left out: links.root still points at the template there until the save has finished.
@@ -2748,29 +2727,69 @@ updateAfterTemplateProcessing = function() {
 
     if(specificationSyncPending) {
         specificationSyncPending = false;
-        runSpecificationSync();
+        runSync(true);
     }
 
 };
 
-function runSpecificationSync() {
+// Combined "Sync" button (inserted next to the reused sync above): first the specification sync,
+// then the REUSED reconciliation, reported together in one message. After a save only the
+// specification sync runs (onlySpecification). The button stays disabled while either runs.
+function getSyncLabels() {
 
-    const syncConfig = getSpecificationSyncConfig();
+    const labels = (getSpecificationSyncConfig() || {}).labels || {};
 
-    if(syncConfig === null) return;
+    return {
+        button  : labels.button  || 'Sync',
+        running : labels.running || 'Syncing ...',
+        title   : labels.title   || 'Sync',
+        tooltip : labels.tooltip || ''
+    };
 
-    const labels     = syncConfig.labels;
-    const elemButton = $('#button-sync-specification');
+}
+function runSync(onlySpecification) {
+
+    const labels     = getSyncLabels();
+    const elemButton = $('#button-sync');
 
     if(elemButton.hasClass('disabled')) return;
     if(isBlank(links.root) || (editMode !== 'existing')) return;
 
     elemButton.addClass('disabled').text(labels.running);
 
-    const finish = function(isError, message) {
+    let messages = [];
+    let hasError = false;
+
+    const finish = function() {
         elemButton.removeClass('disabled').text(labels.button);
-        if(isError) showErrorMessage(labels.title, message); else showSuccessMessage(labels.title, message);
+        if(messages.length === 0) return;
+        if(hasError) showErrorMessage(labels.title, messages.join('<br>')); else showSuccessMessage(labels.title, messages.join('<br>'));
     };
+
+    runSpecificationSync(function(isError, message) {
+
+        if(!isBlank(message)) messages.push(message);
+        hasError = hasError || isError;
+
+        if(onlySpecification) { finish(); return; }
+
+        syncReusedStatus(function(message) {
+            messages.push(message);
+            finish();
+        });
+
+    });
+
+}
+
+function runSpecificationSync(callback) {
+
+    const syncConfig = getSpecificationSyncConfig();
+
+    if(syncConfig === null) { callback(false, ''); return; }
+
+    const labels = syncConfig.labels;
+    const finish = function(isError, message) { callback(isError, 'Specification: ' + message); };
 
     Promise.all([
         $.get('/plm/workspace-scripts', { wsId : config.wsMain.workspaceId, useCache : true }),

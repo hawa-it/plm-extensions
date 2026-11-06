@@ -170,10 +170,11 @@ exports.applications = {
                 scriptName    : 'REQ - Requirements BOM Sync_Add Action', // uniqueName of the on-demand action in workspace 835
                 resultFieldId : 'BOM_SYNC_RESULT',      // Written by the action on the specification, shown as message
                 afterSave     : true,                    // Also run after a save that created or newly linked requirements
-                labels        : {
-                    button   : 'Sync Specification',
+                labels        : {             // Also used by the combined "Sync" button (specification sync + reused sync)
+                    button   : 'Sync',
                     running  : 'Syncing ...',
-                    title    : 'Sync Specification',
+                    title    : 'Sync',
+                    tooltip  : 'Sets Related Specification and the fields taken over from the specification, then checks which requirements are reused',
                     notFound : 'On-demand action "{name}" not found in this workspace.',
                     noSpec   : 'No specification found for this structure.'
                 }
