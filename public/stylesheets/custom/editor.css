@@ -347,8 +347,9 @@ body.chapter-view #add { display : none; }
     min-width  : 120px;
 }
 .chapter-view-edit-fields .field-value {
-    flex     : 1;
-    position : relative;
+    flex      : 1;
+    min-width : 0px;
+    position  : relative;
 }
 .chapter-view-edit-fields input {
     background : var(--color-surface-level-2);
@@ -357,6 +358,21 @@ body.chapter-view #add { display : none; }
     height     : 22px;
     padding    : 7px 28px 7px 14px;
     width      : calc(100% - 42px);
+}
+
+/* In a picklist the input shares the row with the clear button (.picklist-actions), so it takes
+   only the remaining width; at full width the button was pushed into the next field. */
+.chapter-view-edit-fields .picklist-controls {
+    min-width : 0px;
+}
+.chapter-view-edit-fields .picklist-input {
+    flex      : 1 1 auto;
+    min-width : 0px;
+    padding   : 7px 14px;
+    width     : auto;
+}
+.chapter-view-edit-fields .picklist-input.chapter-view-input-missing {
+    box-shadow : inset 0px -2px 0px 0px var(--color-status-red);
 }
 
 /* The framework positions picklists for the wide label column of Advanced Mode

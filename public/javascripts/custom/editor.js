@@ -1645,17 +1645,19 @@ function buildChapterViewData(editorIds) {
         }
 
         // chapterKey and chapterLabel (the value written into CHAPTER) follow moves and renames in
-        // this view, originalKey/originalLabel keep the saved state
+        // this view, registerKey follows a change of REQ Level; the original* keys keep the saved state
         const row = {
-            uid           : String(index),
-            link          : part.link,
-            details       : part.details,
-            id            : getChapterViewValue(part.details, 'ID'),
-            editorId      : editorIds[index - 1] || '',
-            chapterKey    : chapterKey,
-            chapterLabel  : chapterLabel,
-            originalKey   : chapterKey,
-            originalLabel : chapterLabel
+            uid                 : String(index),
+            link                : part.link,
+            details             : part.details,
+            id                  : getChapterViewValue(part.details, 'ID'),
+            editorId            : editorIds[index - 1] || '',
+            registerKey         : register.key,
+            chapterKey          : chapterKey,
+            chapterLabel        : chapterLabel,
+            originalRegisterKey : register.key,
+            originalKey         : chapterKey,
+            originalLabel       : chapterLabel
         };
 
         register.chapters.get(chapterKey).rows.push(row);
@@ -1756,10 +1758,10 @@ function isChapterViewRowEditable(row) {
 
 }
 
-// Unsaved: moved to another chapter, edited here, created here (originalKey null) or deleted
+// Unsaved: moved to another chapter or register, edited here, created here (originalKey null) or deleted
 function isChapterViewRowPending(row) {
 
-    return isChapterViewChapterPending(row) || (row.edited === true) || isChapterViewRowDeleted(row);
+    return isChapterViewChapterPending(row) || (row.registerKey !== row.originalRegisterKey) || (row.edited === true) || isChapterViewRowDeleted(row);
 
 }
 
@@ -2291,14 +2293,21 @@ function insertChapterViewEdit(elemBody, row, colspan) {
 
     insertRichTextEditor(elemDescription, elemEditor.find('.editor-item-description .rte-input').first().html(), null, 'chapter-view-edit');
 
-    const elemFields = insertChapterViewEditFields(elemEdit, elemEditor);
+    const elemFields = insertChapterViewEditFields(elemEdit, elemEditor, row);
 
     const elemActions = $('<div></div>').appendTo(elemEdit).addClass('chapter-view-edit-actions');
 
     const apply = function() {
-        const title = elemTitle.val().trim();
+        const title   = elemTitle.val().trim();
+        const changes = getChapterViewEditFieldChanges(elemFields);
         if(title === '') { elemTitle.addClass('chapter-view-input-missing').focus(); return; }
-        applyChapterViewEdit(row, title, elemDescription.find('.rte-input').html(), getChapterViewEditFieldChanges(elemFields));
+        // Without REQ Level the requirement would drop out of every register
+        const level = changes.find(function(change) { return change.fieldId === getChapterViewConfig().fieldIdRegister; });
+        if(!isBlank(level) && (level.display === '')) {
+            elemFields.find('.field-id-' + level.fieldId + ' .picklist-input').first().addClass('chapter-view-input-missing').focus();
+            return;
+        }
+        applyChapterViewEdit(row, title, elemDescription.find('.rte-input').html(), changes);
     };
 
     $('<div></div>').appendTo(elemActions).addClass('button').addClass('default').text(labels.apply).click(apply);
@@ -2317,11 +2326,16 @@ function insertChapterViewEdit(elemBody, row, colspan) {
 // Mode (insertField, incl. picklist search). Only fields editable in the editor row are offered;
 // their current value is read from there, not from the loaded state. Multiple selections are not
 // supported here. Own container class, as .editor-item-advanced is hidden outside Advanced Mode.
-function insertChapterViewEditFields(elemEdit, elemEditor) {
+// The register field (REQ Level) moves the requirement to another tab and clears its chapter
+// (see moveChapterViewRowToRegister), so it is only offered where moving is possible.
+function insertChapterViewEditFields(elemEdit, elemEditor, row) {
 
-    const elemFields = $('<div></div>').appendTo(elemEdit).addClass('chapter-view-edit-fields');
+    const chapterConfig = getChapterViewConfig();
+    const elemFields    = $('<div></div>').appendTo(elemEdit).addClass('chapter-view-edit-fields');
 
-    for(let fieldId of (getChapterViewConfig().editFields || [])) {
+    for(let fieldId of (chapterConfig.editFields || [])) {
+
+        if((fieldId === chapterConfig.fieldIdRegister) && !isChapterViewRowMovable(row)) continue;
 
         const field      = (config.wsMain.advancedFields || []).find(function(field) { return field.fieldId === fieldId; });
         const elemSource = elemEditor.find('.editor-item-advanced .field-id-' + fieldId + '.field-editable').first();
@@ -2416,7 +2430,67 @@ function applyChapterViewEdit(row, title, description, changes) {
 
     for(let change of changes) row.details[change.fieldId] = change.display;
 
+    const level = changes.find(function(change) { return change.fieldId === getChapterViewConfig().fieldIdRegister; });
+
+    if(!isBlank(level)) moveChapterViewRowToRegister(row, level.display);
+
     closeChapterViewEdit();
+
+}
+
+// A new REQ Level moves the requirement to the matching tab, below "No Chapter": the chapters of
+// one register mean nothing in another, so CHAPTER is cleared the same way a move in this view
+// sets it (setChapterViewEditorValue). The view stays on the current tab, where the row is gone.
+function moveChapterViewRowToRegister(row, levelTitle) {
+
+    const source = chapterViewData.registers.find(function(register) { return register.key === row.registerKey; });
+    const target = getChapterViewRegisterForLevel(levelTitle);
+
+    if(isBlank(source) || (source === target)) return;
+
+    const sourceChapter = source.chapters.get(row.chapterKey);
+
+    if(!isBlank(sourceChapter) && sourceChapter.rows.includes(row)) sourceChapter.rows.splice(sourceChapter.rows.indexOf(row), 1);
+
+    source.count--;
+
+    if(!target.chapters.has('')) target.chapters.set('', { key : '', label : '', rows : [] });
+
+    target.chapters.get('').rows.push(row);
+    target.count++;
+
+    row.registerKey  = target.key;
+    row.chapterKey   = '';
+    row.chapterLabel = '';
+
+    setChapterViewEditorValue(row, '');
+
+    chapterViewSelection.delete(row.uid);
+    if(chapterViewLastClick === row.uid) chapterViewLastClick = null;
+
+}
+
+// Same matching as buildChapterViewData; a level without register goes to "Unassigned", which is
+// only built when the loaded structure needs it, so it is added here if missing
+function getChapterViewRegisterForLevel(levelTitle) {
+
+    const chapterConfig = getChapterViewConfig();
+    const key           = getChapterViewKey(levelTitle || '');
+
+    const register = chapterViewData.registers.find(function(register) {
+        return (register.key !== 'unassigned') && (getChapterViewKey(register.key) === key);
+    });
+
+    if(!isBlank(register)) return register;
+
+    let unassigned = chapterViewData.registers.find(function(register) { return register.key === 'unassigned'; });
+
+    if(isBlank(unassigned)) {
+        unassigned = { key : 'unassigned', label : chapterConfig.labels.unassigned, reqLevel : '', chapters : new Map(), count : 0 };
+        chapterViewData.registers.push(unassigned);
+    }
+
+    return unassigned;
 
 }
 
@@ -2528,15 +2602,17 @@ function createChapterViewRequirement(register, chapterKey, title, description, 
 
     // originalKey null: a new requirement stays pending until saved, wherever it is moved to
     const row = {
-        uid           : 'new-' + elemEditor.attr('data-id'),
-        link          : '',
-        details       : details,
-        id            : '',
-        editorId      : elemEditor.attr('data-id'),
-        chapterKey    : chapterKey,
-        chapterLabel  : chapter.label,
-        originalKey   : null,
-        originalLabel : ''
+        uid                 : 'new-' + elemEditor.attr('data-id'),
+        link                : '',
+        details             : details,
+        id                  : '',
+        editorId            : elemEditor.attr('data-id'),
+        registerKey         : register.key,
+        chapterKey          : chapterKey,
+        chapterLabel        : chapter.label,
+        originalRegisterKey : register.key,
+        originalKey         : null,
+        originalLabel       : ''
     };
 
     chapter.rows.push(row);
@@ -2993,10 +3069,11 @@ updateAfterTemplateProcessing = function() {
                     if(isBlank(link)) continue;
                     row.link = link;
                 }
-                row.originalKey      = row.chapterKey;
-                row.originalLabel    = row.chapterLabel;
-                row.details[fieldId] = row.chapterLabel;   // Same object as in bomPartsList
-                row.edited           = false;
+                row.originalRegisterKey = row.registerKey;
+                row.originalKey         = row.chapterKey;
+                row.originalLabel       = row.chapterLabel;
+                row.details[fieldId]    = row.chapterLabel;   // Same object as in bomPartsList
+                row.edited              = false;
             }
         }
     }
