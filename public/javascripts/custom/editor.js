@@ -1394,12 +1394,19 @@ updateAfterTemplateProcessing = function() {
 
 };
 
-// Chapter View: read-only view of the loaded structure grouped like the department's Excel -
-// one tab per register (derived from the field configured as fieldIdRegister, currently REQ
-// LEVEL), chapter headings (CHAPTER field) within, requirements below. Navigator, Content Editor and BOM stay untouched, nothing is written to Fusion Manage.
-// Toggle and panel are inserted via DOM here, not in editor.pug, like the dashboard above.
-let chapterViewData    = null; // Built in the afterBOMCompletion wrap below, null while not available
-let chapterViewCapture = null; // Content Editor row ids collected while the core loop runs
+// Chapter View: the loaded structure grouped like the department's Excel - one tab per register
+// (derived from the field configured as fieldIdRegister, currently REQ LEVEL), chapter headings
+// (CHAPTER field) within, requirements below. Navigator, Content Editor and BOM stay untouched.
+// Rows can be moved between chapters by drag & drop (allowMove); the new chapter is written into
+// the row's CHAPTER Advanced Field in the Content Editor, so the regular "Save All Changes" stores
+// it - no separate write path to Fusion Manage. Toggle and panel are inserted via DOM here, not
+// in editor.pug, like the dashboard above.
+let chapterViewData      = null;      // Built in the afterBOMCompletion wrap below, null while not available
+let chapterViewCapture   = null;      // Content Editor row ids collected while the core loop runs
+let chapterViewSelection = new Set(); // uids of rows selected with Ctrl / Shift + click
+let chapterViewLastClick = null;      // uid of the last selected row, start of a Shift + click range
+let chapterViewDrag      = null;      // { register, uids } while rows are being dragged
+let chapterViewCollapsed = new Set(); // register key + '|' + chapter key of collapsed chapters
 
 function getChapterViewConfig() {
 
@@ -1420,7 +1427,7 @@ $(document).ready(function() {
         .addClass('with-toggle')
         .addClass('toggle-off')
         .addClass('disabled')
-        .attr('title', 'Click to toggle the read-only chapter view of the loaded structure on/off')
+        .attr('title', 'Click to toggle the chapter view of the loaded structure on/off')
         .text(chapterConfig.labels.toggle)
         .insertBefore('#header-avatar')
         .click(function() {
@@ -1439,6 +1446,24 @@ $(document).ready(function() {
     $('<div></div>').appendTo(elemHeader)
         .addClass('panel-title')
         .append($('<div></div>').addClass('panel-title-main').text(chapterConfig.labels.toggle));
+
+    // Same save as in the Content Editor, whose button is hidden while this view is open
+    const elemControls = $('<div></div>').appendTo(elemHeader)
+        .addClass('panel-controls');
+
+    $('<div></div>').appendTo(elemControls)
+        .attr('id', 'chapter-view-pending')
+        .addClass('chapter-view-pending');
+
+    $('<div></div>').appendTo(elemControls)
+        .attr('id', 'chapter-view-save')
+        .addClass('button')
+        .addClass('default')
+        .addClass('hidden')
+        .text(chapterConfig.labels.save)
+        .click(function() {
+            saveChanges();
+        });
 
     $('<div></div>').appendTo(elemView)
         .attr('id', 'chapter-view-content')
@@ -1495,6 +1520,8 @@ afterBOMCompletion = function(id, data) {
             editorIds = [];
         }
         chapterViewData = buildChapterViewData(editorIds);
+        chapterViewSelection.clear();
+        chapterViewCollapsed.clear();
         renderChapterView();
     }
 
@@ -1525,6 +1552,13 @@ function hasChapterViewField(fieldId) {
 
 }
 
+// Grouping ignores case and surrounding blanks, the first spelling found is displayed
+function getChapterViewKey(label) {
+
+    return label.trim().toLowerCase();
+
+}
+
 function buildChapterViewData(editorIds) {
 
     const chapterConfig = getChapterViewConfig();
@@ -1532,10 +1566,11 @@ function buildChapterViewData(editorIds) {
         return { key : register.value, label : register.label, reqLevel : register.reqLevel || '', chapters : new Map(), count : 0 };
     });
     const unassigned    = { key : 'unassigned', label : chapterConfig.labels.unassigned, reqLevel : '', chapters : new Map(), count : 0 };
+    const rows          = new Map();
     const seen          = new Set();
 
     // Register values are matched case-insensitively, anything else ends up unassigned
-    const registerByValue = new Map(registers.map(function(register) { return [ register.key.trim().toLowerCase(), register ]; }));
+    const registerByValue = new Map(registers.map(function(register) { return [ getChapterViewKey(register.key), register ]; }));
 
     // Index 0 is the root (the specification itself) and not shown
     for(let index = 1; index < bomPartsList.length; index++) {
@@ -1549,22 +1584,28 @@ function buildChapterViewData(editorIds) {
         if(seen.has(part.link)) continue;
         seen.add(part.link);
 
-        const valueRegister = getChapterViewValue(part.details, chapterConfig.fieldIdRegister).trim().toLowerCase();
-        const register      = registerByValue.get(valueRegister) || unassigned;
-
-        // Grouping ignores case and surrounding blanks, the first spelling found is displayed
+        const register     = registerByValue.get(getChapterViewKey(getChapterViewValue(part.details, chapterConfig.fieldIdRegister))) || unassigned;
         const chapterLabel = getChapterViewValue(part.details, chapterConfig.fieldIdChapter).trim();
-        const chapterKey   = chapterLabel.toLowerCase();
+        const chapterKey   = getChapterViewKey(chapterLabel);
 
         if(!register.chapters.has(chapterKey)) {
-            register.chapters.set(chapterKey, { label : chapterLabel, rows : [] });
+            register.chapters.set(chapterKey, { key : chapterKey, label : chapterLabel, rows : [] });
         }
 
-        register.chapters.get(chapterKey).rows.push({
-            details  : part.details,
-            id       : getChapterViewValue(part.details, 'ID'),
-            editorId : editorIds[index - 1] || ''
-        });
+        // chapterKey follows the moves in this view, originalKey/originalLabel keep the saved state
+        const row = {
+            uid           : String(index),
+            link          : part.link,
+            details       : part.details,
+            id            : getChapterViewValue(part.details, 'ID'),
+            editorId      : editorIds[index - 1] || '',
+            chapterKey    : chapterKey,
+            originalKey   : chapterKey,
+            originalLabel : chapterLabel
+        };
+
+        register.chapters.get(chapterKey).rows.push(row);
+        rows.set(row.uid, row);
 
         register.count++;
 
@@ -1575,6 +1616,8 @@ function buildChapterViewData(editorIds) {
     return {
         root          : links.root,
         registers     : registers,
+        rows          : rows,
+        canMove       : isChapterViewMoveEnabled(),
         hasReqLevel   : hasChapterViewField(chapterConfig.fieldIdReqLevel),
         missingFields : [ chapterConfig.fieldIdChapter, chapterConfig.fieldIdRegister ].filter(function(fieldId) {
             return !hasChapterViewField(fieldId);
@@ -1583,11 +1626,63 @@ function buildChapterViewData(editorIds) {
 
 }
 
+// Moving needs CHAPTER as editable Advanced Field: that is where the Content Editor's save picks
+// the new value up (editExistingItems sends every .field-editable.changed of a changed row).
+function isChapterViewMoveEnabled() {
+
+    const chapterConfig = getChapterViewConfig();
+
+    if(!chapterConfig.allowMove) return false;
+    if(!hasChapterViewField(chapterConfig.fieldIdChapter)) return false;
+
+    return (config.wsMain.advancedFields || []).some(function(field) {
+        return (field.fieldId === chapterConfig.fieldIdChapter) && field.editable;
+    });
+
+}
+
+// All Content Editor rows of a requirement - several if it is reused
+function getChapterViewEditorRows(row) {
+
+    return $('#editor-content').children('.editor-item').not('.deleted').filter(function() {
+        return $(this).attr('data-link') === row.link;
+    });
+
+}
+
+// Locked rows (released revision or lock field, see setLockedStatus) are skipped by the save
+// anyway, so they cannot be moved - the change would otherwise get lost without notice.
+function isChapterViewRowMovable(row) {
+
+    if(!chapterViewData.canMove) return false;
+
+    const elemEditors = getChapterViewEditorRows(row);
+    const fieldClass  = '.field-id-' + getChapterViewConfig().fieldIdChapter + '.field-editable';
+
+    if(elemEditors.length === 0) return false;
+
+    return elemEditors.toArray().every(function(elem) {
+        return !$(elem).hasClass('locked') && ($(elem).find('.editor-item-advanced ' + fieldClass + ' input').length > 0);
+    });
+
+}
+
+function getChapterViewPendingCount() {
+
+    if(chapterViewData === null) return 0;
+
+    return Array.from(chapterViewData.rows.values()).filter(function(row) { return row.chapterKey !== row.originalKey; }).length;
+
+}
+
 function renderChapterView() {
 
     const chapterConfig = getChapterViewConfig();
     const labels        = chapterConfig.labels;
-    const elemContent   = $('#chapter-view-content').html('');
+    const elemContent   = $('#chapter-view-content');
+    const scrollTop     = elemContent.find('.chapter-view-tab-contents').scrollTop() || 0;
+
+    elemContent.html('');
 
     if(chapterViewData === null) return;
 
@@ -1595,13 +1690,21 @@ function renderChapterView() {
     // reflected until saved and reloaded - said once on top instead of reloading automatically.
     $('<div></div>').appendTo(elemContent)
         .addClass('chapter-view-hint')
-        .text(labels.staleHint);
+        .text(labels.staleHint + (chapterViewData.canMove ? ' ' + labels.moveHint : ''));
 
     for(let fieldId of chapterViewData.missingFields) {
         $('<div></div>').appendTo(elemContent)
             .addClass('chapter-view-missing')
             .text(labels.missingField + ': ' + fieldId);
     }
+
+    if(chapterConfig.allowMove && !chapterViewData.canMove && (chapterViewData.missingFields.length === 0)) {
+        $('<div></div>').appendTo(elemContent)
+            .addClass('chapter-view-missing')
+            .text(labels.notEditable.replace('{field}', chapterConfig.fieldIdChapter));
+    }
+
+    updateChapterViewPending();
 
     const registers = chapterViewData.registers.filter(function(register) {
         return !chapterConfig.hideEmptyRegisters || (register.count > 0);
@@ -1627,6 +1730,7 @@ function renderChapterView() {
             .attr('data-register', register.key)
             .text(register.label + ' (' + register.count + ')')
             .click(function() {
+                clearChapterViewSelection();
                 clickTab($(this));
                 storeChapterViewTab($(this).attr('data-register'));
             });
@@ -1639,9 +1743,12 @@ function renderChapterView() {
             $('<div></div>').appendTo(elemTabContent)
                 .addClass('chapter-view-empty')
                 .text(labels.emptyRegister);
-        } else {
-            for(let chapter of getChapterViewChapters(register)) insertChapterViewChapter(elemTabContent, register, chapter);
+            continue;
         }
+
+        if(chapterViewData.canMove) insertChapterViewNewChapter(elemTabContent, register);
+
+        for(let chapter of getChapterViewChapters(register)) insertChapterViewChapter(elemTabContent, register, chapter);
 
     }
 
@@ -1652,20 +1759,38 @@ function renderChapterView() {
 
     clickTab(elemTab);
 
+    // Re-rendered after every move, so keep the reading position
+    elemTabContents.scrollTop(scrollTop);
+
 }
 
-// Chapters in configured order, requirements without chapter always last
+function updateChapterViewPending() {
+
+    const count = getChapterViewPendingCount();
+
+    $('#chapter-view-pending').text((count > 0) ? getChapterViewConfig().labels.pending.replace('{count}', count) : '');
+    $('#chapter-view-save').toggleClass('hidden', (chapterViewData === null) || !chapterViewData.canMove);
+
+}
+
+// Chapters in configured order, requirements without chapter always last. While moving is
+// enabled, "No Chapter" is always there as a drop target to clear the chapter of a row.
 function getChapterViewChapters(register) {
 
     const chapterConfig = getChapterViewConfig();
-    let   chapters      = Array.from(register.chapters.values()).filter(function(chapter) { return chapter.label !== ''; });
+    let   chapters      = Array.from(register.chapters.values()).filter(function(chapter) { return chapter.key !== ''; });
     const noChapter     = register.chapters.get('');
 
     if(chapterConfig.chapterSort === 'alphanumeric') {
         chapters.sort(function(a, b) { return a.label.localeCompare(b.label, undefined, { numeric : true }); });
     }
 
-    if(!isBlank(noChapter)) chapters.push({ label : chapterConfig.labels.noChapter, rows : noChapter.rows, isNoChapter : true });
+    if(!isBlank(noChapter) && ((noChapter.rows.length > 0) || chapterViewData.canMove)) {
+        chapters.push({ key : '', label : chapterConfig.labels.noChapter, rows : noChapter.rows, isNoChapter : true });
+    } else if(isBlank(noChapter) && chapterViewData.canMove) {
+        register.chapters.set('', { key : '', label : '', rows : [] });
+        chapters.push({ key : '', label : chapterConfig.labels.noChapter, rows : register.chapters.get('').rows, isNoChapter : true });
+    }
 
     return chapters;
 
@@ -1682,24 +1807,59 @@ function sortChapterViewRows(rows) {
 
 }
 
+// A chapter only exists through the requirements carrying it, so a new one is first created
+// empty here as drop target; it is saved with the first row moved onto it.
+function insertChapterViewNewChapter(elemParent, register) {
+
+    const labels   = getChapterViewConfig().labels;
+    const elemNew  = $('<div></div>').appendTo(elemParent).addClass('chapter-view-new');
+    const elemName = $('<input></input>').appendTo(elemNew)
+        .addClass('chapter-view-new-name')
+        .attr('placeholder', labels.newChapter);
+
+    const addChapter = function() {
+        const label = elemName.val().trim();
+        const key   = getChapterViewKey(label);
+        if(label === '') return;
+        if(!register.chapters.has(key)) register.chapters.set(key, { key : key, label : label, rows : [] });
+        chapterViewCollapsed.delete(register.key + '|' + key);
+        renderChapterView();
+    };
+
+    elemName.on('keydown', function(e) { if(e.key === 'Enter') addChapter(); });
+
+    $('<div></div>').appendTo(elemNew)
+        .addClass('button')
+        .text(labels.addChapter)
+        .click(addChapter);
+
+}
+
 function insertChapterViewChapter(elemParent, register, chapter) {
 
     const chapterConfig = getChapterViewConfig();
     const labels        = chapterConfig.labels;
+    const collapseKey   = register.key + '|' + chapter.key;
 
     const elemChapter = $('<div></div>').appendTo(elemParent)
         .addClass('chapter-view-chapter')
-        .toggleClass('chapter-view-chapter-none', chapter.isNoChapter === true);
+        .toggleClass('chapter-view-chapter-none', chapter.isNoChapter === true)
+        .toggleClass('collapsed', chapterViewCollapsed.has(collapseKey));
 
     $('<div></div>').appendTo(elemChapter)
         .addClass('chapter-view-chapter-header')
-        .append($('<span></span>').addClass('icon').addClass('icon-chevron-down').addClass('chapter-view-chapter-toggle'))
+        .append($('<span></span>').addClass('icon').addClass(chapterViewCollapsed.has(collapseKey) ? 'icon-chevron-right' : 'icon-chevron-down').addClass('chapter-view-chapter-toggle'))
         .append($('<span></span>').addClass('chapter-view-chapter-title').text(chapter.label))
         .append($('<span></span>').addClass('chapter-view-chapter-count').text('(' + chapter.rows.length + ')'))
         .click(function() {
             elemChapter.toggleClass('collapsed');
+            if(elemChapter.hasClass('collapsed')) chapterViewCollapsed.add(collapseKey); else chapterViewCollapsed.delete(collapseKey);
             $(this).find('.chapter-view-chapter-toggle').toggleClass('icon-chevron-down').toggleClass('icon-chevron-right');
         });
+
+    if(chapterViewData.canMove) insertChapterViewDropTarget(elemChapter, register, chapter.key);
+
+    if(chapter.rows.length === 0) return;
 
     const elemTable = $('<table></table>').appendTo(elemChapter)
         .addClass('chapter-view-table');
@@ -1718,22 +1878,39 @@ function insertChapterViewChapter(elemParent, register, chapter) {
 
     for(let row of sortChapterViewRows(chapter.rows)) {
 
-        const elemRow = $('<tr></tr>').appendTo(elemBody)
+        const isMovable = isChapterViewRowMovable(row);
+        const elemRow   = $('<tr></tr>').appendTo(elemBody)
             .addClass('chapter-view-row')
             .toggleClass('chapter-view-row-nolink', row.editorId === '')
+            .toggleClass('chapter-view-row-pending', row.chapterKey !== row.originalKey)
+            .toggleClass('selected', chapterViewSelection.has(row.uid))
+            .attr('data-uid', row.uid)
             .attr('data-editor-id', row.editorId);
 
-        if(row.editorId !== '') {
-            elemRow.click(function() {
-                jumpFromChapterView($(this).attr('data-editor-id'));
-            });
+        // Plain click jumps into the Content Editor, Ctrl / Shift + click selects rows to move
+        elemRow.click(function(e) {
+            if(e.ctrlKey || e.metaKey || e.shiftKey) {
+                if(isMovable) selectChapterViewRow($(this), e.shiftKey);
+                return;
+            }
+            if(row.editorId !== '') jumpFromChapterView(row.editorId);
+        });
+
+        if(isMovable) insertChapterViewDragSource(elemRow, register, row);
+
+        const elemCheck = $('<td></td>').appendTo(elemRow).addClass('chapter-view-col-check');
+        const actual    = getChapterViewValue(row.details, chapterConfig.fieldIdReqLevel);
+
+        if(chapterViewData.canMove && !isMovable) {
+            $('<span></span>').appendTo(elemCheck)
+                .addClass('icon')
+                .addClass('icon-lock')
+                .addClass('chapter-view-row-lock')
+                .attr('title', labels.locked);
         }
 
         // Plausibility only, if a register defines reqLevel: the expected REQ Level is shown, never
         // corrected. Not configured while the registers are derived from REQ Level itself.
-        const elemCheck = $('<td></td>').appendTo(elemRow).addClass('chapter-view-col-check');
-        const actual    = getChapterViewValue(row.details, chapterConfig.fieldIdReqLevel);
-
         if(chapterViewData.hasReqLevel && (register.reqLevel !== '') && (actual !== register.reqLevel)) {
             elemRow.addClass('chapter-view-row-mismatch');
             $('<span></span>').appendTo(elemCheck)
@@ -1751,6 +1928,134 @@ function insertChapterViewChapter(elemParent, register, chapter) {
         }
 
     }
+
+}
+
+function selectChapterViewRow(elemRow, isRange) {
+
+    const uid = elemRow.attr('data-uid');
+
+    // Shift + click selects all movable rows between the last selected one and this one, in the
+    // order shown in the current tab
+    if(isRange && (chapterViewLastClick !== null)) {
+        const elemRows = elemRow.closest('.chapter-view-tab').find('.chapter-view-row[draggable="true"]');
+        const uids     = elemRows.toArray().map(function(elem) { return $(elem).attr('data-uid'); });
+        const from     = uids.indexOf(chapterViewLastClick);
+        const to       = uids.indexOf(uid);
+        if((from >= 0) && (to >= 0)) {
+            uids.slice(Math.min(from, to), Math.max(from, to) + 1).forEach(function(value) { chapterViewSelection.add(value); });
+            elemRows.each(function() { $(this).toggleClass('selected', chapterViewSelection.has($(this).attr('data-uid'))); });
+            return;
+        }
+    }
+
+    if(chapterViewSelection.has(uid)) chapterViewSelection.delete(uid); else chapterViewSelection.add(uid);
+
+    elemRow.toggleClass('selected', chapterViewSelection.has(uid));
+    chapterViewLastClick = uid;
+
+}
+function clearChapterViewSelection() {
+
+    chapterViewSelection.clear();
+    chapterViewLastClick = null;
+    $('#chapter-view-content').find('.chapter-view-row.selected').removeClass('selected');
+
+}
+
+// Native drag & drop. Dragging a selected row moves the whole selection, an unselected row moves
+// alone. Drops are only accepted within the same register, as the register follows REQ Level.
+function insertChapterViewDragSource(elemRow, register, row) {
+
+    elemRow.attr('draggable', 'true')
+        .on('dragstart', function(e) {
+            if(!chapterViewSelection.has(row.uid)) {
+                clearChapterViewSelection();
+                chapterViewSelection.add(row.uid);
+            }
+            chapterViewDrag = { register : register, uids : Array.from(chapterViewSelection) };
+            e.originalEvent.dataTransfer.effectAllowed = 'move';
+            e.originalEvent.dataTransfer.setData('text/plain', row.id || row.uid); // Required by Firefox to start dragging
+            $('#chapter-view').addClass('chapter-view-dragging');
+        })
+        .on('dragend', function() {
+            chapterViewDrag = null;
+            $('#chapter-view').removeClass('chapter-view-dragging');
+            $('.chapter-view-drop-target').removeClass('chapter-view-drop-target');
+        });
+
+}
+function insertChapterViewDropTarget(elemChapter, register, chapterKey) {
+
+    elemChapter
+        .on('dragover', function(e) {
+            if((chapterViewDrag === null) || (chapterViewDrag.register !== register)) return;
+            e.preventDefault();
+            e.originalEvent.dataTransfer.dropEffect = 'move';
+            elemChapter.addClass('chapter-view-drop-target');
+        })
+        .on('dragleave', function(e) {
+            // dragleave also fires when moving over child elements of the chapter
+            if(!elemChapter.get(0).contains(e.originalEvent.relatedTarget)) elemChapter.removeClass('chapter-view-drop-target');
+        })
+        .on('drop', function(e) {
+            if((chapterViewDrag === null) || (chapterViewDrag.register !== register)) return;
+            e.preventDefault();
+            moveChapterViewRows(register, chapterViewDrag.uids, chapterKey);
+        });
+
+}
+
+function moveChapterViewRows(register, uids, targetKey) {
+
+    const target = register.chapters.get(targetKey);
+
+    if(isBlank(target)) return;
+
+    for(let uid of uids) {
+
+        const row = chapterViewData.rows.get(uid);
+
+        if(isBlank(row) || (row.chapterKey === targetKey) || !isChapterViewRowMovable(row)) continue;
+
+        const source = register.chapters.get(row.chapterKey);
+
+        // Rows of other registers cannot be part of a selection, but guard against it anyway
+        if(isBlank(source) || !source.rows.includes(row)) continue;
+
+        source.rows.splice(source.rows.indexOf(row), 1);
+        target.rows.push(row);
+        row.chapterKey = targetKey;
+
+        // Moved back to where it was saved: the original spelling is restored, not the target's
+        setChapterViewEditorValue(row, (targetKey === row.originalKey) ? row.originalLabel : target.label);
+
+    }
+
+    clearChapterViewSelection();
+    renderChapterView();
+
+}
+
+// Writes the chapter into the CHAPTER Advanced Field of all editor rows of the requirement and
+// marks field and row as changed, exactly what a manual edit in Advanced Mode would do. A move
+// back to the saved chapter only unmarks the field; the row itself may carry other changes.
+function setChapterViewEditorValue(row, value) {
+
+    const fieldClass = '.field-id-' + getChapterViewConfig().fieldIdChapter + '.field-editable';
+    const isPending  = (row.chapterKey !== row.originalKey);
+
+    getChapterViewEditorRows(row).each(function() {
+
+        const elemEditor = $(this);
+        const elemField  = elemEditor.find('.editor-item-advanced ' + fieldClass).first();
+
+        elemField.find('input').val(value);
+        elemField.toggleClass('changed', isPending);
+
+        if(isPending) setChanged(elemEditor);
+
+    });
 
 }
 
@@ -1803,6 +2108,9 @@ function toggleChapterView() {
     $('body').addClass('chapter-view');
     $('#button-toggle-chapter-view').removeClass('toggle-off').addClass('toggle-on');
 
+    // Locks may have changed in the Content Editor meanwhile (e.g. an item reused since)
+    renderChapterView();
+
 }
 function closeChapterView() {
 
@@ -1818,6 +2126,34 @@ toggleDashboard = function() {
     if($('body').hasClass('chapter-view')) closeChapterView();
 
     baseChapterToggleDashboard();
+
+};
+
+// The save run ends here (see the dashboard wrap above), whether started from the Content Editor
+// or from this view: moved rows count as saved from now on. A failed edit of a single item is
+// reported by editExistingItems itself; the view cannot tell which one, so it trusts the save.
+const baseChapterUpdateAfterTemplateProcessing = updateAfterTemplateProcessing;
+
+updateAfterTemplateProcessing = function() {
+
+    baseChapterUpdateAfterTemplateProcessing();
+
+    if(chapterViewData === null) return;
+
+    const fieldId = getChapterViewConfig().fieldIdChapter;
+
+    for(let register of chapterViewData.registers) {
+        for(let chapter of register.chapters.values()) {
+            for(let row of chapter.rows) {
+                if(row.chapterKey === row.originalKey) continue;
+                row.originalKey      = row.chapterKey;
+                row.originalLabel    = chapter.label;
+                row.details[fieldId] = chapter.label;   // Same object as in bomPartsList
+            }
+        }
+    }
+
+    renderChapterView();
 
 };
 
@@ -1847,4 +2183,3 @@ function jumpFromChapterView(editorId) {
     setTimeout(function() { elemEditor.removeClass('chapter-view-highlight'); }, 2000);
 
 }
-

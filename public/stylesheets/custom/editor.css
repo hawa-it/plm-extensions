@@ -220,3 +220,30 @@ body.chapter-view #add { display : none; }
     outline-offset : -3px;
     transition     : outline-color 0.5s ease;
 }
+
+/* Chapter View: moving rows between chapters */
+#chapter-view .panel-controls {
+    align-items : center;
+    display     : flex;
+    gap         : 12px;
+}
+.chapter-view-pending { color : var(--color-status-yellow); }
+.chapter-view-new {
+    display : flex;
+    gap     : 8px;
+}
+.chapter-view-new-name {
+    background : var(--color-surface-level-2);
+    border     : 1px solid var(--color-surface-level-4);
+    color      : inherit;
+    flex       : 1;
+    max-width  : 400px;
+    padding    : 4px 8px;
+}
+.chapter-view-row[draggable="true"] { cursor : grab; }
+.chapter-view-row.selected { background : var(--color-hover-background); }
+.chapter-view-row.selected td:first-child { box-shadow : inset 4px 0px 0px var(--color-blue-500); }
+.chapter-view-row-pending td:first-child { box-shadow : inset 4px 0px 0px var(--color-status-yellow); }
+.chapter-view-row-lock { font-size : 16px; opacity : 0.5; }
+#chapter-view.chapter-view-dragging .chapter-view-chapter { outline : 1px dashed var(--color-surface-level-4); }
+#chapter-view .chapter-view-chapter.chapter-view-drop-target { outline : 2px solid var(--color-blue-500); }
