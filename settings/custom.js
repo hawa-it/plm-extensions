@@ -173,6 +173,7 @@ exports.applications = {
                 chapterSort        : 'first-occurrence', // or 'alphanumeric' (e.g. for "01 Plattform & Normen")
                 hideEmptyRegisters : false,              // false: empty registers are shown greyed out with (0)
                 allowMove          : true,               // Drag & drop between chapters, saved with the Content Editor (needs CHAPTER in advancedFieldIds)
+                allowCreate        : true,               // New requirements per chapter, appended directly below the root (needs CHAPTER and REQ_LEVEL in advancedFieldIds)
                 columns : [                              // Only fields contained in the BOM view
                     { fieldId : 'ID',          label : 'ID'          },
                     { fieldId : 'TITLE',       label : 'Title'       },
@@ -201,7 +202,15 @@ exports.applications = {
                     addChapter    : 'Add Chapter',
                     pending       : '{count} unsaved chapter change(s)',
                     locked        : 'Locked, the chapter of this requirement cannot be changed',
-                    notEditable   : 'Moving rows needs {field} as editable Advanced Field.'
+                    notEditable   : 'Moving rows needs {field} as editable Advanced Field.',
+                    newRequirement: '+ New Requirement',
+                    title         : 'Title',
+                    description   : 'Description',
+                    create        : 'Create',
+                    cancel        : 'Cancel',
+                    newId         : '(new)',
+                    levelNotFound : 'REQ Level "{value}" is not an option of the picklist, the requirement cannot be created.',
+                    rootNotWorking: 'New requirements can only be added while the specification is in work (WIP).'
                 }
             },
             panels : {
