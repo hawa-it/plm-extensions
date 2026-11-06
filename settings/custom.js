@@ -233,6 +233,9 @@ exports.applications = {
                     deletedByParent : 'Removed together with its parent requirement',
                     confirmChildren : '"{title}" has {count} sub requirement(s), they are removed from this structure as well. Continue?',
                     confirmReused : '"{title}" is used {count} times in this structure, all of them are removed. Continue?',
+                    renameChapter : 'Rename chapter (all requirements in it)',
+                    confirmRenameLocked : '{count} of {total} requirement(s) in "{title}" are locked and keep the old chapter name. Rename the others?',
+                    confirmMerge  : 'Chapter "{title}" already exists in this register, the requirements are moved into it. Continue?',
                     newId         : '(new)',
                     levelNotFound : 'REQ Level "{value}" is not an option of the picklist, the requirement cannot be created.',
                     rootNotWorking: 'New requirements can only be added while the specification is in work (WIP).'
