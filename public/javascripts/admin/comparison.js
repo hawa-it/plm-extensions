@@ -566,12 +566,16 @@ function startComparison() {
         ]
 
         Promise.all(requests).then(function(responses) {
-        
-            environments.source.permissions = responses[0].data.list.permission;
-            environments.target.permissions = responses[1].data.list.permission;
+
+            if(!hasValidResponses('Permissions', responses)) return;
+
+            environments.source.permissions = toArray(responses[0].data.list.permission);
+            environments.target.permissions = toArray(responses[1].data.list.permission);
 
             getAllWorkspaces(false);
 
+        }).catch(function(error) {
+            logComparisonError('Loading permissions', error);
         });
 
     } else {
@@ -643,12 +647,15 @@ function updateComparison(elemButton) {
 
             if(stopped) return;
             if(responses[0].params.timestamp != timestamp) return;
-        
-            environments.source.permissions = responses[0].data.list.permission;
-            environments.target.permissions = responses[1].data.list.permission;
+            if(!hasValidResponses('Permissions', responses)) return;
+
+            environments.source.permissions = toArray(responses[0].data.list.permission);
+            environments.target.permissions = toArray(responses[1].data.list.permission);
 
             getAllRoles(true);
 
+        }).catch(function(error) {
+            logComparisonError('Loading permissions', error);
         });
     }        
 
@@ -4352,6 +4359,55 @@ function getAllPicklists(update) {
     });
 
 }
+// Fehlerbehandlung: ohne diese Funktionen bricht ein Fehler innerhalb von .then() still ab,
+// der Lauf wirkt endlos und es erscheint nichts im Log.
+function logComparisonError(context, error) {
+
+    console.error(context, error);
+    addLogEntry(context + ' failed : ' + ((error && error.message) ? error.message : error), 'error');
+    endComparison();
+
+}
+function hasValidResponses(context, responses) {
+
+    let valid = true;
+
+    for(let index = 0; index < responses.length; index++) {
+
+        let response = responses[index];
+
+        if(response.error) {
+
+            let tenantName = (index === 0) ? environments.source.tenantName : environments.target.tenantName;
+            let message    = isBlank(response.message) ? 'no message' : response.message;
+
+            addLogEntry(context + ' : request to ' + tenantName + ' failed (status ' + response.status + ') - ' + message, 'error');
+            valid = false;
+
+        }
+
+    }
+
+    if(!valid) endComparison();
+
+    return valid;
+
+}
+// Das v1 API liefert Listen teilweise als einzelnes Objekt (1 Element) oder gar nicht (0 Elemente)
+function toArray(value) {
+
+    if(typeof value === 'undefined' || value === null || value === '') return [];
+
+    return Array.isArray(value) ? value : [value];
+
+}
+function getRolePermissions(role) {
+
+    if(typeof role === 'undefined' || role === null) return [];
+
+    return toArray(role.permissions ? role.permissions.permission : []);
+
+}
 function getAllRoles(update) {
 
     if(stopped) return;
@@ -4367,11 +4423,12 @@ function getAllRoles(update) {
 
         if(stopped) return;
         if(responses[0].params.timestamp != timestamp) return;
+        if(!hasValidResponses('Roles', responses)) return;
 
         all.roles = [];
         all.names = [];
 
-        for(let source of responses[0].data.list.role) {
+        for(let source of toArray(responses[0].data.list.role)) {
 
             if(!all.names.includes(source.name)) {
                 all.names.push(source.name);
@@ -4385,7 +4442,7 @@ function getAllRoles(update) {
 
         }
 
-        for(let target of responses[1].data.list.role) {
+        for(let target of toArray(responses[1].data.list.role)) {
 
             if(!all.names.includes(target.name)) {
                 all.names.push(target.name);
@@ -4420,26 +4477,22 @@ function getAllRoles(update) {
 
         for(let role of all.roles) {
             
-            let count = (typeof role.source.permissions === 'undefined') ? role.target.permissions.permission.length : role.source.permissions.permission.length;
-            
-            if(typeof role.source.permissions === 'undefined') role.source.permissions = { permission : [] };
-            else {
-                for(let permission of role.source.permissions.permission) {
-                    for(let definition of environments.source.permissions) {
-                        if(permission.id === definition.id) {
-                            permission.title = definition.name;
-                        }
+            // Berechtigungen immer als Array ablegen (auch bei fehlender Rolle im anderen Tenant)
+            role.source.permissions = { permission : getRolePermissions(role.source) };
+            role.target.permissions = { permission : getRolePermissions(role.target) };
+
+            for(let permission of role.source.permissions.permission) {
+                for(let definition of environments.source.permissions) {
+                    if(permission.id === definition.id) {
+                        permission.title = definition.name;
                     }
                 }
             }
 
-            if(typeof role.target.permissions === 'undefined') role.target.permissions = { permission : [] };
-            else {
-                for(let permission of role.target.permissions.permission) {
-                    for(let definition of environments.target.permissions) {
-                        if(permission.id === definition.id) {
-                            permission.title = definition.name;
-                        }
+            for(let permission of role.target.permissions.permission) {
+                for(let definition of environments.target.permissions) {
+                    if(permission.id === definition.id) {
+                        permission.title = definition.name;
                     }
                 }
             }
@@ -4460,6 +4513,8 @@ function getAllRoles(update) {
 
         if(update) compareAllRoles(true); else getAllGroups(false);
 
+    }).catch(function(error) {
+        logComparisonError('Loading roles', error);
     });
 
 }
@@ -4478,11 +4533,18 @@ function getAllGroups(update) {
 
         if(stopped) return;
         if(responses[0].params.timestamp != timestamp) return;
+        if(!hasValidResponses('Groups', responses)) return;
 
         all.groups = [];
         all.names  = [];
 
-        for(let source of responses[0].data.items) {
+        // Je nach Modus (bulk oder nicht) liegen die Gruppen in 'items' oder 'groups'
+        let groupsSource = toArray(responses[0].data.items || responses[0].data.groups);
+        let groupsTarget = toArray(responses[1].data.items || responses[1].data.groups);
+
+        for(let source of groupsSource) {
+
+            if(isBlank(source.shortName)) source.shortName = source.longName || '';
 
             if(!all.names.includes(source.shortName)) {
                 all.names.push(source.shortName);
@@ -4497,7 +4559,9 @@ function getAllGroups(update) {
 
         }
 
-        for(let target of responses[1].data.items) {
+        for(let target of groupsTarget) {
+
+            if(isBlank(target.shortName)) target.shortName = target.longName || '';
 
             if(!all.names.includes(target.shortName)) {
                 all.names.push(target.shortName);
@@ -4548,6 +4612,8 @@ function getAllGroups(update) {
 
         if(update) endComparison(); else compareAllWorkspaces();
 
+    }).catch(function(error) {
+        logComparisonError('Loading groups', error);
     });
 
 }
@@ -5076,6 +5142,15 @@ function compareNextRole(update) {
 
     if(stopped) return;
 
+    try {
+        compareNextRoleEntry(update);
+    } catch(error) {
+        logComparisonError('Comparing roles', error);
+    }
+
+}
+function compareNextRoleEntry(update) {
+
     let proceed = true;
     let index   = 0;
 
@@ -5083,30 +5158,32 @@ function compareNextRole(update) {
 
         if(!role.completed) {
 
-            let permissions  = { match : false, count : 0};
+            let permissions       = { match : false, count : 0};
+            let permissionsSource = getRolePermissions(role.source);
+            let permissionsTarget = getRolePermissions(role.target);
 
             if(isBlank(role.source.uri)) {
 
                 addLogEntry('Role ' + role.name + ' missing in ' + environments.source.tenantName, 'diff');
-                permissions.count = role.target.permissions.permission.length;
+                permissions.count = permissionsTarget.length;
 
             } else if(isBlank(role.target.uri)) {
 
                 addLogEntry('Role ' + role.name + ' missing in ' + environments.target.tenantName, 'diff');
-                permissions.count = role.source.permissions.permission.length;
-                
+                permissions.count = permissionsSource.length;
+
             } else {
-                
+
                 addLogEntry('Comparing Role <strong>' + role.name + '</strong>', 'notice');
-                permissions.count = role.source.permissions.permission.length;
+                permissions.count = permissionsSource.length;
 
             }
 
             let listSource = [];
             let listTarget = [];
 
-            for(let permission of role.source.permissions.permission) listSource.push(permission.title);
-            for(let permission of role.target.permissions.permission) listTarget.push(permission.title);
+            for(let permission of permissionsSource) listSource.push(permission.title);
+            for(let permission of permissionsTarget) listTarget.push(permission.title);
 
             permissions.match = (listSource.toString() == listTarget.toString());
             
